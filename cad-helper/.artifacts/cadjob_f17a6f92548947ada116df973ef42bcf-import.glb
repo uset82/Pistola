@@ -1,0 +1,12 @@
+{
+  "jobId": "cadjob_f17a6f92548947ada116df973ef42bcf",
+  "type": "placeholder-glb",
+  "operation": "import_step",
+  "source": "C:/Users/carlos/PROYECTOS/pistola/cad-helper/.artifacts/uploads/7574175596924788a124c2f2cdc45f87.step",
+  "dimensions": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "preview": "placeholder-glb"
+}

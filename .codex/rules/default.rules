@@ -1,0 +1,122 @@
+# Pistola team rules for Codex command execution outside the sandbox.
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Do not discard local changes. Use targeted edits or get explicit user direction first.",
+    match = [
+        "git reset --hard",
+        "git reset --hard HEAD~1",
+    ],
+    not_match = [
+        "git reset --soft HEAD~1",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "forbidden",
+    justification = "Do not overwrite files from git without explicit user direction.",
+    match = [
+        "git checkout -- package.json",
+        "git checkout -- .",
+    ],
+    not_match = [
+        "git checkout main",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "clean", ["-fd", "-fdx", "-xdf"]],
+    decision = "forbidden",
+    justification = "Do not delete untracked files wholesale. Clean only with explicit user direction.",
+    match = [
+        "git clean -fd",
+        "git clean -fdx",
+        "git clean -xdf",
+    ],
+    not_match = [
+        "git clean -f",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Pushing changes requires an explicit user decision.",
+    match = [
+        "git push",
+        "git push origin main",
+    ],
+    not_match = [
+        "git status",
+    ],
+)
+
+prefix_rule(
+    pattern = ["gh", "workflow", "run"],
+    decision = "prompt",
+    justification = "Release or workflow automation should only run with explicit user approval.",
+    match = [
+        "gh workflow run release.yml",
+        "gh workflow run ci.yml -f target=viewer",
+    ],
+    not_match = [
+        "gh workflow list",
+    ],
+)
+
+prefix_rule(
+    pattern = [["bun", "npm", "pnpm"], ["add", "install", "update"]],
+    decision = "prompt",
+    justification = "Dependency installation or mutation changes the workspace and should be intentional.",
+    match = [
+        "bun install",
+        "bun add zod",
+        "npm install",
+        "pnpm add react",
+    ],
+    not_match = [
+        "pnpm test",
+    ],
+)
+
+prefix_rule(
+    pattern = [["curl", "wget", "Invoke-WebRequest"]],
+    decision = "prompt",
+    justification = "External network fetches should be intentional and reviewable.",
+    match = [
+        "curl https://example.com",
+        "wget https://example.com/file.tgz",
+        "Invoke-WebRequest https://example.com",
+    ],
+    not_match = [
+        "rg example.com",
+    ],
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "prompt",
+    justification = "Recursive deletion is risky. Confirm intent before running it.",
+    match = [
+        "rm -rf dist",
+        "rm -rf node_modules",
+    ],
+    not_match = [
+        "rm file.txt",
+    ],
+)
+
+prefix_rule(
+    pattern = ["Remove-Item"],
+    decision = "prompt",
+    justification = "PowerShell deletion commands should be confirmed before execution.",
+    match = [
+        "Remove-Item dist -Recurse -Force",
+        "Remove-Item .\\build -Force",
+    ],
+    not_match = [
+        "Get-Item dist",
+    ],
+)

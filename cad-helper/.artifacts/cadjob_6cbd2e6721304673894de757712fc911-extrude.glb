@@ -1,0 +1,17 @@
+{
+  "jobId": "cadjob_6cbd2e6721304673894de757712fc911",
+  "type": "placeholder-glb",
+  "operation": "extrude",
+  "dimensions": [
+    0.5,
+    0.45,
+    0.5
+  ],
+  "sketchId": "csk_xmagg1j6cic5d4hj",
+  "direction": [
+    0.0,
+    1.0,
+    0.0
+  ],
+  "symmetric": false
+}

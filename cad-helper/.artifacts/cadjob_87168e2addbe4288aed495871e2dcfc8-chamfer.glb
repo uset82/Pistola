@@ -1,0 +1,10 @@
+{
+  "jobId": "cadjob_87168e2addbe4288aed495871e2dcfc8",
+  "type": "placeholder-glb",
+  "operation": "chamfer",
+  "bodyId": "cbody_d2dcb3dt8uromw9c",
+  "edgeRefs": [
+    "edge-1"
+  ],
+  "distance": 0.06
+}

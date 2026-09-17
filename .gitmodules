@@ -1,0 +1,3 @@
+[submodule "freecad"]
+	path = freecad
+	url = https://github.com/uset82/FreeCAD.git

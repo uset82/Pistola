@@ -1,0 +1,46 @@
+{
+  "name": "editor",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --env-mode=loose --filter=!@pascal-app/cad-helper",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --write",
+    "format": "biome format --write",
+    "format:check": "biome format",
+    "check": "biome check",
+    "check:fix": "biome check --write",
+    "check-types": "node ./node_modules/turbo/bin/turbo run check-types --ui=stream",
+    "acceptance:assistant": "node ./scripts/assistant-acceptance.mjs",
+    "acceptance:assistant-command-vision": "node ./scripts/assistant-command-vision-browser-check.mjs",
+    "kill": "lsof -ti:3002 | xargs kill -9 2>/dev/null || echo 'No processes found on port 3002'",
+    "release": "gh workflow run release.yml -f package=both -f bump=patch",
+    "release:viewer": "gh workflow run release.yml -f package=viewer -f bump=patch",
+    "release:core": "gh workflow run release.yml -f package=core -f bump=patch",
+    "release:minor": "gh workflow run release.yml -f package=both -f bump=minor",
+    "release:major": "gh workflow run release.yml -f package=both -f bump=major"
+  },
+  "dependencies": {
+    "portless": "^0.4.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "dotenv-cli": "^11.0.0",
+    "playwright": "^1.58.2",
+    "turbo": "^2.8.15",
+    "typescript": "5.9.3",
+    "ultracite": "^7.2.5"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "bun@1.3.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tooling/*"
+  ],
+  "resolutions": {
+    "three-mesh-bvh": "0.9.8"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "jobId": "cadjob_34119ac9b70a41cea6495113bdcb46fe",
+  "type": "placeholder-glb",
+  "operation": "fillet",
+  "bodyId": "cbody_makreldrgrd5nli5",
+  "edgeRefs": [
+    "edge-1"
+  ],
+  "radius": 0.08
+}

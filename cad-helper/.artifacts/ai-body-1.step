@@ -1,0 +1,9 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Pistola CAD helper scaffold export'),'2;1');
+FILE_NAME('ai-body-1.step','2026-03-23T00:00:00',('Pistola'),('Pistola CAD Helper'),'OpenAI Codex','Pistola','');
+ENDSEC;
+DATA;
+/* Mock STEP placeholder for unknown from cadjob_7c6880e9b1a04b7a9a604e3a43ec909a-extrude.fcstd */
+ENDSEC;
+END-ISO-10303-21;

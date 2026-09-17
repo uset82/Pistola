@@ -1,0 +1,12 @@
+{
+  "jobId": "cadjob_ca25bac368fc49a1a82e6520e1175933",
+  "type": "placeholder-glb",
+  "operation": "cut",
+  "bodyIdA": "cbody_iriu2gekmtdaj3y7",
+  "bodyIdB": "cbody_ts780n2tm3lnb16h",
+  "dimensions": [
+    2.0,
+    2.5,
+    2.2
+  ]
+}
