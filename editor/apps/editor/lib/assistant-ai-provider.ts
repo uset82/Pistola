@@ -42,6 +42,7 @@ import {
 } from '../../../packages/editor/src/lib/assistant/sequence-validation'
 import {
   AiProviderError,
+  cleanJsonString,
   getSharedAiConfig,
   readEnvValue,
   requestOpenAiResponses,
@@ -5133,7 +5134,8 @@ const safeParseTaskPlanSteps = (raw: unknown[]) => {
 }
 
 const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
-  const json = JSON.parse(raw)
+  const cleaned = cleanJsonString(raw)
+  const json = JSON.parse(cleaned)
   const rawActions = Array.isArray(json?.actions) ? (json.actions as unknown[]) : []
   const rawSteps = Array.isArray(json?.steps) ? (json.steps as unknown[]) : []
   const { valid: parsedActions, invalidActionIssues: parsedInvalidActionIssues } = safeParseActions(rawActions)

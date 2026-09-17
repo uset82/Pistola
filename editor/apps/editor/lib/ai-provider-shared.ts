@@ -197,6 +197,34 @@ export const getSharedAiConfig = (
   return { provider: 'fallback' }
 }
 
+export const cleanJsonString = (raw: string): string => {
+  const trimmed = raw.trim()
+
+  const codeBlockMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  if (codeBlockMatch?.[1]) {
+    return codeBlockMatch[1].trim()
+  }
+
+  const innerCodeBlock = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+  if (innerCodeBlock?.[1]) {
+    return innerCodeBlock[1].trim()
+  }
+
+  const firstBrace = trimmed.indexOf('{')
+  const lastBrace = trimmed.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1).trim()
+  }
+
+  const firstBracket = trimmed.indexOf('[')
+  const lastBracket = trimmed.lastIndexOf(']')
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    return trimmed.slice(firstBracket, lastBracket + 1).trim()
+  }
+
+  return trimmed
+}
+
 export const extractResponseText = (response: any): string => {
   const output = Array.isArray(response?.output) ? response.output : []
 

@@ -8,6 +8,7 @@ import {
 } from './cad-deterministic-brief'
 import {
   AiProviderError,
+  cleanJsonString,
   getSharedAiConfig,
   readEnvValue,
   requestOpenAiResponses,
@@ -638,7 +639,8 @@ const normalizeOperationCandidate = (operation: unknown) => {
 }
 
 const normalizeCadBriefCandidate = (raw: string) => {
-  const parsed = JSON.parse(raw)
+  const cleaned = cleanJsonString(raw)
+  const parsed = JSON.parse(cleaned)
   const record = getRecord(parsed)
   if (!record) return parsed
 

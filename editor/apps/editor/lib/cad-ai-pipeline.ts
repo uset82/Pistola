@@ -3,6 +3,7 @@ import type { AnyNode } from '../../../packages/core/src/schema/types'
 import { useCad } from '@pascal-app/editor'
 import { z } from 'zod'
 import { shapeCadPlanningContext } from './ai-context-shaping'
+import { cleanJsonString } from './ai-provider-shared'
 
 type CadPromptContext = {
   nodes: AnyNode[]
@@ -151,7 +152,7 @@ export async function promptToCadBrief(
 
       let parsedJson: unknown
       try {
-        parsedJson = JSON.parse(result.raw)
+        parsedJson = JSON.parse(cleanJsonString(result.raw))
       } catch {
         if (retry === 0) continue
         throw new Error('CAD AI returned malformed JSON.')
