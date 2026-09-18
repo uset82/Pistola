@@ -204,6 +204,13 @@ export const getSharedAiConfig = (
 export const cleanJsonString = (raw: string): string => {
   let trimmed = raw.trim()
 
+  // Strip reasoning / thinking tags from DeepSeek R1/V3/V4, Qwen, etc.
+  trimmed = trimmed
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+    .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
+    .trim()
+
   const codeBlockMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
   if (codeBlockMatch?.[1]) {
     return codeBlockMatch[1].trim()
@@ -211,7 +218,10 @@ export const cleanJsonString = (raw: string): string => {
 
   const innerCodeBlock = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
   if (innerCodeBlock?.[1]) {
-    return innerCodeBlock[1].trim()
+    const candidate = innerCodeBlock[1].trim()
+    if (candidate.startsWith('{') || candidate.startsWith('[')) {
+      return candidate
+    }
   }
 
   if (trimmed.startsWith('```')) {
@@ -247,6 +257,14 @@ export const extractResponseText = (response: any): string => {
       if (content?.type === 'output_text' && typeof content.text === 'string') {
         return content.text
       }
+    }
+  }
+
+  // Also support OpenAI / OpenRouter chat completions format
+  if (Array.isArray(response?.choices) && response.choices.length > 0) {
+    const choice = response.choices[0]
+    if (typeof choice?.message?.content === 'string') {
+      return choice.message.content
     }
   }
 

@@ -186,3 +186,29 @@ test('Acceptance Prompt 3: Build 10m x 8m modern studio with large windows on so
   assert.ok(window && 'wallId' in window && window.wallId === '$ref_room_wall_0')
 })
 
+test('createAssistantTurnResult creates a 3D boat assembly for "hola genera un barquito 3D"', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'hola genera un barquito 3D',
+      context: {},
+    },
+    NO_AUTH_ENV,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.ok(result.turn.actions.length >= 6)
+  const [hull, ...parts] = result.turn.actions
+  assert.equal(hull?.type, 'place_item')
+  if (hull?.type === 'place_item') {
+    assert.equal(hull.refId, '$ref_boat_root')
+    assert.equal(hull.name, 'Boat Hull')
+    assert.equal(hull.assetId, 'primitive-box')
+  }
+  for (const part of parts) {
+    assert.equal(part.type, 'place_item')
+    if (part.type === 'place_item') {
+      assert.equal(part.parentId, '$ref_boat_root')
+    }
+  }
+})
+

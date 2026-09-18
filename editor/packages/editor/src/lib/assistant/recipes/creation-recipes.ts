@@ -904,6 +904,102 @@ export const rocketRecipe: CreationRecipe = {
   },
 }
 
+export const boatRecipe: CreationRecipe = {
+  id: 'boat',
+  name: '3D Boat Assembly',
+  category: 'vehicle',
+  keywords: [
+    'boat',
+    'barco',
+    'barquito',
+    'ship',
+    'sailboat',
+    'velero',
+    'yacht',
+    'bote',
+    'lancha',
+    'navio',
+    'navío',
+    'buque',
+  ],
+  generateActions: ({ position = [0, 0, 0] }) => {
+    const [x, y, z] = position
+    const rootRef = '$ref_boat_root'
+    return [
+      // Boat Hull (Root node)
+      {
+        type: 'place_item',
+        refId: rootRef,
+        placement: 'explicit',
+        name: 'Boat Hull',
+        assetId: 'primitive-box',
+        position: [x, y + 0.4, z],
+        scale: [2.0, 0.8, 5.0],
+      },
+      // Bow (Front tapered section)
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Boat Bow',
+        assetId: 'primitive-wedge',
+        position: [x, y + 0.4, z + 3.1],
+        scale: [2.0, 0.8, 1.6],
+      },
+      // Stern Deck
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Stern Deck',
+        assetId: 'primitive-box',
+        position: [x, y + 0.85, z - 1.8],
+        scale: [1.8, 0.1, 1.2],
+      },
+      // Deck Cabin / Wheelhouse
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Deck Cabin',
+        assetId: 'primitive-box',
+        position: [x, y + 1.2, z - 0.4],
+        scale: [1.4, 0.9, 1.8],
+      },
+      // Cabin Roof
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Cabin Roof',
+        assetId: 'primitive-box',
+        position: [x, y + 1.7, z - 0.4],
+        scale: [1.55, 0.1, 1.95],
+      },
+      // Main Mast
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Main Mast',
+        assetId: 'primitive-cylinder',
+        position: [x, y + 2.1, z + 1.0],
+        scale: [0.12, 2.4, 0.12],
+      },
+      // Crow's Nest / Lookout
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Crow Nest',
+        assetId: 'primitive-cylinder',
+        position: [x, y + 3.0, z + 1.0],
+        scale: [0.45, 0.2, 0.45],
+      },
+    ]
+  },
+}
+
 export const CREATION_RECIPES: CreationRecipe[] = [
   heartRecipe,
   boardRecipe,
@@ -915,6 +1011,7 @@ export const CREATION_RECIPES: CreationRecipe[] = [
   chairRecipe,
   droneRecipe,
   rocketRecipe,
+  boatRecipe,
 ]
 
 export const findMatchingRecipe = (prompt: string): CreationRecipe | null => {
