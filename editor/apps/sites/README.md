@@ -27,10 +27,14 @@ bun run build:sites   # next build (static export) + copy editor/public + sync t
 bun run smoke:sites   # serves editor/out and checks landing, worlds, and the AI Assistant
 ```
 
-`apps/sites/scripts/sync-hosting-output.mjs` mirrors `apps/sites/out` into the
-directory declared by `editor/.openai/hosting.json` (`static.directory`,
-currently `out`, resolved from `editor/`). Sites packages that directory, so
-the export must exist at `editor/out` before publishing.
+`apps/sites/scripts/sync-hosting-output.mjs` mirrors `apps/sites/out` into
+`editor/out`. Sites hosting is linked from both:
+
+- `editor/.openai/hosting.json` → `out` when the Sites project root is `editor/`
+- `.openai/hosting.json` → `editor/out` when the Sites project root is this repo
+
+The export must exist at `editor/out` before publishing. A save without that
+directory keeps the stale chatgpt.site snapshot (release 10).
 
 The build script calls `node ./node_modules/next/dist/bin/next` directly: on
 Windows the bun `.bin` shim for `next build` exits with code 255 while the real

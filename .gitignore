@@ -53,6 +53,10 @@ third_party/FreeCAD/
 supabase/.branches/
 supabase/.temp/
 
+# Local Sites packaging leftovers
+pistola-cad-sites-*.tgz
+sites-package-*/
+
 # OS / Editor
 .DS_Store
 Thumbs.db
