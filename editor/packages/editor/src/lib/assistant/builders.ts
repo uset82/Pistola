@@ -4,15 +4,20 @@ import {
   type AnyNode,
   type AnyNodeId,
   type AssetInput,
+  BuildingNode,
   type CadBodyNode,
+  CadSketchEntity,
   type CadSketchNode,
   CeilingNode,
   DoorNode,
+  emitter,
+  generateId,
   type GuideNode,
   ItemNode,
   LevelNode,
   RoofNode,
   type ScanNode,
+  SiteNode,
   SlabNode,
   WallNode,
   WindowNode,
@@ -332,6 +337,58 @@ export const selectNodes = (action: Extract<AssistantAction, { type: 'select_nod
   })
   useViewer.getState().setSelection({ selectedIds: action.nodeIds, zoneId: null })
   return action.nodeIds[0] ?? null
+}
+
+export const focusCameraOnNodes = (
+  action: Extract<AssistantAction, { type: 'focus_camera_on_nodes' }>,
+) => {
+  action.nodeIds.forEach((nodeId) => {
+    requireNode(nodeId)
+  })
+  useViewer.getState().setSelection({ selectedIds: action.nodeIds, zoneId: null })
+  const firstTarget = action.nodeIds[0] ? getNode(action.nodeIds[0]) : null
+  if (firstTarget?.camera) {
+    emitter.emit('camera-controls:view', { nodeId: firstTarget.id as AnyNodeId })
+  }
+  return action.nodeIds[0] ?? null
+}
+
+export const createSite = (action: Extract<AssistantAction, { type: 'create_site' }>) => {
+  const site = SiteNode.parse({
+    name: action.name,
+    children: [],
+  })
+  useScene.getState().createNode(site)
+  useViewer.getState().setSelection({
+    buildingId: null,
+    levelId: null,
+    selectedIds: [site.id],
+    zoneId: null,
+  })
+  return site.id
+}
+
+export const createBuilding = (action: Extract<AssistantAction, { type: 'create_building' }>) => {
+  let site = action.siteId ? getNode(action.siteId) : getSiteNode()
+  if (!site || site.type !== 'site') {
+    const newSite = SiteNode.parse({ name: 'Site', children: [] })
+    useScene.getState().createNode(newSite)
+    site = newSite
+  }
+
+  const building = BuildingNode.parse({
+    name: action.name,
+    children: [],
+  })
+
+  useScene.getState().createNode(building, site.id as AnyNodeId)
+  useViewer.getState().setSelection({
+    buildingId: building.id,
+    levelId: null,
+    selectedIds: [],
+    zoneId: null,
+  })
+  return building.id
 }
 
 export const createLevel = (action: Extract<AssistantAction, { type: 'create_level' }>) => {
@@ -1378,4 +1435,91 @@ export const deleteNodes = (action: Extract<AssistantAction, { type: 'delete_nod
   }
 
   return action.nodeIds[0] ?? null
+}
+
+export const reparentNode = (action: Extract<AssistantAction, { type: 'reparent_node' }>) => {
+  const node = requireNode(action.nodeId)
+  const newParent = requireNode(action.newParentId)
+
+  if (node.id === newParent.id) {
+    throw new Error('A node cannot be reparented to itself.')
+  }
+
+  let checkParent: AnyNode | null = newParent
+  while (checkParent?.parentId) {
+    if (checkParent.parentId === node.id) {
+      throw new Error('Cannot reparent a node into one of its descendants.')
+    }
+    checkParent = getNode(checkParent.parentId)
+  }
+
+  if (node.parentId) {
+    const oldParent = getNode(node.parentId)
+    if (oldParent && 'children' in oldParent && Array.isArray(oldParent.children)) {
+      useScene.getState().updateNode(oldParent.id as AnyNodeId, {
+        children: oldParent.children.filter((id) => id !== node.id),
+      } as any)
+    }
+  }
+
+  const existingChildren = 'children' in newParent && Array.isArray(newParent.children) ? newParent.children : []
+  const nextChildren = Array.from(new Set([...existingChildren, node.id]))
+  useScene.getState().updateNode(newParent.id as AnyNodeId, { children: nextChildren as any })
+  useScene.getState().updateNode(node.id as AnyNodeId, { parentId: newParent.id })
+  return node.id
+}
+
+export const setNodeMetadata = (action: Extract<AssistantAction, { type: 'set_node_metadata' }>) => {
+  const node = requireNode(action.nodeId)
+  const existingMetadata = node.metadata && typeof node.metadata === 'object' ? node.metadata : {}
+  const updatedMetadata = {
+    ...existingMetadata,
+    [action.key]: action.value,
+  }
+  useScene.getState().updateNode(node.id as AnyNodeId, { metadata: updatedMetadata })
+  return node.id
+}
+
+export const getCadSketchById = (sketchId: string | undefined): CadSketchNode | null => {
+  if (sketchId) {
+    const node = getNode(sketchId)
+    return node?.type === 'cad-sketch' ? (node as CadSketchNode) : null
+  }
+
+  const activeSketchId = useEditor.getState().activeSketchId
+  if (activeSketchId) {
+    const activeNode = getNode(activeSketchId)
+    if (activeNode?.type === 'cad-sketch') return activeNode as CadSketchNode
+  }
+
+  const selectedNodeId = getSelectedNodeId()
+  const node = getNode(selectedNodeId)
+  return node?.type === 'cad-sketch' ? (node as CadSketchNode) : null
+}
+
+export const addCadSketchEntities = (
+  action: Extract<AssistantAction, { type: 'add_cad_sketch_entities' }>,
+) => {
+  const sketch = getCadSketchById(action.sketchId)
+  if (!sketch) throw new Error('Select or open a CAD sketch before adding entities.')
+
+  const parsedEntities = action.entities.map((raw) => {
+    const entityWithId = {
+      id: typeof raw.id === 'string' && raw.id.length > 0 ? raw.id : generateId('ske'),
+      ...raw,
+    }
+    return CadSketchEntity.parse(entityWithId)
+  })
+
+  const updatedEntities = [...sketch.entities, ...parsedEntities]
+  useScene.getState().updateNode(sketch.id as AnyNodeId, { entities: updatedEntities })
+  return sketch.id
+}
+
+export const setCadSketchPlane = (action: Extract<AssistantAction, { type: 'set_cad_sketch_plane' }>) => {
+  const sketch = getCadSketchById(action.sketchId)
+  if (!sketch) throw new Error('Select or open a CAD sketch before changing its plane.')
+  useScene.getState().updateNode(sketch.id as AnyNodeId, { plane: action.plane })
+  useEditor.getState().setActiveWorkplane(action.plane)
+  return sketch.id
 }

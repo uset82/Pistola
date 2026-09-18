@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { applyInstalledAiConfigToEnv } from './installed-ai-config'
 
 const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1'
 const DEFAULT_OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
@@ -142,35 +143,38 @@ export const getSharedAiConfig = (
   env: Record<string, string | undefined> = process.env,
   options: SharedAiConfigOptions,
 ): SharedAiConfig => {
-  const requestedProvider = getRequestedProvider(env, options)
+  // Prefer user-installed local model config (.pistola-ai.local.json) over bare env.
+  const effectiveEnv = applyInstalledAiConfigToEnv(env)
+
+  const requestedProvider = getRequestedProvider(effectiveEnv, options)
   const openRouterApiKey =
-    readEnvValue(env.OPENROUTER_API_KEY) ??
+    readEnvValue(effectiveEnv.OPENROUTER_API_KEY) ??
     (options.legacyOpenRouterApiKeyEnvVar
-      ? readEnvValue(env[options.legacyOpenRouterApiKeyEnvVar])
+      ? readEnvValue(effectiveEnv[options.legacyOpenRouterApiKeyEnvVar])
       : undefined)
 
   const openRouterConfig = openRouterApiKey
     ? ({
         provider: 'openrouter',
         apiKey: openRouterApiKey,
-        model: readEnvValue(env[options.modelEnvVar]) ?? options.openRouterModelDefault,
-        serverUrl: normalizeOpenRouterServerUrl(env[options.baseUrlEnvVar]),
+        model: readEnvValue(effectiveEnv[options.modelEnvVar]) ?? options.openRouterModelDefault,
+        serverUrl: normalizeOpenRouterServerUrl(effectiveEnv[options.baseUrlEnvVar]),
         httpReferer: options.httpRefererEnvVar
-          ? readEnvValue(env[options.httpRefererEnvVar])
+          ? readEnvValue(effectiveEnv[options.httpRefererEnvVar])
           : undefined,
         title: options.titleEnvVar
-          ? readEnvValue(env[options.titleEnvVar]) ?? options.openRouterTitleDefault
+          ? readEnvValue(effectiveEnv[options.titleEnvVar]) ?? options.openRouterTitleDefault
           : options.openRouterTitleDefault,
       } satisfies SharedOpenRouterConfig)
     : null
 
-  const openAiApiKey = readEnvValue(env.OPENAI_API_KEY)
+  const openAiApiKey = readEnvValue(effectiveEnv.OPENAI_API_KEY)
   const openAiConfig = openAiApiKey
     ? ({
         provider: 'openai',
         apiKey: openAiApiKey,
-        model: readEnvValue(env[options.modelEnvVar]) ?? options.openAiModelDefault,
-        responsesUrl: readEnvValue(env[options.baseUrlEnvVar]) ?? DEFAULT_OPENAI_RESPONSES_URL,
+        model: readEnvValue(effectiveEnv[options.modelEnvVar]) ?? options.openAiModelDefault,
+        responsesUrl: readEnvValue(effectiveEnv[options.baseUrlEnvVar]) ?? DEFAULT_OPENAI_RESPONSES_URL,
       } satisfies SharedOpenAiConfig)
     : null
 
@@ -198,7 +202,7 @@ export const getSharedAiConfig = (
 }
 
 export const cleanJsonString = (raw: string): string => {
-  const trimmed = raw.trim()
+  let trimmed = raw.trim()
 
   const codeBlockMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
   if (codeBlockMatch?.[1]) {
@@ -208,6 +212,10 @@ export const cleanJsonString = (raw: string): string => {
   const innerCodeBlock = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
   if (innerCodeBlock?.[1]) {
     return innerCodeBlock[1].trim()
+  }
+
+  if (trimmed.startsWith('```')) {
+    trimmed = trimmed.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim()
   }
 
   const firstBrace = trimmed.indexOf('{')

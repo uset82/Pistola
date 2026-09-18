@@ -4,7 +4,18 @@ const CadPlanPoint = z.tuple([z.number(), z.number()])
 const CadPlanRecord = z.record(z.string(), z.unknown())
 
 export const CadEntitySpecSchema = z.object({
-  type: z.enum(['line', 'rectangle', 'circle', 'arc', 'polyline']),
+  type: z.enum([
+    'line',
+    'rectangle',
+    'circle',
+    'arc',
+    'polyline',
+    'heart',
+    'board',
+    'airfoil',
+    'ellipse',
+    'bspline',
+  ]),
   points: z.array(CadPlanPoint).default([]),
   params: CadPlanRecord.default({}),
 })

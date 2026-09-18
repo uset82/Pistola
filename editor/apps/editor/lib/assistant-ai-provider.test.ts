@@ -27,6 +27,7 @@ import {
 } from './assistant-ai-provider'
 import {
   assistantAcceptanceFixtures,
+  assistantAgenticOperatorFixtures,
   assistantCommandVisionFixtures,
   assistantSurfaceSourceFixtures,
 } from './assistant-acceptance-fixtures'
@@ -3199,6 +3200,92 @@ test('createAssistantTurnResult routes replace commands through a deterministic 
   assert.equal(result.turn.requiresReview, true)
 })
 
+test('createAssistantTurnResult does not match a catalog tag inside a longer prompt word', async () => {
+  let remotePlannerCalled = false
+
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'add a 4m x 4m room with walls',
+      context: {
+        selection: {
+          levelId: 'level_0',
+          selectedIds: [],
+        },
+        sceneSummary: [{ id: 'level_0', type: 'level', name: null, level: 0, childIds: [] }],
+        catalog: [
+          {
+            id: 'cube',
+            name: 'Cube',
+            category: 'furniture',
+            attachTo: null,
+            tags: ['floor', 'primitive'],
+          },
+          {
+            id: 'ev-wall-charger',
+            name: 'Ev-wall-charger',
+            category: 'appliance',
+            attachTo: 'wall',
+            tags: ['wall', 'garage'],
+          },
+          { id: 'door', name: 'Door', category: 'door', attachTo: 'wall', tags: ['wall'] },
+        ],
+      },
+    },
+    {
+      ...NO_CODEX_AUTH,
+      OPENROUTER_API_KEY: 'openrouter-key',
+    },
+    {
+      requestOpenRouterTurn: async () => {
+        remotePlannerCalled = true
+        return JSON.stringify({
+          reply: 'I can create a rectangular room with walls.',
+          mode: 'plan',
+          assumptions: [],
+          ambiguities: [],
+          actions: [],
+          requiresReview: false,
+          destructiveActionCount: 0,
+        })
+      },
+    },
+  )
+
+  // "wall" is a tag on several catalog items, but the prompt says "walls" — a
+  // different word describing the room's construction. Substring matching used
+  // to read this as a request to place the first wall-mounted asset and never
+  // consult the planner at all.
+  assert.doesNotMatch(JSON.stringify(result.turn.actions), /ev-wall-charger/)
+  assert.equal(remotePlannerCalled, true)
+})
+
+test('createAssistantTurnResult still matches an explicitly named catalog item', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'add a sofa',
+      context: {
+        selection: {
+          levelId: 'level_0',
+          selectedIds: [],
+        },
+        sceneSummary: [{ id: 'level_0', type: 'level', name: null, level: 0, childIds: [] }],
+        catalog: [
+          {
+            id: 'sofa',
+            name: 'Sofa',
+            category: 'furniture',
+            attachTo: null,
+            tags: ['seating', 'couch'],
+          },
+        ],
+      },
+    },
+    {},
+  )
+
+  assert.match(JSON.stringify(result.turn.actions), /"assetId":"sofa"/)
+})
+
 test('createAssistantTurnResult routes reset-style level cleanup prompts deterministically', async () => {
   const result = await createAssistantTurnResult(
     {
@@ -3461,3 +3548,42 @@ for (const fixture of assistantSurfaceSourceFixtures) {
     }
   })
 }
+
+test('assistantAgenticOperatorFixtures corpus provides 30+ fixtures across all required categories and languages', () => {
+  assert.ok(
+    assistantAgenticOperatorFixtures.length >= 30,
+    `expected >= 30 fixtures, got ${assistantAgenticOperatorFixtures.length}`,
+  )
+
+  const ids = new Set<string>()
+  const categories = new Set<string>()
+  const languages = new Set<string>()
+
+  for (const fixture of assistantAgenticOperatorFixtures) {
+    assert.ok(!ids.has(fixture.id), `duplicate fixture ID: ${fixture.id}`)
+    ids.add(fixture.id)
+    assert.ok(fixture.prompt.trim().length > 0, `empty prompt for fixture ${fixture.id}`)
+    assert.ok(fixture.category, `missing category for fixture ${fixture.id}`)
+    assert.ok(fixture.baselineFailureClass, `missing baseline failure class for ${fixture.id}`)
+    categories.add(fixture.category)
+    languages.add(fixture.language)
+  }
+
+  const requiredCategories = [
+    'general-object',
+    'compound-assembly',
+    'appearance',
+    'inspection',
+    'observation-build',
+    'asset-import',
+    'camera-focus',
+    'unsupported',
+  ]
+
+  for (const cat of requiredCategories) {
+    assert.ok(categories.has(cat), `missing required category: ${cat}`)
+  }
+
+  assert.ok(languages.has('en'), 'missing English fixtures')
+  assert.ok(languages.has('es'), 'missing Spanish fixtures')
+})

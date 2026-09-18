@@ -47,7 +47,7 @@ const getMaterialForOriginal = (original: Material): MeshStandardNodeMaterial =>
   return defaultMaterial
 }
 
-const isProceduralItem = (node: ItemNode) => node.asset.primitive === 'box'
+const isProceduralItem = (node: ItemNode) => Boolean(node.asset.primitive)
 
 export const ItemRenderer = ({ node }: { node: ItemNode }) => {
   const ref = useRef<Group>(null!)
@@ -122,6 +122,9 @@ const ProceduralItemRenderer = ({ node }: { node: ItemNode }) => {
     return () => useInteractive.getState().removeItem(node.id)
   }, [node.id])
 
+  const primitive = node.asset.primitive || 'box'
+  const [w, h, d] = node.asset.dimensions
+
   return (
     <group
       position={node.asset.offset}
@@ -129,10 +132,20 @@ const ProceduralItemRenderer = ({ node }: { node: ItemNode }) => {
       scale={multiplyScales(node.asset.scale || [1, 1, 1], node.scale || [1, 1, 1])}
       {...handlers}
     >
-      <mesh castShadow material={material} position-y={node.asset.dimensions[1] / 2} receiveShadow>
-        <boxGeometry
-          args={[node.asset.dimensions[0], node.asset.dimensions[1], node.asset.dimensions[2]]}
-        />
+      <mesh castShadow material={material} position-y={h / 2} receiveShadow>
+        {primitive === 'sphere' ? (
+          <sphereGeometry args={[w / 2, 32, 16]} />
+        ) : primitive === 'cylinder' ? (
+          <cylinderGeometry args={[w / 2, (d || w) / 2, h, 32]} />
+        ) : primitive === 'cone' ? (
+          <coneGeometry args={[w / 2, h, 32]} />
+        ) : primitive === 'torus' ? (
+          <torusGeometry args={[w / 2, Math.max(0.02, h / 4), 16, 48]} />
+        ) : primitive === 'capsule' ? (
+          <capsuleGeometry args={[w / 2, Math.max(0.01, h - w), 16, 32]} />
+        ) : (
+          <boxGeometry args={[w, h, d]} />
+        )}
       </mesh>
     </group>
   )

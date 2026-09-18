@@ -1,0 +1,374 @@
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import threading
+from pathlib import Path
+from typing import Callable
+
+from mac_runtime import (
+    DEFAULT_OPENROUTER_BASE,
+    DEFAULT_OPENROUTER_MODEL,
+    INSTALL_HINT,
+    build_mac_spawn_env,
+    read_env,
+    resolve_installed_ai_config,
+    resolve_mac_python,
+    resolve_mac_root,
+)
+from schemas import MacArtifactRefs, MacJobResult, MacJobResultPayload
+
+ARTIFACT_URL_PREFIX = "/v1/mac/artifacts"
+
+
+def _artifact_url(job_id: str, filename: str) -> str:
+    return f"{ARTIFACT_URL_PREFIX}/{job_id}/{filename}"
+
+
+def _write_mock_artifacts(job_dir: Path, prompt: str) -> MacArtifactRefs:
+    """Create placeholder artifacts so the import path can be exercised without MAC."""
+    job_dir.mkdir(parents=True, exist_ok=True)
+    step_path = job_dir / "part.step"
+    glb_path = job_dir / "part.glb"
+    code_path = job_dir / "temp_design_0.py"
+    measurements_path = job_dir / "temp_measurements_0.json"
+
+    # Minimal ASCII STEP solid (unit box) for downstream import tooling.
+    step_path.write_text(
+        "ISO-10303-21;\n"
+        "HEADER;\n"
+        "FILE_DESCRIPTION(('Pistola MAC mock'),'2;1');\n"
+        "FILE_NAME('part.step','2026-01-01',('pistola'),('pistola'),"
+        "'','','');\n"
+        "FILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\n"
+        "ENDSEC;\n"
+        "DATA;\n"
+        "ENDSEC;\n"
+        "END-ISO-10303-21;\n",
+        encoding="utf-8",
+    )
+    # Tiny GLB-looking placeholder bytes; FreeCAD import uses STEP primarily.
+    glb_path.write_bytes(b"glTF")
+    code_path.write_text(
+        f'# Mock MAC output for: {prompt}\nfrom build123d import *\n\nprint("mock")\n',
+        encoding="utf-8",
+    )
+    measurements_path.write_text(json.dumps({"mock": True, "prompt": prompt}), encoding="utf-8")
+
+    return MacArtifactRefs(
+        previewUrl=_artifact_url(job_dir.name, glb_path.name),
+        cadUrl=_artifact_url(job_dir.name, step_path.name),
+        stlUrl=None,
+        codeUrl=_artifact_url(job_dir.name, code_path.name),
+        measurementsUrl=_artifact_url(job_dir.name, measurements_path.name),
+        previewArtifactRef=str(glb_path.resolve()),
+        cadArtifactRef=str(step_path.resolve()),
+        codeArtifactRef=str(code_path.resolve()),
+    )
+
+
+def _find_latest(job_dir: Path, patterns: list[str]) -> Path | None:
+    matches: list[Path] = []
+    for pattern in patterns:
+        matches.extend(job_dir.glob(pattern))
+        matches.extend(job_dir.rglob(pattern))
+    files = [path for path in matches if path.is_file()]
+    if not files:
+        return None
+    files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return files[0]
+
+
+def _collect_artifacts(job_id: str, job_dir: Path) -> MacArtifactRefs:
+    step = _find_latest(job_dir, ["*.step", "*.stp", "temp_output_*.step"])
+    stl = _find_latest(job_dir, ["*.stl", "temp_output_*.stl"])
+    glb = _find_latest(job_dir, ["*.glb", "*.gltf"])
+    code = _find_latest(job_dir, ["temp_design_*.py", "*.py"])
+    measurements = _find_latest(job_dir, ["temp_measurements_*.json"])
+
+    # Prefer copying canonical names into the job root for stable URLs.
+    cad_name = "part.step"
+    preview_name = "part.glb"
+    code_name = "design.py"
+    measurements_name = "measurements.json"
+    stl_name = "part.stl"
+
+    if step:
+        target = job_dir / cad_name
+        if step.resolve() != target.resolve():
+            shutil.copy2(step, target)
+        step = target
+    if glb:
+        target = job_dir / preview_name
+        if glb.resolve() != target.resolve():
+            shutil.copy2(glb, target)
+        glb = target
+    if stl:
+        target = job_dir / stl_name
+        if stl.resolve() != target.resolve():
+            shutil.copy2(stl, target)
+        stl = target
+    if code:
+        target = job_dir / code_name
+        if code.resolve() != target.resolve():
+            shutil.copy2(code, target)
+        code = target
+    if measurements:
+        target = job_dir / measurements_name
+        if measurements.resolve() != target.resolve():
+            shutil.copy2(measurements, target)
+        measurements = target
+
+    return MacArtifactRefs(
+        previewUrl=_artifact_url(job_id, preview_name) if glb else None,
+        cadUrl=_artifact_url(job_id, cad_name) if step else None,
+        stlUrl=_artifact_url(job_id, stl_name) if stl else None,
+        codeUrl=_artifact_url(job_id, code_name) if code else None,
+        measurementsUrl=_artifact_url(job_id, measurements_name) if measurements else None,
+        previewArtifactRef=str(glb.resolve()) if glb else None,
+        cadArtifactRef=str(step.resolve()) if step else None,
+        stlArtifactRef=str(stl.resolve()) if stl else None,
+        codeArtifactRef=str(code.resolve()) if code else None,
+    )
+
+
+def _write_bootstrap(job_dir: Path, prompt: str, model: str, base_url: str) -> Path:
+    """Bootstrap that patches MAC config without editing the tracked config.py."""
+    bootstrap = job_dir / "_pistola_mac_bootstrap.py"
+    bootstrap.write_text(
+        f'''# Auto-generated by Pistola mac-helper. Do not commit.
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+MAC_ROOT = Path(os.environ["PISTOLA_MAC_ROOT"]).resolve()
+JOB_DIR = Path(os.environ["PISTOLA_MAC_JOB_DIR"]).resolve()
+sys.path.insert(0, str(MAC_ROOT))
+os.chdir(JOB_DIR)
+
+import multi_agent_cad.config as config
+
+config.USER_REQUEST = {prompt!r}
+config.DS_BASE_URL = {base_url!r}
+config.SPEC_PLANNER_MODEL = {model!r}
+config.ARCHITECT_MODEL = {model!r}
+config.CODER_MODEL = {model!r}
+config.REPAIR_MODEL = {model!r}
+config.JUDGE_MODEL = {model!r}
+config.AIDER_MODEL = "openai/" + {model!r}
+config.SPEC_PLANNER_KWARGS = {{}}
+config.ARCHITECT_KWARGS = {{}}
+config.CODER_KWARGS = {{}}
+config.REPAIR_KWARGS = {{}}
+config.JUDGE_KWARGS = {{}}
+config.JUDGE_MULTIMODAL = "never"
+config.SPEC_PLANNER_MULTIMODAL = "never"
+config.WORKFLOW_ID = "original"
+
+# Clear request-blind caches for this isolated job.
+cache_dir = JOB_DIR / "pipeline_cache"
+cache_dir.mkdir(parents=True, exist_ok=True)
+for name in ("cad_brief.json", "architect_plan.json"):
+    path = cache_dir / name
+    if path.exists():
+        path.unlink()
+
+from multi_agent_cad.graph import main
+
+if __name__ == "__main__":
+    main()
+''',
+        encoding="utf-8",
+    )
+    return bootstrap
+
+
+def run_mac_job_sync(
+    *,
+    job_id: str,
+    prompt: str,
+    job_dir: Path,
+    on_status: Callable[[str], None] | None = None,
+) -> MacJobResult:
+    runtime_mode = (read_env("PISTOLA_MAC_HELPER_RUNTIME") or "python").lower()
+    warnings: list[str] = []
+
+    if on_status:
+        on_status("running")
+
+    if runtime_mode == "mock":
+        artifacts = _write_mock_artifacts(job_dir, prompt)
+        return MacJobResult(
+            jobId=job_id,
+            status="succeeded",
+            warnings=["MAC helper ran in mock mode. Install Multi-Agent-CAD for real geometry."],
+            result=MacJobResultPayload(
+                prompt=prompt,
+                mode="part",
+                qaSummary="Mock job completed.",
+                warnings=warnings,
+                artifacts=artifacts,
+                metadata={"engine": "mac-mock"},
+            ),
+        )
+
+    mac_root = resolve_mac_root()
+    python_path = resolve_mac_python(mac_root)
+    ai = resolve_installed_ai_config()
+
+    if mac_root is None or python_path is None:
+        return MacJobResult(
+            jobId=job_id,
+            status="failed",
+            error=f"MAC is not installed or configured. {INSTALL_HINT}",
+        )
+    if not ai.get("apiKey"):
+        return MacJobResult(
+            jobId=job_id,
+            status="failed",
+            error=(
+                "OpenRouter is not configured. Set OPENROUTER_API_KEY or install a model "
+                "via Settings / pistola_configure_model."
+            ),
+        )
+
+    model = ai.get("model") or DEFAULT_OPENROUTER_MODEL
+    base_url = (ai.get("baseUrl") or DEFAULT_OPENROUTER_BASE).rstrip("/")
+    job_dir.mkdir(parents=True, exist_ok=True)
+    bootstrap = _write_bootstrap(job_dir, prompt, model, base_url)
+
+    env = build_mac_spawn_env()
+    env["PISTOLA_MAC_ROOT"] = str(mac_root)
+    env["PISTOLA_MAC_JOB_DIR"] = str(job_dir.resolve())
+    env["PISTOLA_MAC_JOB_ID"] = job_id
+
+    timeout_seconds = int(read_env("PISTOLA_MAC_JOB_TIMEOUT_SECONDS") or "1800")
+    log_path = job_dir / "mac_run.log"
+
+    try:
+        with log_path.open("w", encoding="utf-8") as log_file:
+            completed = subprocess.run(
+                [python_path, str(bootstrap)],
+                cwd=str(job_dir),
+                env=env,
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                timeout=timeout_seconds,
+                check=False,
+            )
+    except subprocess.TimeoutExpired:
+        return MacJobResult(
+            jobId=job_id,
+            status="failed",
+            error=f"MAC job timed out after {timeout_seconds} seconds.",
+        )
+    except OSError as error:
+        return MacJobResult(
+            jobId=job_id,
+            status="failed",
+            error=f"Failed to start MAC python process: {error}. {INSTALL_HINT}",
+        )
+
+    artifacts = _collect_artifacts(job_id, job_dir)
+    if completed.returncode != 0 and not artifacts.cadUrl:
+        log_tail = ""
+        if log_path.is_file():
+            text = log_path.read_text(encoding="utf-8", errors="replace")
+            log_tail = text[-2000:]
+        return MacJobResult(
+            jobId=job_id,
+            status="failed",
+            error=(
+                f"MAC process exited with code {completed.returncode}. "
+                f"{log_tail or INSTALL_HINT}"
+            ),
+            warnings=warnings,
+            result=MacJobResultPayload(
+                prompt=prompt,
+                mode="part",
+                artifacts=artifacts,
+                metadata={"exitCode": completed.returncode, "logPath": str(log_path)},
+            ),
+        )
+
+    if not artifacts.cadUrl:
+        warnings.append("MAC finished without a STEP artifact. Check mac_run.log in the job directory.")
+
+    qa_summary = None
+    missed = _find_latest(job_dir, ["temp_missed_*.json"])
+    if missed and missed.is_file():
+        try:
+            qa_summary = missed.read_text(encoding="utf-8", errors="replace")[:2000]
+        except OSError:
+            qa_summary = None
+
+    return MacJobResult(
+        jobId=job_id,
+        status="succeeded" if artifacts.cadUrl else "failed",
+        warnings=warnings,
+        error=None if artifacts.cadUrl else "MAC did not produce a STEP artifact.",
+        result=MacJobResultPayload(
+            prompt=prompt,
+            mode="part",
+            qaSummary=qa_summary,
+            warnings=warnings,
+            artifacts=artifacts,
+            metadata={
+                "engine": "mac-build123d",
+                "model": model,
+                "macRoot": str(mac_root),
+                "exitCode": completed.returncode,
+            },
+        ),
+    )
+
+
+class MacJobManager:
+    def __init__(self, artifact_dir: Path) -> None:
+        self.artifact_dir = artifact_dir
+        self.artifact_dir.mkdir(parents=True, exist_ok=True)
+        self.jobs: dict[str, MacJobResult] = {}
+        self._lock = threading.Lock()
+
+    def create(self, job_id: str, prompt: str, session_id: str | None = None) -> MacJobResult:
+        job_dir = self.artifact_dir / job_id
+        job_dir.mkdir(parents=True, exist_ok=True)
+        pending = MacJobResult(
+            jobId=job_id,
+            status="pending",
+            result=MacJobResultPayload(
+                prompt=prompt,
+                mode="part",
+                metadata={"sessionId": session_id} if session_id else {},
+            ),
+        )
+        with self._lock:
+            self.jobs[job_id] = pending
+
+        def worker() -> None:
+            def on_status(status: str) -> None:
+                with self._lock:
+                    current = self.jobs.get(job_id)
+                    if current:
+                        self.jobs[job_id] = current.model_copy(update={"status": status})  # type: ignore[arg-type]
+
+            result = run_mac_job_sync(
+                job_id=job_id,
+                prompt=prompt,
+                job_dir=job_dir,
+                on_status=on_status,
+            )
+            with self._lock:
+                self.jobs[job_id] = result
+
+        thread = threading.Thread(target=worker, name=f"mac-job-{job_id}", daemon=True)
+        thread.start()
+        return pending
+
+    def get(self, job_id: str) -> MacJobResult | None:
+        with self._lock:
+            return self.jobs.get(job_id)

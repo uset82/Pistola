@@ -26,6 +26,8 @@ type ImplicitTargetDriftCause = {
 }
 
 const nodeCreatingActionTypes = new Set<AssistantAction['type']>([
+  'create_site',
+  'create_building',
   'create_level',
   'create_wall',
   'create_zone',
@@ -52,6 +54,7 @@ const implicitTargetDriftActionTypes = new Set<AssistantAction['type']>([
   'reset_workspace_selection',
   'focus_building',
   'focus_level',
+  'focus_camera_on_nodes',
   'select_nodes',
   'reposition_target',
   'run_cad_prompt',
@@ -152,6 +155,23 @@ const collectReferencedIds = (action: AssistantAction): string[] => {
       appendId(ids, action.targetBodyId)
       appendId(ids, action.toolBodyId)
       break
+    case 'create_building':
+      appendId(ids, action.siteId)
+      break
+    case 'focus_camera_on_nodes':
+      appendIds(ids, action.nodeIds)
+      break
+    case 'add_cad_sketch_entities':
+    case 'set_cad_sketch_plane':
+      appendId(ids, action.sketchId)
+      break
+    case 'reparent_node':
+      appendId(ids, action.nodeId)
+      appendId(ids, action.newParentId)
+      break
+    case 'set_node_metadata':
+      appendId(ids, action.nodeId)
+      break
     default:
       break
   }
@@ -169,6 +189,8 @@ const actionUsesImplicitTarget = (action: AssistantAction) => {
     case 'duplicate_reposition_target':
     case 'delete_target':
       return !action.nodeId
+    case 'create_building':
+      return !action.siteId
     case 'create_level':
       return !action.buildingId
     case 'create_wall':
@@ -187,6 +209,8 @@ const actionUsesImplicitTarget = (action: AssistantAction) => {
     case 'update_cad_sketch_dimension':
     case 'extrude_cad_sketch':
     case 'revolve_cad_sketch':
+    case 'add_cad_sketch_entities':
+    case 'set_cad_sketch_plane':
       return !action.sketchId
     case 'regenerate_cad_body':
     case 'retry_cad_body':

@@ -1,4 +1,4 @@
-import { CadBriefSchema } from '../../../../core/src/schema/cad-brief'
+import { CadBriefSchema } from '@pascal-app/core/schema/cad-brief'
 import { z } from 'zod'
 import { assistantToolValues } from './tool-surface'
 
@@ -100,6 +100,7 @@ export const assistantActionTypeValues = [
   'clear_level_contents',
   'execute_cad_brief',
   'run_cad_prompt',
+  'generate_mac_part',
   'create_default_cad_sketch',
   'extrude_cad_sketch',
   'revolve_cad_sketch',
@@ -113,6 +114,13 @@ export const assistantActionTypeValues = [
   'extrude_cad_body_face',
   'shell_cad_body',
   'export_cad_body_step',
+  'create_site',
+  'create_building',
+  'focus_camera_on_nodes',
+  'add_cad_sketch_entities',
+  'set_cad_sketch_plane',
+  'reparent_node',
+  'set_node_metadata',
 ] as const
 export const assistantSafeImmediateActionTypes = [
   'reset_workspace_selection',
@@ -145,6 +153,9 @@ export const assistantSafeImmediateActionTypes = [
   'focus_level',
   'select_nodes',
   'reposition_target',
+  'focus_camera_on_nodes',
+  'set_cad_sketch_plane',
+  'set_node_metadata',
 ] as const
 
 export const assistantDestructiveActionTypes = [
@@ -686,6 +697,10 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     prompt: z.string().min(1),
   }),
   z.object({
+    type: z.literal('generate_mac_part'),
+    prompt: z.string().min(1),
+  }),
+  z.object({
     type: z.literal('create_default_cad_sketch'),
     position: AssistantPoint3Schema.optional(),
   }),
@@ -753,6 +768,40 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('export_cad_body_step'),
     bodyId: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('create_site'),
+    name: z.string().min(1).optional(),
+  }),
+  z.object({
+    type: z.literal('create_building'),
+    siteId: z.string().optional(),
+    name: z.string().min(1).optional(),
+  }),
+  z.object({
+    type: z.literal('focus_camera_on_nodes'),
+    nodeIds: z.array(z.string()).min(1),
+  }),
+  z.object({
+    type: z.literal('add_cad_sketch_entities'),
+    sketchId: z.string().optional(),
+    entities: z.array(z.record(z.string(), z.unknown())).min(1),
+  }),
+  z.object({
+    type: z.literal('set_cad_sketch_plane'),
+    sketchId: z.string().optional(),
+    plane: AssistantCadWorkplaneSchema,
+  }),
+  z.object({
+    type: z.literal('reparent_node'),
+    nodeId: z.string(),
+    newParentId: z.string(),
+  }),
+  z.object({
+    type: z.literal('set_node_metadata'),
+    nodeId: z.string(),
+    key: z.string().min(1),
+    value: z.union([z.string(), z.number(), z.boolean()]),
   }),
 ])
 

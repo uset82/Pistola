@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "build:sites": "bun run --cwd=apps/sites build",
+    "smoke:sites": "node ./scripts/sites-static-smoke.mjs",
     "dev": "turbo run dev --env-mode=loose --filter=!@pascal-app/cad-helper",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",

@@ -40,6 +40,7 @@ import {
   type AssistantActionSequenceIssue,
   validateAssistantActionSequence,
 } from '../../../packages/editor/src/lib/assistant/sequence-validation'
+import { findMatchingRecipe } from '../../../packages/editor/src/lib/assistant/recipes/creation-recipes'
 import {
   AiProviderError,
   cleanJsonString,
@@ -51,6 +52,7 @@ import {
   type SharedOpenAiConfig,
   type SharedOpenRouterConfig,
 } from './ai-provider-shared'
+import { applyInstalledAiConfigToEnv } from './installed-ai-config'
 import { shapeAssistantPlanningContext } from './ai-context-shaping'
 import {
   AssistantChatModeSchema,
@@ -89,9 +91,9 @@ const DEFAULT_CODEX_REASONING_EFFORT = 'medium'
 const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-5.4'
 const DEFAULT_OPENROUTER_TITLE = 'Pistola'
 const OPENAI_ASSISTANT_TIMEOUT_MS = 60_000
-const OPENROUTER_ASSISTANT_TIMEOUT_MS = 60_000
-const REMOTE_ASSISTANT_CHAT_TIMEOUT_MS = 45_000
-const COMPLEX_ASSISTANT_TIMEOUT_MS = 90_000
+const OPENROUTER_ASSISTANT_TIMEOUT_MS = 300_000
+const REMOTE_ASSISTANT_CHAT_TIMEOUT_MS = 180_000
+const COMPLEX_ASSISTANT_TIMEOUT_MS = 300_000
 const LOCAL_ASSISTANT_MODEL = 'deterministic-local'
 const GEMINI_ASSISTANT_MODEL = 'gemini-2.5-flash'
 
@@ -432,6 +434,27 @@ const ASSISTANT_ACTION_GUIDE = [
     },
   },
   { type: 'export_cad_body_step', shape: { type: 'export_cad_body_step', bodyId: 'cad_body_id optional if selected' } },
+  { type: 'create_site', shape: { type: 'create_site', name: 'Site name optional' } },
+  { type: 'create_building', shape: { type: 'create_building', siteId: 'site_id optional', name: 'Building name optional' } },
+  { type: 'focus_camera_on_nodes', shape: { type: 'focus_camera_on_nodes', nodeIds: ['node_id_1', 'node_id_2'] } },
+  {
+    type: 'add_cad_sketch_entities',
+    shape: {
+      type: 'add_cad_sketch_entities',
+      sketchId: 'cad_sketch_id optional if active sketch should be used',
+      entities: [{ kind: 'rectangle|circle|line|arc|polyline' }],
+    },
+  },
+  {
+    type: 'set_cad_sketch_plane',
+    shape: {
+      type: 'set_cad_sketch_plane',
+      sketchId: 'cad_sketch_id optional if active sketch should be used',
+      plane: enumShape(assistantCadWorkplaneValues),
+    },
+  },
+  { type: 'reparent_node', shape: { type: 'reparent_node', nodeId: 'node_id', newParentId: 'new_parent_id' } },
+  { type: 'set_node_metadata', shape: { type: 'set_node_metadata', nodeId: 'node_id', key: 'status', value: 'approved' } },
 ] as const
 
 const ASSISTANT_PLANNING_EXAMPLES = [
@@ -972,7 +995,8 @@ Action field constraints (use only these exact values):
 - activate_tool: catalogCategory, when used, must be one of ${assistantCatalogCategoryValues.map((v) => `'${v}'`).join(', ')}
 Any mutating scene plan must require review before execution.
 Use catalog item ids exactly as provided in the workspace context.
-Use execute_cad_brief for general CAD generation requests so the assistant returns a structured CAD brief instead of a second planner request. Use run_cad_prompt only as a backward-compatible internal macro when you genuinely cannot translate the request into direct CAD/body actions, and never emit run_cad_prompt when assistantSession.cadMacroExpansion is true. Use extrude_cad_sketch or revolve_cad_sketch only when the user explicitly asks to operate on the active or selected CAD sketch.
+Available procedural primitives for place_item: primitive-box, primitive-sphere, primitive-cylinder, primitive-cone, primitive-torus, primitive-capsule, primitive-wedge. Use them to construct compound assemblies (robots, vehicles, airplanes, furniture) when an explicit catalog model does not exist.
+Use execute_cad_brief for FreeCAD interactive prismatic CAD (sketches, extrudes, simple solids) so the assistant returns a structured CAD brief. Use generate_mac_part for standalone mechanical / printable parts that need Multi-Agent-CAD (mechanisms, complex solids, print-in-place, geneva, gears, cages). Prefer generate_mac_part when the user asks for a complete engineered part rather than a sketch-based edit. Use run_cad_prompt only as a backward-compatible internal macro when you genuinely cannot translate the request into direct CAD/body actions, and never emit run_cad_prompt when assistantSession.cadMacroExpansion is true. Use extrude_cad_sketch or revolve_cad_sketch only when the user explicitly asks to operate on the active or selected CAD sketch.
 If the user provides an image and asks to recreate, approximate, furnish, or model something buildable, return an executable plan or a clarification when geometry is blocked. Do not force image requests into chat-only responses.
 Prefer editable approximations over fake precision when the exact asset or geometry is unavailable.
 If the user asks for a vague aesthetic change such as "nice entrance", ask clarifying questions instead of mutating the scene.
@@ -1422,6 +1446,27 @@ const getPlacementTargetId = (
   return null
 }
 
+/**
+ * Matches a normalized catalog term against a normalized prompt on whole-word
+ * boundaries.
+ *
+ * Both sides are already lowercase, space-separated word sequences (see
+ * `normalizeSearchValue`), so this compares word by word rather than by raw
+ * substring. Substring matching made short tags match inside unrelated words:
+ * the tag "wall" matched the "walls" in "add a 4m x 4m room with walls", which
+ * resolved a room-building request to the first wall-mounted catalog item.
+ */
+const matchesNormalizedTerm = (normalizedPrompt: string, term: string) => {
+  const termWords = term.split(' ').filter(Boolean)
+  if (termWords.length === 0) return false
+
+  const promptWords = normalizedPrompt.split(' ').filter(Boolean)
+
+  return promptWords.some((_, start) =>
+    termWords.every((termWord, offset) => promptWords[start + offset] === termWord),
+  )
+}
+
 const scoreCatalogItemMatch = (
   item: AssistantCatalogItemContext,
   normalizedPrompt: string,
@@ -1431,14 +1476,14 @@ const scoreCatalogItemMatch = (
   const categoryTerm = normalizeSearchValue(item.category)
   const tagTerms = item.tags.map(normalizeSearchValue).filter(Boolean)
   const matchedTerms = [idTerm, nameTerm, categoryTerm, ...tagTerms].filter(
-    (term) => term.length >= 3 && normalizedPrompt.includes(term),
+    (term) => term.length >= 3 && matchesNormalizedTerm(normalizedPrompt, term),
   )
 
   if (matchedTerms.length === 0) return -1
 
   const bestLength = Math.max(...matchedTerms.map((term) => term.length))
-  const exactIdBoost = normalizedPrompt.includes(idTerm) ? 40 : 0
-  const exactNameBoost = normalizedPrompt.includes(nameTerm) ? 30 : 0
+  const exactIdBoost = matchesNormalizedTerm(normalizedPrompt, idTerm) ? 40 : 0
+  const exactNameBoost = matchesNormalizedTerm(normalizedPrompt, nameTerm) ? 30 : 0
   const tagBoost = matchedTerms.some((term) => tagTerms.includes(term)) ? 10 : 0
 
   return bestLength + exactIdBoost + exactNameBoost + tagBoost
@@ -3363,6 +3408,29 @@ const buildDeterministicAssistantTurn = (
   )
   if (pendingBoxFollowUpTurn) return pendingBoxFollowUpTurn
 
+  const matchingRecipe = findMatchingRecipe(prompt)
+  if (matchingRecipe) {
+    const requestedDimensions = parsePlanarMetricDimensions(prompt)
+    const actions = matchingRecipe.generateActions({
+      width: requestedDimensions?.width ?? undefined,
+      height: requestedDimensions?.height ?? undefined,
+      depth: requestedDimensions?.depth ?? undefined,
+      position: [0, 0, 0],
+    })
+    return {
+      reply: `I have prepared the plan to build ${matchingRecipe.name}.`,
+      mode: 'plan',
+      assumptions: [
+        `Generated 3D elements for ${matchingRecipe.name}.`,
+        'Positioned at workspace origin.',
+      ],
+      ambiguities: [],
+      actions,
+      requiresReview: false,
+      destructiveActionCount: 0,
+    }
+  }
+
   if (isUnsupportedCreationPrompt(normalizedPrompt)) {
     return buildChatTurn(
       'I cannot create an exact branded, animation-heavy, or highly organic replica in the current editor stack. I can build a simplified editable proxy with similar proportions and layout if you want a nearest buildable fallback.',
@@ -4079,7 +4147,9 @@ const buildDeterministicAssistantTurn = (
     if (isDogHouseAssembly) {
       const nodes = getAssistantNodeRecords(body.context)
       const assemblyNodes = nodes.filter(n => /dog ?house/i.test(n.name ?? '') || n.id === selectedTarget.id)
-      assemblyNodes.forEach(n => moveActions.push({ type: 'move_target', nodeId: n.id, delta }))
+      assemblyNodes.forEach((n) => {
+        moveActions.push({ type: 'move_target', nodeId: n.id, delta })
+      })
     } else {
       moveActions.push({ type: 'move_target', nodeId: selectedTarget.id, delta })
     }
@@ -4523,11 +4593,19 @@ const getAssistantNonCodexAiConfig = (
 export const getAssistantAiConfig = (
   env: Record<string, string | undefined> = process.env,
 ): AssistantAiConfig => {
-  const normalized = normalizeAssistantEnv(env)
+  const effectiveEnv = applyInstalledAiConfigToEnv(env)
+
+  const normalized = normalizeAssistantEnv(effectiveEnv)
   const requestedProvider = readEnvValue(normalized.PISTOLA_ASSISTANT_AI_PROVIDER)?.toLowerCase()
   const apiKey = readEnvValue(normalized.OPENAI_API_KEY)
   const hasCodexAuth = hasCodexAuthCache(normalized)
-  const shouldDefaultToCodex = !requestedProvider && (Boolean(apiKey) || hasCodexAuth)
+  // Installed OpenRouter config wins over Codex default so one model drives the system.
+  const hasInstalledOpenRouter =
+    Boolean(readEnvValue(normalized.OPENROUTER_API_KEY)) &&
+    (requestedProvider === 'openrouter' ||
+      readEnvValue(normalized.PISTOLA_AI_PROVIDER)?.toLowerCase() === 'openrouter')
+  const shouldDefaultToCodex =
+    !requestedProvider && !hasInstalledOpenRouter && (Boolean(apiKey) || hasCodexAuth)
 
   if (requestedProvider === 'codex' || shouldDefaultToCodex) {
     return {
@@ -5133,9 +5211,27 @@ const safeParseTaskPlanSteps = (raw: unknown[]) => {
   return { valid, invalidStepIssues }
 }
 
+const safeJsonParse = (cleaned: string): Record<string, unknown> => {
+  try {
+    return JSON.parse(cleaned)
+  } catch (initialError) {
+    try {
+      const repaired = cleaned
+        .replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '$1')
+        .replace(/,\s*([}\]])/g, '$1')
+        .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":')
+        .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
+      return JSON.parse(repaired)
+    } catch {
+      console.warn('[ai] Failed to parse JSON. Raw output was:', cleaned.slice(0, 500))
+      throw initialError
+    }
+  }
+}
+
 const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
   const cleaned = cleanJsonString(raw)
-  const json = JSON.parse(cleaned)
+  const json = safeJsonParse(cleaned)
   const rawActions = Array.isArray(json?.actions) ? (json.actions as unknown[]) : []
   const rawSteps = Array.isArray(json?.steps) ? (json.steps as unknown[]) : []
   const { valid: parsedActions, invalidActionIssues: parsedInvalidActionIssues } = safeParseActions(rawActions)

@@ -75,6 +75,14 @@ export interface EditorProps {
 
   // Presets storage backend (defaults to localStorage)
   presetsAdapter?: PresetsAdapter
+
+  // Enables CAD controls and the managed CAD runtime. Static hosts can disable
+  // this while still using the browser-based scene editor.
+  enableCad?: boolean
+
+  // Controls the helper-backed FreeCAD runtime separately from the CAD UI.
+  // Static hosts can expose browser-side sketching without requesting local APIs.
+  enableCadRuntime?: boolean
 }
 
 function EditorSceneCrashFallback() {
@@ -119,6 +127,8 @@ export default function Editor({
   settingsPanelProps,
   sitePanelProps,
   presetsAdapter,
+  enableCad = true,
+  enableCadRuntime = true,
 }: EditorProps) {
   useKeyboard()
 
@@ -189,13 +199,15 @@ export default function Editor({
           <ViewerOverlay onBack={() => useEditor.getState().setPreviewMode(false)} />
         ) : (
           <>
-            <ActionMenu />
+            <ActionMenu enableCadRuntime={enableCadRuntime} />
             <PanelManager />
-            <HelperManager />
+            <HelperManager enableCad={enableCad} enableCadRuntime={enableCadRuntime} />
 
             <SidebarProvider className="fixed z-20">
               <AppSidebar
                 appMenuButton={appMenuButton}
+                enableCad={enableCad}
+                enableCadRuntime={enableCadRuntime}
                 settingsPanelProps={settingsPanelProps}
                 sidebarTop={sidebarTop}
                 sitePanelProps={sitePanelProps}
@@ -210,7 +222,7 @@ export default function Editor({
             {!isPreviewMode && <FloatingActionMenu />}
             {!isPreviewMode && <TransformOverlay />}
             <ExportManager />
-            <CadBodyRuntimeSystem />
+            {enableCad && enableCadRuntime && <CadBodyRuntimeSystem />}
             {isPreviewMode ? <ViewerZoneSystem /> : <ZoneSystem />}
             <CeilingSystem />
             {!isPreviewMode && <Grid cellColor="#aaa" fadeDistance={500} sectionColor="#ccc" />}

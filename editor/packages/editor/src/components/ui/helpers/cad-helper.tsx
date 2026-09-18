@@ -8,6 +8,7 @@ import { runAssistantCommand } from '../../../lib/assistant-command-actions'
 import { cn } from '../../../lib/utils'
 import useCad, { cadHelperUnavailableMessage } from '../../../store/use-cad'
 import useEditor from '../../../store/use-editor'
+import { AiModelSettings } from './ai-model-settings'
 
 export function CadHelper() {
   const phase = useEditor((state) => state.phase)
@@ -183,6 +184,8 @@ export function CadHelper() {
       <div className="rounded-lg border border-border/50 bg-black/10 px-3 py-2 text-[11px] text-muted-foreground">
         {selectionSummary}
       </div>
+
+      <AiModelSettings />
 
       {helperStatus === 'error' && (
         <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-[11px] text-red-200">

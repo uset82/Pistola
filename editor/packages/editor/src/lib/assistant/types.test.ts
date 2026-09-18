@@ -77,6 +77,14 @@ test('AssistantActionSchema parses a direct CAD brief execution action', () => {
   assert.equal(isSafeImmediateAssistantActionType(action.type), false)
 })
 
+test('AssistantActionSchema parses a MAC part generation action', () => {
+  const action = AssistantActionSchema.parse({
+    type: 'generate_mac_part',
+    prompt: 'Create a 50x50x6 mm base plate with a 20 mm central hole.',
+  })
+  assert.equal(action.type, 'generate_mac_part')
+})
+
 test('AssistantActionSchema parses CAD sketch refinement actions', () => {
   const deleteConstraint = AssistantActionSchema.parse({
     type: 'delete_cad_sketch_constraint',
@@ -437,3 +445,52 @@ test('AssistantActionSchema parses viewer visibility and camera utility actions'
   assert.equal(isSafeImmediateAssistantActionType(gridAction.type), true)
   assert.equal(isSafeImmediateAssistantActionType(orbitAction.type), true)
 })
+
+test('AssistantActionSchema parses phase 1 gap actions', () => {
+  const siteAction = AssistantActionSchema.parse({
+    type: 'create_site',
+    name: 'Main Site',
+  })
+  const buildingAction = AssistantActionSchema.parse({
+    type: 'create_building',
+    siteId: 'site_1',
+    name: 'Guest House',
+  })
+  const focusCameraAction = AssistantActionSchema.parse({
+    type: 'focus_camera_on_nodes',
+    nodeIds: ['wall_1', 'wall_2'],
+  })
+  const addEntitiesAction = AssistantActionSchema.parse({
+    type: 'add_cad_sketch_entities',
+    sketchId: 'csk_1',
+    entities: [{ kind: 'circle', center: [0, 0], radius: 2 }],
+  })
+  const setPlaneAction = AssistantActionSchema.parse({
+    type: 'set_cad_sketch_plane',
+    sketchId: 'csk_1',
+    plane: 'XZ',
+  })
+  const reparentAction = AssistantActionSchema.parse({
+    type: 'reparent_node',
+    nodeId: 'item_1',
+    newParentId: 'level_1',
+  })
+  const metadataAction = AssistantActionSchema.parse({
+    type: 'set_node_metadata',
+    nodeId: 'item_1',
+    key: 'status',
+    value: 'approved',
+  })
+
+  assert.equal(siteAction.type, 'create_site')
+  assert.equal(buildingAction.type, 'create_building')
+  assert.equal(focusCameraAction.type, 'focus_camera_on_nodes')
+  assert.equal(addEntitiesAction.type, 'add_cad_sketch_entities')
+  assert.equal(setPlaneAction.type, 'set_cad_sketch_plane')
+  assert.equal(reparentAction.type, 'reparent_node')
+  assert.equal(metadataAction.type, 'set_node_metadata')
+  assert.equal(isSafeImmediateAssistantActionType(focusCameraAction.type), true)
+  assert.equal(isSafeImmediateAssistantActionType(setPlaneAction.type), true)
+  assert.equal(isSafeImmediateAssistantActionType(metadataAction.type), true)
+})
+

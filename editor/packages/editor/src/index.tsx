@@ -39,6 +39,8 @@ export {
   type CadAttachmentBodySpec,
   type AssistantWorkspaceContext,
   validateAssistantPlan,
+  executeAgentTool,
+  listCreationRecipes,
 } from './lib/assistant'
 export type { SceneGraph } from './lib/scene'
 export { applySceneGraphToEditor } from './lib/scene'

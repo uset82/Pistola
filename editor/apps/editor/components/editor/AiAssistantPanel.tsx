@@ -60,6 +60,7 @@ import {
   validateAssistantPromptForSubmission,
 } from '../../lib/assistant-panel-prompt'
 import { executeCadBrief } from '../../lib/cad-brief-executor'
+import { generateMacPart } from '../../lib/mac-part-executor'
 import { executeLocalCadIntent } from '../../lib/cad-local-intent'
 import { runAssistantTurnSequence } from '../../lib/assistant-turn-sequence'
 import {
@@ -69,7 +70,17 @@ import {
   type TaskPlan,
 } from '../../lib/assistant-task-plan'
 import { classifyRequestComplexity } from '../../lib/assistant-agent-router'
+import { runAgentTurn } from '../../lib/assistant-agent/run-agent-turn'
 import { AssistantTaskPlanCard } from './AssistantTaskPlanCard'
+
+const isObservationPrompt = (text: string) => {
+  const norm = text.toLowerCase()
+  return (
+    /\b(how (big|many|wide|long|high|tall)|measure|distance|inspect|longest wall|area|perimeter|floor space)\b/i.test(norm) ||
+    /\b(cuanto mide|cuántos|cuantos|mide|distancia|área|dimensiones|espacio libre)\b/i.test(norm) ||
+    /\b(longest wall|pared mas larga|pared más larga)\b/i.test(norm)
+  )
+}
 
 type ExecutionPolicy = 'autopilot' | 'review'
 type AssistantRouteErrorPayload = {
@@ -888,6 +899,12 @@ export function AiAssistantPanel() {
     return result
   }
 
+  const generateMacPartAction = async (prompt: string) => {
+    const result = await generateMacPart(prompt)
+    applyCadExecutionSelection({ bodyIds: result.bodyIds, sketchIds: [] })
+    return { bodyIds: result.bodyIds, jobId: result.jobId }
+  }
+
   const runCadPrompt = async (prompt: string) => {
     const currentNodes = useScene.getState().nodes
     const currentLevelId = useViewer.getState().selection.levelId
@@ -950,6 +967,7 @@ export function AiAssistantPanel() {
       runtime: {
         executeCadBrief: executeCadBriefAction,
         runCadPrompt,
+        generateMacPart: generateMacPartAction,
       },
     })
 
@@ -965,6 +983,12 @@ export function AiAssistantPanel() {
       bodyIds: result.bodyIds,
       sketchIds: result.sketchIds,
     }
+  }
+
+  const assistantRuntime = {
+    executeCadBrief: executeCadBriefAction,
+    runCadPrompt,
+    generateMacPart: generateMacPartAction,
   }
 
   const getAssistantSessionContext = (overrides: Record<string, unknown> = {}) => ({
@@ -1142,7 +1166,7 @@ export function AiAssistantPanel() {
 
     const result = await executeAssistantPlan(nextTurn.actions, {
       reviewConfirmed,
-      runtime: { executeCadBrief: executeCadBriefAction, runCadPrompt },
+      runtime: assistantRuntime,
       onStatus: (event) => {
         if (!isActiveAssistantRequest(requestId)) return
         setExecutionEvents((current) => [...current, event].slice(-8))
@@ -1319,7 +1343,7 @@ export function AiAssistantPanel() {
     }
 
     const completedPlan = await executeTaskPlan(planToRun, {
-      runtime: { executeCadBrief: executeCadBriefAction, runCadPrompt },
+      runtime: assistantRuntime,
       shouldStop: () => stopTaskPlanRef.current,
       onStepStart: (stepIndex, step) => {
         if (!isActiveAssistantRequest(requestId)) return
@@ -1519,6 +1543,52 @@ export function AiAssistantPanel() {
     setStatus('planning')
 
     try {
+      if (isObservationPrompt(prompt)) {
+        setStatus('executing')
+        const snapshot = createAssistantUndoSnapshot(prompt)
+        setLastUndoSnapshot(snapshot)
+
+        const agentResult = await runAgentTurn({
+          prompt,
+          chatMode,
+          image: promptImage,
+          workspaceContext: getAssistantWorkspaceContext(),
+          reviewConfirmed: true,
+          onTimelineEvent: (event) => {
+            if (!isActiveAssistantRequest(requestId)) return
+            const statusEvent: AssistantExecutionStatus = {
+              index: event.round,
+              action: { type: 'select_nodes', nodeIds: [] } as AssistantAction,
+              status:
+                event.status === 'running'
+                  ? 'started'
+                  : event.status === 'completed'
+                    ? 'completed'
+                    : 'failed',
+              message: `[Round ${event.round}] ${event.toolName}: ${event.observation || 'running...'}`,
+            }
+            setExecutionEvents((current) => [...current, statusEvent].slice(-8))
+          },
+        })
+
+        if (!isActiveAssistantRequest(requestId)) return
+        const nextTurn = agentResult.turn
+        setTurn(nextTurn)
+        setMessages((current) => [
+          ...current,
+          {
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            text: nextTurn.reply,
+          },
+        ])
+        setAssistantSessionMemory((current) =>
+          rememberConversationTurn(current, prompt, nextTurn.reply),
+        )
+        setStatus(nextTurn.mode === 'clarify' ? 'clarify' : 'executed')
+        return
+      }
+
       const nextTurn = await requestAssistantTurn({
         prompt,
         image: promptImage,

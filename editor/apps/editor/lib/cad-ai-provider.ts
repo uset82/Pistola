@@ -25,7 +25,7 @@ const DEFAULT_CODEX_REASONING_EFFORT = 'medium'
 const DEFAULT_OPENROUTER_MODEL = 'openrouter/free'
 const DEFAULT_OPENROUTER_TITLE = 'Pistola'
 const OPENAI_CAD_TIMEOUT_MS = 60_000
-const OPENROUTER_CAD_TIMEOUT_MS = 60_000
+const OPENROUTER_CAD_TIMEOUT_MS = 300_000
 const CODEX_CAD_TIMEOUT_MS = 90_000
 
 const cadCodexReasoningEffortValues = ['low', 'medium', 'high', 'xhigh'] as const

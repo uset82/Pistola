@@ -148,7 +148,12 @@ const resolveWindowsPyLauncher = () => {
 
 const resolveDefaultFreecadCmdCandidatePaths = (helperDirectory: string) => {
   const freecadRoot = path.resolve(helperDirectory, '..', '..', 'third_party', 'FreeCAD')
+  const userProfile = process.env.USERPROFILE || ''
   return [
+    path.join(userProfile, 'AppData', 'Local', 'Programs', 'FreeCAD', 'FreeCAD_1.1.3-Windows-x86_64-py311', 'bin', 'freecadcmd.exe'),
+    path.join(userProfile, 'AppData', 'Local', 'Programs', 'FreeCAD', 'bin', 'FreeCADCmd.exe'),
+    'C:\\Program Files\\FreeCAD 1.1\\bin\\FreeCADCmd.exe',
+    'C:\\Program Files\\FreeCAD\\bin\\FreeCADCmd.exe',
     path.join(freecadRoot, 'build', 'release', 'bin', 'FreeCADCmd.exe'),
     path.join(freecadRoot, 'build', 'Release', 'bin', 'FreeCADCmd.exe'),
     path.join(freecadRoot, 'build', 'debug', 'bin', 'FreeCADCmd.exe'),
@@ -291,7 +296,24 @@ const getManagedCadHelperCandidates = (
   }
   ensureFreecadCmdAvailable(helperDirectory)
 
+  const venvCandidates = [
+    path.resolve(cwd, '.venv', 'Scripts', 'python.exe'),
+    path.resolve(cwd, '..', '.venv', 'Scripts', 'python.exe'),
+    path.resolve(cwd, '..', '..', '.venv', 'Scripts', 'python.exe'),
+  ]
+  const venvPython = venvCandidates.find((candidate) => existsSync(candidate))
+
   return [
+    ...(venvPython
+      ? [
+          {
+            command: venvPython,
+            args: ['-m', 'uvicorn', 'main:app', '--host', helperUrlObject.hostname, '--port', helperPort],
+            cwd: helperDirectory,
+            label: 'Python CAD helper (.venv)',
+          },
+        ]
+      : []),
     {
       command: resolveWindowsPyLauncher(),
       args: ['-3', '-m', 'uvicorn', 'main:app', '--host', helperUrlObject.hostname, '--port', helperPort],

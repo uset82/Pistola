@@ -15,6 +15,11 @@
       "types": "./dist/lib/cad-body-transform.d.ts",
       "import": "./dist/lib/cad-body-transform.js",
       "default": "./dist/lib/cad-body-transform.js"
+    },
+    "./schema/cad-brief": {
+      "types": "./dist/schema/cad-brief.d.ts",
+      "import": "./dist/schema/cad-brief.js",
+      "default": "./dist/schema/cad-brief.js"
     }
   },
   "files": [

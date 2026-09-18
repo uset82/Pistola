@@ -57,7 +57,7 @@ const cadToolGroups: CadToolGroup[] = [
   },
 ]
 
-export function CadTools() {
+export function CadTools({ enableCadRuntime = true }: { enableCadRuntime?: boolean }) {
   const activeTool = useEditor((state) => state.tool)
 
   return (
@@ -79,7 +79,9 @@ export function CadTools() {
         <Pointer className="h-4 w-4" />
       </ActionButton>
 
-      {cadToolGroups.map((group, groupIndex) => (
+      {cadToolGroups
+        .filter((group) => enableCadRuntime || group.id !== 'solid')
+        .map((group) => (
         <div className="flex items-center gap-1.5" key={group.id}>
           <div className="mx-1 h-5 w-px bg-border/50" />
           {group.tools.map((tool) => {
@@ -109,7 +111,13 @@ export function CadTools() {
             )
           })}
         </div>
-      ))}
+        ))}
+
+      {!enableCadRuntime ? (
+        <div className="ml-2 whitespace-nowrap text-[10px] text-muted-foreground">
+          Solid tools require the desktop FreeCAD runtime.
+        </div>
+      ) : null}
     </div>
   )
 }

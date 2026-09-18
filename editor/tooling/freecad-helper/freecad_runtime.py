@@ -30,6 +30,10 @@ def _trimmed_env(name: str, env: dict[str, str] | None = None) -> str | None:
 def get_default_freecad_cmd_candidates() -> tuple[Path, ...]:
     freecad_root = Path(__file__).resolve().parents[2] / "third_party" / "FreeCAD"
     return (
+        Path.home() / "AppData" / "Local" / "Programs" / "FreeCAD" / "FreeCAD_1.1.3-Windows-x86_64-py311" / "bin" / "freecadcmd.exe",
+        Path.home() / "AppData" / "Local" / "Programs" / "FreeCAD" / "bin" / "FreeCADCmd.exe",
+        Path("C:/Program Files/FreeCAD 1.1/bin/FreeCADCmd.exe"),
+        Path("C:/Program Files/FreeCAD/bin/FreeCADCmd.exe"),
         freecad_root / "build" / "release" / "bin" / "FreeCADCmd.exe",
         freecad_root / "build" / "Release" / "bin" / "FreeCADCmd.exe",
         freecad_root / "build" / "debug" / "bin" / "FreeCADCmd.exe",
@@ -120,7 +124,7 @@ def _run_freecad_script(
         raise FreeCADRuntimeError(f"FreeCAD bridge script was not found: {script_path}")
 
     process = subprocess.run(
-        [str(freecad_cmd_path), str(script_path), *(args or []), str(output_path)],
+        [str(freecad_cmd_path), str(script_path), "--pass", *(args or []), str(output_path)],
         capture_output=True,
         text=True,
         timeout=_subprocess_timeout_seconds(runtime_env),

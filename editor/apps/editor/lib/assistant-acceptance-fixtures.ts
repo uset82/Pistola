@@ -1246,3 +1246,426 @@ export const assistantSurfaceSourceFixtures: AssistantSurfaceSourceFixture[] = [
     forbiddenMutationPatterns: [/updateNode\(/, /deleteNode\(/],
   },
 ]
+
+export type AssistantAgenticOperatorFailureClass =
+  | 'router'
+  | 'planner'
+  | 'action-surface'
+  | 'primitive-gap'
+  | 'executor'
+  | 'timeout'
+  | 'unsupported'
+
+export type AssistantAgenticOperatorFixture = {
+  id: string
+  prompt: string
+  language: 'en' | 'es'
+  category:
+    | 'general-object'
+    | 'compound-assembly'
+    | 'appearance'
+    | 'inspection'
+    | 'observation-build'
+    | 'asset-import'
+    | 'camera-focus'
+    | 'unsupported'
+  expectedOutcome: 'direct-router' | 'agent-loop' | 'unsupported-clarify'
+  baselineFailureClass: AssistantAgenticOperatorFailureClass
+  context?: AssistantPlanRequest['context']
+  notes?: string
+}
+
+export const assistantAgenticOperatorFixtures: AssistantAgenticOperatorFixture[] = [
+  // General Objects (primitives)
+  {
+    id: 'create_sphere_half_meter',
+    prompt: 'create a sphere with 0.5m radius',
+    language: 'en',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Requires procedural sphere primitive in schema/viewer and create_primitive action.',
+  },
+  {
+    id: 'create_sphere_half_meter_es',
+    prompt: 'crea una esfera de 0.5m de radio',
+    language: 'es',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish alias for sphere creation via deterministic router.',
+  },
+  {
+    id: 'create_cylinder_pillar',
+    prompt: 'create a cylinder 2m tall and 0.3m diameter',
+    language: 'en',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Requires procedural cylinder primitive with height and diameter/radius params.',
+  },
+  {
+    id: 'create_cylinder_pillar_es',
+    prompt: 'crea un cilindro de 2m de altura y 0.3m de diametro',
+    language: 'es',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish alias for cylinder creation.',
+  },
+  {
+    id: 'create_torus_ring',
+    prompt: 'create a torus with 1m radius',
+    language: 'en',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Requires procedural torus primitive.',
+  },
+  {
+    id: 'create_torus_ring_es',
+    prompt: 'crea un toroide de 1m de radio',
+    language: 'es',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish alias for torus creation.',
+  },
+  {
+    id: 'create_cone_marker',
+    prompt: 'create a cone 1m high',
+    language: 'en',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Requires procedural cone primitive.',
+  },
+  {
+    id: 'create_capsule_pill',
+    prompt: 'create a capsule 1.5m tall',
+    language: 'en',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Requires procedural capsule primitive.',
+  },
+  {
+    id: 'create_red_sphere_on_table',
+    prompt: 'create a red sphere 0.5 m on the table',
+    language: 'en',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Acceptance gate 1: builds primitive parented/placed correctly on table without remote planning.',
+  },
+  {
+    id: 'create_red_sphere_on_table_es',
+    prompt: 'crea una esfera roja de 0.5m sobre la mesa',
+    language: 'es',
+    category: 'general-object',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish variant for acceptance gate 1.',
+  },
+
+  // Compound Assemblies & Recipes
+  {
+    id: 'build_small_bookshelf_4_shelves',
+    prompt: 'build a small bookshelf with 4 shelves',
+    language: 'en',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Acceptance gate 2: produces editable compound or recipe with stated assumptions.',
+  },
+  {
+    id: 'build_small_bookshelf_4_shelves_es',
+    prompt: 'construye una estanteria pequena con 4 baldas',
+    language: 'es',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish variant of bookshelf recipe/compound.',
+  },
+  {
+    id: 'build_small_car_proxy',
+    prompt: 'build a small car',
+    language: 'en',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Acceptance gate 6: yields a proxy compound or MAC part with explicit approximation notes.',
+  },
+  {
+    id: 'build_small_car_proxy_es',
+    prompt: 'construye un coche pequeno',
+    language: 'es',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish variant for car proxy compound.',
+  },
+  {
+    id: 'build_low_poly_tree',
+    prompt: 'create a simple tree with a trunk and foliage',
+    language: 'en',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Recipe or primitive compound with cylinder trunk and cone foliage.',
+  },
+  {
+    id: 'build_low_poly_tree_es',
+    prompt: 'crea un arbol simple con tronco y copa',
+    language: 'es',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish variant for tree recipe.',
+  },
+  {
+    id: 'build_desk_lamp',
+    prompt: 'create a desk lamp with base, stand and shade',
+    language: 'en',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Compound primitive assembly with parent item and local transform children.',
+  },
+  {
+    id: 'build_desk_lamp_es',
+    prompt: 'crea una lampara de escritorio con base, soporte y pantalla',
+    language: 'es',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Spanish variant for desk lamp assembly.',
+  },
+  {
+    id: 'build_dining_table_assembly',
+    prompt: 'create a wooden dining table with 4 legs',
+    language: 'en',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Parametric table recipe returning validated action list.',
+  },
+  {
+    id: 'build_chair_assembly',
+    prompt: 'create an office chair with seat, backrest and wheels',
+    language: 'en',
+    category: 'compound-assembly',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'primitive-gap',
+    notes: 'Parametric chair recipe returning validated action list.',
+  },
+
+  // Appearance Edits
+  {
+    id: 'make_sofa_blue',
+    prompt: 'make the sofa blue',
+    language: 'en',
+    category: 'appearance',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Acceptance gate 3: executes via registry set_node_appearance capability.',
+  },
+  {
+    id: 'make_sofa_blue_es',
+    prompt: 'pon el sofa de color azul',
+    language: 'es',
+    category: 'appearance',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Spanish variant for sofa color edit.',
+  },
+  {
+    id: 'make_wall_brick_color',
+    prompt: 'change the selected wall color to brick red',
+    language: 'en',
+    category: 'appearance',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Modifies wall material/color appearance.',
+  },
+  {
+    id: 'make_table_metallic',
+    prompt: 'make the table metallic dark gray',
+    language: 'en',
+    category: 'appearance',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Sets metalness and color properties on item asset material.',
+  },
+  {
+    id: 'make_chair_leather_finish',
+    prompt: 'set the chair material to smooth black leather',
+    language: 'en',
+    category: 'appearance',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Sets roughness and color on target node appearance.',
+  },
+
+  // Inspection Questions (Read Tools)
+  {
+    id: 'inspect_room_size',
+    prompt: 'how big is this room',
+    language: 'en',
+    category: 'inspection',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Requires measure / inspect_scene tool to calculate zone area and bounds.',
+  },
+  {
+    id: 'inspect_room_size_es',
+    prompt: 'que tamano tiene esta habitacion',
+    language: 'es',
+    category: 'inspection',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Spanish variant for room measurement query.',
+  },
+  {
+    id: 'inspect_wall_length',
+    prompt: 'measure the length of the selected wall',
+    language: 'en',
+    category: 'inspection',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Requires measure tool inspecting wall node start/end points.',
+  },
+  {
+    id: 'inspect_free_floor_space',
+    prompt: 'is there enough free floor space for a 2m dining table in the living room',
+    language: 'en',
+    category: 'inspection',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Requires measure and get_nodes tools to check clearance.',
+  },
+  {
+    id: 'inspect_catalog_furniture',
+    prompt: 'search catalog for mid-century modern armchairs',
+    language: 'en',
+    category: 'inspection',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Requires search_catalog read tool.',
+  },
+
+  // Multi-Step Builds Requiring Observation
+  {
+    id: 'put_window_on_longest_wall',
+    prompt: 'put a window on the longest wall of the living room',
+    language: 'en',
+    category: 'observation-build',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'planner',
+    notes: 'Acceptance gate 4: inspects/measures walls first, identifies longest, places window.',
+  },
+  {
+    id: 'put_window_on_longest_wall_es',
+    prompt: 'pon una ventana en la pared mas larga del salon',
+    language: 'es',
+    category: 'observation-build',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'planner',
+    notes: 'Spanish variant of observation-based window placement.',
+  },
+  {
+    id: 'center_table_in_living_room',
+    prompt: 'center the dining table inside the living room',
+    language: 'en',
+    category: 'observation-build',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'planner',
+    notes: 'Inspects room polygon center and repositions table to center coordinate.',
+  },
+  {
+    id: 'align_two_chairs_facing_desk',
+    prompt: 'place two chairs facing the desk with 0.5m clearance',
+    language: 'en',
+    category: 'observation-build',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'planner',
+    notes: 'Inspects desk position/orientation and places chairs facing desk front.',
+  },
+  {
+    id: 'hide_windows_level_2',
+    prompt: 'hide all windows on level 2',
+    language: 'en',
+    category: 'observation-build',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Acceptance gate 3: batch visibility mutation via registry capability.',
+  },
+  {
+    id: 'hide_windows_level_2_es',
+    prompt: 'oculta todas las ventanas del nivel 2',
+    language: 'es',
+    category: 'observation-build',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Spanish variant for hiding level 2 windows.',
+  },
+
+  // Asset Import & Camera Focus
+  {
+    id: 'import_glb_asset_lamp',
+    prompt: 'import https://models.example.com/modern_lamp.glb as a lamp',
+    language: 'en',
+    category: 'asset-import',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Acceptance gate 5: creates item with measured dimensions and registers name for reuse.',
+  },
+  {
+    id: 'import_glb_asset_lamp_es',
+    prompt: 'importa https://models.example.com/modern_lamp.glb como lampara',
+    language: 'es',
+    category: 'asset-import',
+    expectedOutcome: 'agent-loop',
+    baselineFailureClass: 'action-surface',
+    notes: 'Spanish variant of GLB URL asset import.',
+  },
+  {
+    id: 'focus_camera_on_selected',
+    prompt: 'focus camera on the selected furniture',
+    language: 'en',
+    category: 'camera-focus',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Executes focus_camera_on_nodes to frame selected target.',
+  },
+  {
+    id: 'focus_camera_on_selected_es',
+    prompt: 'enfoca la camara en el mueble seleccionado',
+    language: 'es',
+    category: 'camera-focus',
+    expectedOutcome: 'direct-router',
+    baselineFailureClass: 'action-surface',
+    notes: 'Spanish variant of camera focus.',
+  },
+
+  // Explicit Unsupported Asks
+  {
+    id: 'unsupported_exact_ferrari_mesh',
+    prompt: 'generate an exact Ferrari 488 with interior physics and engine telemetry',
+    language: 'en',
+    category: 'unsupported',
+    expectedOutcome: 'unsupported-clarify',
+    baselineFailureClass: 'unsupported',
+    notes: 'Must not claim fake success; returns stated limitation and nearest buildable car proxy.',
+  },
+  {
+    id: 'unsupported_exact_ferrari_mesh_es',
+    prompt: 'genera un Ferrari 488 exacto con fisica de motor y telemetria',
+    language: 'es',
+    category: 'unsupported',
+    expectedOutcome: 'unsupported-clarify',
+    baselineFailureClass: 'unsupported',
+    notes: 'Spanish variant of explicit limitation handling.',
+  },
+]
+

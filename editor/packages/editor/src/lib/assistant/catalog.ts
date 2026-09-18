@@ -21,6 +21,27 @@ export const findCatalogItem = (query: string): AssetInput | null => {
 
   if (exact) return exact
 
+  const PRIMITIVE_TYPES = ['box', 'cube', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'wedge'] as const
+  const matchedPrim = PRIMITIVE_TYPES.find(
+    (p) => normalizedQuery === p || normalizedQuery.startsWith(`${p} `) || normalizedQuery.endsWith(` ${p}`) || normalizedQuery.includes(`primitive ${p}`) || normalizedQuery.includes(`primitive-${p}`)
+  )
+  if (matchedPrim) {
+    const prim = matchedPrim === 'cube' ? 'box' : matchedPrim
+    return {
+      id: `primitive-${prim}`,
+      name: `${prim.charAt(0).toUpperCase() + prim.slice(1)}`,
+      category: 'primitives',
+      thumbnail: '',
+      src: '',
+      primitive: prim as 'box' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'capsule' | 'wedge',
+      dimensions: [1, 1, 1],
+      color: '#60a5fa',
+      offset: [0, 0, 0],
+      rotation: [0, 0, 0],
+      scale: [1, 1, 1],
+    }
+  }
+
   const fuzzy = CATALOG_ITEMS.find((item) => {
     const tags = item.tags?.map(normalize) ?? []
     return (

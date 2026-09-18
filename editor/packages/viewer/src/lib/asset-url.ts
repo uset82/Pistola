@@ -1,7 +1,9 @@
 import { loadAssetUrl } from '@pascal-app/core'
 
+const configuredAssetsCdnUrl = process.env.NEXT_PUBLIC_ASSETS_CDN_URL?.trim()
+
 export const ASSETS_CDN_URL =
-  process.env.NEXT_PUBLIC_ASSETS_CDN_URL || 'https://editor.pascal.app'
+  configuredAssetsCdnUrl === undefined ? 'https://editor.pascal.app' : configuredAssetsCdnUrl
 
 /**
  * Resolves an asset URL to the appropriate format:

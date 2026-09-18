@@ -99,7 +99,34 @@ export function saveSceneToLocalStorage(scene: SceneGraph): void {
 export function loadSceneFromLocalStorage(): SceneGraph | null {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as SceneGraph) : null
+    if (!raw) return null
+
+    const sceneGraph = JSON.parse(raw) as Partial<SceneGraph>
+    const hasNodes =
+      typeof sceneGraph.nodes === 'object' && sceneGraph.nodes !== null && !Array.isArray(sceneGraph.nodes)
+    const hasRoots = Array.isArray(sceneGraph.rootNodeIds) && sceneGraph.rootNodeIds.length > 0
+
+    const nodes = hasNodes ? (sceneGraph.nodes as Record<string, unknown>) : {}
+    const hasBuildingHierarchy = (sceneGraph.rootNodeIds || []).some((rootNodeId) => {
+      const rootNode = nodes[rootNodeId]
+      if (!rootNode || typeof rootNode !== 'object' || (rootNode as { type?: unknown }).type !== 'site') {
+        return false
+      }
+
+      const children = (rootNode as { children?: unknown }).children
+      if (!Array.isArray(children)) return false
+
+      return children.some((child) => {
+        const childNode = typeof child === 'string' ? nodes[child] : child
+        return (
+          childNode &&
+          typeof childNode === 'object' &&
+          (childNode as { type?: unknown }).type === 'building'
+        )
+      })
+    })
+
+    return hasNodes && hasRoots && hasBuildingHierarchy ? (sceneGraph as SceneGraph) : null
   } catch {
     return null
   }

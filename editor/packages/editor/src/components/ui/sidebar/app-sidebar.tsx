@@ -21,6 +21,8 @@ interface AppSidebarProps {
   sidebarTop?: ReactNode
   settingsPanelProps?: SettingsPanelProps
   sitePanelProps?: SitePanelProps
+  enableCad?: boolean
+  enableCadRuntime?: boolean
 }
 
 export function AppSidebar({
@@ -28,6 +30,8 @@ export function AppSidebar({
   sidebarTop,
   settingsPanelProps,
   sitePanelProps,
+  enableCad = true,
+  enableCadRuntime = true,
 }: AppSidebarProps) {
   const [activePanel, setActivePanel] = useState<PanelId>('site')
 
@@ -65,9 +69,12 @@ export function AppSidebar({
           <div className="flex flex-1 flex-col overflow-hidden">
             <SidebarHeader className="relative flex-col items-stretch justify-center gap-3 border-border/50 border-b px-3 py-3">
               {sidebarTop}
-              <WorkspaceSwitcher onWorkspaceChange={() => setActivePanel('site')} />
+              <WorkspaceSwitcher
+                enableCad={enableCad}
+                onWorkspaceChange={() => setActivePanel('site')}
+              />
               <CommandsTrigger />
-              <CadStatus />
+              {enableCad && enableCadRuntime ? <CadStatus /> : null}
             </SidebarHeader>
 
             <SidebarContent className={cn('no-scrollbar flex flex-1 flex-col overflow-hidden')}>

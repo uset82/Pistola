@@ -454,8 +454,14 @@ Useful environment variables:
 - `PISTOLA_CAD_AI_BASE_URL` — optional; for OpenRouter use the API root like `https://openrouter.ai/api/v1`; for direct OpenAI use the full Responses endpoint like `https://api.openai.com/v1/responses`
 - `PISTOLA_CAD_MODEL` — optional; defaults to `openrouter/free` with OpenRouter and `gpt-5.4` with direct OpenAI
 - `PISTOLA_CAD_AI_HTTP_REFERER` / `PISTOLA_CAD_AI_TITLE` — optional request metadata headers for compatible providers such as OpenRouter
+- `PISTOLA_MAC_HELPER_URL` — optional MAC sidecar URL; defaults to `http://127.0.0.1:7879`
+- `PISTOLA_MAC_HELPER_RUNTIME` — `python` | `mock` | `external` for Multi-Agent-CAD jobs
+- `PISTOLA_MAC_ROOT` / `PISTOLA_MAC_PYTHON` — path to a user-installed Multi-Agent-CAD clone and its interpreter
+- `PISTOLA_LOCAL_API_TOKEN` — optional development-only bearer token so local MCP/IDE automation can call Next.js APIs
+- `PISTOLA_ALLOW_UNAUTHENTICATED_API` — set `1` only in the local editor app environment, with no `PISTOLA_LOCAL_API_TOKEN`, to allow MCP and a browser workspace when auth DB is not configured
+- Installed model file: `apps/editor/.pistola-ai.local.json` (gitignored; written by Settings / `pistola_configure_model`)
 
-`/api/assistant/plan` is the primary AI route for the app shell. Codex is the single control plane for scene edits and CAD prompting, while `/api/cad/*` stays focused on helper health and execution.
+`/api/assistant/plan` is the primary AI route for the app shell. Codex is the single control plane for scene edits and CAD prompting, while `/api/cad/*` stays focused on helper health and execution. `/api/mac/*` proxies Multi-Agent-CAD generation. `/api/workspace/*` lets a live editor tab execute IDE-originated commands.
 
 `run_cad_prompt` remains available only as a backward-compatible internal macro. Standard CAD prompting now resolves back through the assistant route into direct actions such as `execute_cad_brief`, not through a separate CAD planner surface.
 

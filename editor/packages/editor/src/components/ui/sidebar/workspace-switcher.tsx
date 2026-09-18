@@ -6,8 +6,10 @@ import { cn } from '../../../lib/utils'
 import useEditor from '../../../store/use-editor'
 
 export function WorkspaceSwitcher({
+  enableCad = true,
   onWorkspaceChange,
 }: {
+  enableCad?: boolean
   onWorkspaceChange?: () => void
 }) {
   const structureLayer = useEditor((state) => state.structureLayer)
@@ -18,7 +20,7 @@ export function WorkspaceSwitcher({
       ? 'structure'
       : phase === 'furnish'
         ? 'furnish'
-        : phase === 'cad'
+        : enableCad && phase === 'cad'
           ? 'cad'
         : phase === 'structure' && structureLayer === 'zones'
           ? 'zones'
@@ -51,7 +53,12 @@ export function WorkspaceSwitcher({
   }
 
   return (
-    <div className="relative grid grid-cols-4 items-center gap-1 rounded-xl border border-border/50 bg-[#2C2C2E] p-1">
+    <div
+      className={cn(
+        'relative grid items-center gap-1 rounded-xl border border-border/50 bg-[#2C2C2E] p-1',
+        enableCad ? 'grid-cols-4' : 'grid-cols-3',
+      )}
+    >
       <button
         className={cn(
           'relative flex flex-1 cursor-pointer flex-col items-center justify-center rounded-md py-2 font-medium text-[10px] transition-all duration-200',
@@ -157,7 +164,8 @@ export function WorkspaceSwitcher({
         </div>
       </button>
 
-      <button
+      {enableCad ? (
+        <button
         className={cn(
           'relative flex flex-1 cursor-pointer flex-col items-center justify-center rounded-md py-2 font-medium text-[10px] transition-all duration-200',
           activeTab === 'cad'
@@ -187,7 +195,8 @@ export function WorkspaceSwitcher({
             4
           </span>
         </div>
-      </button>
+        </button>
+      ) : null}
     </div>
   )
 }

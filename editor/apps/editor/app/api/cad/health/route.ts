@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server'
 import { normalizeCadHelperHealth } from '@pascal-app/editor/lib/cad/contracts'
 import { requireRouteAuthSession } from '@/lib/auth/route'
+import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import { fetchCadHelper, getCadHelperUrl } from '../_helper'
 
-export async function GET() {
+export const OPTIONS = pistolaCorsPreflight
+
+export async function GET(request: Request) {
   try {
     const auth = await requireRouteAuthSession()
     if (auth.response) {
-      return auth.response
+      return withPistolaCors(request, auth.response)
     }
 
     const response = await fetchCadHelper('/health')
     const payload = await response.json()
     const normalized = normalizeCadHelperHealth(payload, getCadHelperUrl())
 
-    return NextResponse.json(
+    return withPistolaCors(request, NextResponse.json(
       normalized,
       {
         status: response.status,
@@ -22,9 +25,9 @@ export async function GET() {
           'Cache-Control': 'no-store',
         },
       },
-    )
+    ))
   } catch (error) {
-    return NextResponse.json(
+    return withPistolaCors(request, NextResponse.json(
       normalizeCadHelperHealth(
         {
         status: 'error',
@@ -37,6 +40,6 @@ export async function GET() {
         getCadHelperUrl(),
       ),
       { status: 503 },
-    )
+    ))
   }
 }

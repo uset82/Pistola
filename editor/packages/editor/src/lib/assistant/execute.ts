@@ -16,13 +16,20 @@ import useCad from '../../store/use-cad'
 import useEditor from '../../store/use-editor'
 import { downloadIfcScene } from '../ifc-export'
 import {
+  addCadSketchEntities,
+  createBuilding,
   createCeiling,
   createLevel,
   createRoof,
+  createSite,
   createSlab,
   createWall,
   createZone,
   clearLevelContents,
+  focusCameraOnNodes,
+  reparentNode,
+  setCadSketchPlane,
+  setNodeMetadata,
   deleteCadSketchConstraint,
   deleteNodes,
   deleteTarget,
@@ -144,6 +151,12 @@ export type AssistantExecutionRuntime = {
   ) => Promise<{
     sketchIds?: string[]
     bodyIds?: string[]
+  }>
+  generateMacPart?: (
+    prompt: string,
+  ) => Promise<{
+    bodyIds?: string[]
+    jobId?: string
   }>
 }
 
@@ -703,6 +716,53 @@ const getValidationError = (action: AssistantAction) => {
       if (!cadToolSet.has(action.tool)) return null
       return null
     }
+    case 'create_site':
+      return null
+    case 'create_building': {
+      if (action.siteId && !isForwardRef(action.siteId)) {
+        const site = useScene.getState().nodes[action.siteId as AnyNodeId]
+        if (!site) return `Site node "${action.siteId}" was not found.`
+        if (site.type !== 'site') return `Node "${action.siteId}" is not a site.`
+      }
+      return null
+    }
+    case 'focus_camera_on_nodes': {
+      for (const nodeId of action.nodeIds) {
+        if (!isForwardRef(nodeId) && !useScene.getState().nodes[nodeId as AnyNodeId]) {
+          return `Node "${nodeId}" was not found.`
+        }
+      }
+      return null
+    }
+    case 'add_cad_sketch_entities': {
+      if (action.sketchId && !isForwardRef(action.sketchId)) {
+        const sketch = getCadSketchById(action.sketchId)
+        if (!sketch) return `CAD sketch "${action.sketchId}" was not found.`
+      }
+      return null
+    }
+    case 'set_cad_sketch_plane': {
+      if (action.sketchId && !isForwardRef(action.sketchId)) {
+        const sketch = getCadSketchById(action.sketchId)
+        if (!sketch) return `CAD sketch "${action.sketchId}" was not found.`
+      }
+      return null
+    }
+    case 'reparent_node': {
+      if (!isForwardRef(action.nodeId) && !useScene.getState().nodes[action.nodeId as AnyNodeId]) {
+        return `Node "${action.nodeId}" was not found.`
+      }
+      if (!isForwardRef(action.newParentId) && !useScene.getState().nodes[action.newParentId as AnyNodeId]) {
+        return `New parent node "${action.newParentId}" was not found.`
+      }
+      return null
+    }
+    case 'set_node_metadata': {
+      if (!isForwardRef(action.nodeId) && !useScene.getState().nodes[action.nodeId as AnyNodeId]) {
+        return `Node "${action.nodeId}" was not found.`
+      }
+      return null
+    }
     default:
       return null
   }
@@ -1064,6 +1124,17 @@ const executeAction = async (
         sketchIds: result.sketchIds ?? [],
       }
     }
+    case 'generate_mac_part': {
+      if (!options.runtime?.generateMacPart) {
+        throw new Error('MAC part generation is not available in this runtime.')
+      }
+      useEditor.getState().setPhase('cad')
+      const result = await options.runtime.generateMacPart(action.prompt)
+      return {
+        bodyIds: result.bodyIds ?? [],
+        nodeId: result.bodyIds?.[0] ?? null,
+      }
+    }
     case 'create_default_cad_sketch': {
       const sketch = useCad.getState().createDefaultSketch(action.position)
       if (!sketch) throw new Error(useCad.getState().lastError || 'Unable to create a CAD sketch.')
@@ -1196,6 +1267,34 @@ const executeAction = async (
         throw new Error(useCad.getState().lastError || 'Unable to export the CAD body.')
       }
       return { bodyIds: [body.id], nodeId: body.id }
+    }
+    case 'create_site': {
+      const siteId = createSite(action)
+      return { nodeId: siteId }
+    }
+    case 'create_building': {
+      const buildingId = createBuilding(action)
+      return { nodeId: buildingId }
+    }
+    case 'focus_camera_on_nodes': {
+      const targetId = focusCameraOnNodes(action)
+      return { nodeId: targetId ?? undefined }
+    }
+    case 'add_cad_sketch_entities': {
+      const sketchId = addCadSketchEntities(action)
+      return { sketchIds: [sketchId], nodeId: sketchId }
+    }
+    case 'set_cad_sketch_plane': {
+      const sketchId = setCadSketchPlane(action)
+      return { sketchIds: [sketchId], nodeId: sketchId }
+    }
+    case 'reparent_node': {
+      const nodeId = reparentNode(action)
+      return { nodeId }
+    }
+    case 'set_node_metadata': {
+      const nodeId = setNodeMetadata(action)
+      return { nodeId }
     }
     default:
       return {}

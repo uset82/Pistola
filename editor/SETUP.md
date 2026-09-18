@@ -116,6 +116,45 @@ cd tooling/freecad-helper
 python -m uvicorn main:app --host 127.0.0.1 --port 7878
 ```
 
+### 5b. Multi-Agent-CAD (MAC) sidecar
+
+Advanced text-to-CAD uses a separate sidecar at `tooling/mac-helper` (default `http://127.0.0.1:7879`). FreeCAD stays the interactive engine; MAC generates standalone mechanical parts via [Pan-Chera/Multi-Agent-CAD](https://github.com/Pan-Chera/Multi-Agent-CAD).
+
+Pistola does **not** vendor MAC. Clone and install it yourself:
+
+```bash
+git clone https://github.com/Pan-Chera/Multi-Agent-CAD.git
+cd Multi-Agent-CAD
+conda env create -f environment.yml
+conda activate multi_agent_cad
+pip install --no-deps "aider-chat==0.82.3"
+```
+
+Then in `apps/editor/.env.local`:
+
+```bash
+PISTOLA_MAC_HELPER_URL=http://127.0.0.1:7879
+PISTOLA_MAC_HELPER_RUNTIME=python
+PISTOLA_MAC_ROOT=C:\path\to\Multi-Agent-CAD
+PISTOLA_MAC_PYTHON=C:\path\to\conda\envs\multi_agent_cad\python.exe
+OPENROUTER_API_KEY=<your_openrouter_key>
+PISTOLA_MAC_MODEL=openrouter/free
+```
+
+For plumbing tests without installing MAC, set `PISTOLA_MAC_HELPER_RUNTIME=mock`.
+
+Install the same OpenRouter model from the CAD panel **AI Model** section (writes gitignored `.pistola-ai.local.json`) or via MCP `pistola_configure_model`. That config is shared by assistant planning, CadBrief planning, and MAC stages.
+
+### 5c. IDE control (MCP)
+
+Cursor / VS Code / Codex can drive Pistola through `tooling/pistola-mcp` (see repo `.cursor/mcp.json`):
+
+1. Start the editor and keep a live workspace tab open.
+2. Sign in through `/login`; development-only token-based MCP calls still need that signed-in browser tab for scene mutations. Alternatively, for a local auth-free workspace leave `PISTOLA_LOCAL_API_TOKEN` unset and set `PISTOLA_ALLOW_UNAUTHENTICATED_API=1` in `apps/editor/.env.local` (development only).
+3. Use MCP tools such as `pistola_chat`, `pistola_generate_mac`, and `pistola_configure_model`.
+
+Scene mutations require the open tab (`WorkspaceBridge` + `/api/workspace/*`).
+
 The bundled Node helper in `tooling/cad-helper/server.mjs` is now mock-only. Use it only when you explicitly opt in:
 
 ```bash

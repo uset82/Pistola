@@ -98,6 +98,149 @@ def _line_edge(entity: dict[str, Any]) -> Any:
     return Part.makeLine(_world_vector(entity.get("start", [0.0, 0.0])), _world_vector(entity.get("end", [1.0, 0.0])))
 
 
+def _heart_wire(entity: dict[str, Any]) -> Any:
+    center_x, center_z = _float_pair(entity.get("center", [0.0, 0.0]))
+    width = float(entity.get("width", 2.0))
+    height = float(entity.get("height", 2.5))
+    num_points = int(entity.get("numPoints", 64))
+
+    raw_points = []
+    for i in range(num_points):
+        t = 2.0 * math.pi * i / num_points
+        x = 16.0 * (math.sin(t) ** 3)
+        z = 13.0 * math.cos(t) - 5.0 * math.cos(2.0 * t) - 2.0 * math.cos(3.0 * t) - math.cos(4.0 * t)
+        raw_points.append((x, z))
+
+    xs = [p[0] for p in raw_points]
+    zs = [p[1] for p in raw_points]
+    min_x, max_x = min(xs), max(xs)
+    min_z, max_z = min(zs), max(zs)
+    raw_w = max_x - min_x or 1.0
+    raw_h = max_z - min_z or 1.0
+    mid_x = (min_x + max_x) / 2.0
+    mid_z = (min_z + max_z) / 2.0
+
+    vectors = []
+    for x, z in raw_points:
+        norm_x = center_x + (x - mid_x) * (width / raw_w)
+        norm_z = center_z + (z - mid_z) * (height / raw_h)
+        vectors.append(App.Vector(norm_x, 0.0, norm_z))
+
+    vectors.append(vectors[0])
+    return Part.makePolygon(vectors)
+
+
+def _airfoil_wire(entity: dict[str, Any]) -> Any:
+    center_x, center_z = _float_pair(entity.get("center", [0.0, 0.0]))
+    chord = float(entity.get("chord", entity.get("width", 2.0)))
+    thickness = float(entity.get("thickness", entity.get("height", chord * 0.12)))
+    num_points = int(entity.get("numPoints", 40))
+
+    t_ratio = thickness / (chord or 1.0)
+    vectors: list[Any] = []
+    # Upper surface (leading edge to trailing edge)
+    for i in range(num_points):
+        x = (i / float(num_points - 1))
+        # NACA 4-digit thickness distribution
+        yt = 5.0 * t_ratio * (0.2969 * math.sqrt(x) - 0.1260 * x - 0.3516 * (x ** 2) + 0.2843 * (x ** 3) - 0.1015 * (x ** 4))
+        vectors.append(App.Vector(center_x + (x - 0.5) * chord, 0.0, center_z + yt * chord))
+    # Lower surface (trailing edge to leading edge)
+    for i in range(num_points - 1, -1, -1):
+        x = (i / float(num_points - 1))
+        yt = 5.0 * t_ratio * (0.2969 * math.sqrt(x) - 0.1260 * x - 0.3516 * (x ** 2) + 0.2843 * (x ** 3) - 0.1015 * (x ** 4))
+        vectors.append(App.Vector(center_x + (x - 0.5) * chord, 0.0, center_z - yt * chord))
+
+    vectors.append(vectors[0])
+    return Part.makePolygon(vectors)
+
+
+def _board_wire(entity: dict[str, Any]) -> Any:
+    center_x, center_z = _float_pair(entity.get("center", [0.0, 0.0]))
+    length = float(entity.get("length", entity.get("height", 2.2)))
+    width = float(entity.get("width", 0.6))
+    num_points = int(entity.get("numPoints", 50))
+
+    vectors: list[Any] = []
+    for i in range(num_points):
+        t = 2.0 * math.pi * i / num_points
+        # Streamlined board planform: slightly wider forward, tapered tail
+        z = math.sin(t) * (length / 2.0)
+        norm_z = z / (length / 2.0 or 1.0)
+        taper = 1.0 - 0.15 * norm_z - 0.2 * (norm_z ** 2 if norm_z < 0 else 0)
+        x = math.cos(t) * (width / 2.0) * max(taper, 0.2)
+        vectors.append(App.Vector(center_x + x, 0.0, center_z + z))
+
+    vectors.append(vectors[0])
+    return Part.makePolygon(vectors)
+
+
+def _ellipse_wire(entity: dict[str, Any]) -> Any:
+    center_x, center_z = _float_pair(entity.get("center", [0.0, 0.0]))
+    r1 = float(entity.get("radius1", entity.get("radius", 1.0)))
+    r2 = float(entity.get("radius2", r1 * 0.5))
+    num_points = int(entity.get("numPoints", 48))
+
+    vectors: list[Any] = []
+    for i in range(num_points):
+        t = 2.0 * math.pi * i / num_points
+        vectors.append(App.Vector(center_x + r1 * math.cos(t), 0.0, center_z + r2 * math.sin(t)))
+    vectors.append(vectors[0])
+    return Part.makePolygon(vectors)
+
+
+def _bspline_wire(entity: dict[str, Any]) -> Any:
+    points = [_world_vector(point) for point in entity.get("points", [])]
+    if len(points) < 2:
+        raise ValueError("BSpline / curve entities require at least two points.")
+    if entity.get("closed", True) and points[0] != points[-1]:
+        points.append(points[0])
+    return Part.makePolygon(points)
+
+
+def _chain_loose_edges(edges: list[Any], tolerance: float = 0.05) -> list[Any]:
+    if not edges:
+        return []
+    remaining = list(edges)
+    chained: list[Any] = [remaining.pop(0)]
+
+    while remaining:
+        last_vertex = chained[-1].Vertexes[-1].Point
+        best_idx = -1
+        best_dist = float("inf")
+        reverse = False
+
+        for idx, edge in enumerate(remaining):
+            v_start = edge.Vertexes[0].Point
+            v_end = edge.Vertexes[-1].Point
+            dist_start = last_vertex.sub(v_start).Length
+            dist_end = last_vertex.sub(v_end).Length
+
+            if dist_start < best_dist:
+                best_dist = dist_start
+                best_idx = idx
+                reverse = False
+            if dist_end < best_dist:
+                best_dist = dist_end
+                best_idx = idx
+                reverse = True
+
+        if best_idx >= 0 and best_dist <= tolerance:
+            next_edge = remaining.pop(best_idx)
+            chained.append(next_edge if not reverse else Part.Edge(next_edge.Curve.reversed()))
+        else:
+            break
+
+    # If almost closed, add a closing segment
+    if len(chained) >= 2:
+        start_pt = chained[0].Vertexes[0].Point
+        end_pt = chained[-1].Vertexes[-1].Point
+        gap = start_pt.sub(end_pt).Length
+        if 1e-6 < gap <= tolerance:
+            chained.append(Part.makeLine(end_pt, start_pt))
+
+    return chained
+
+
 def build_profile_from_sketch(sketch: dict[str, Any]) -> tuple[Any, Any]:
     entities = sketch.get("entities") or []
     if not entities:
@@ -107,11 +250,21 @@ def build_profile_from_sketch(sketch: dict[str, Any]) -> tuple[Any, Any]:
     loose_edges: list[Any] = []
 
     for entity in entities:
-        kind = entity.get("kind")
+        kind = str(entity.get("kind") or entity.get("type") or "").lower()
         if kind == "rectangle":
             closed_wires.append(_rectangle_wire(entity))
         elif kind == "circle":
             closed_wires.append(_circle_wire(entity))
+        elif kind in {"heart", "corazon", "corazón"}:
+            closed_wires.append(_heart_wire(entity))
+        elif kind in {"airfoil", "wing", "ala"}:
+            closed_wires.append(_airfoil_wire(entity))
+        elif kind in {"board", "surfboard", "tabla"}:
+            closed_wires.append(_board_wire(entity))
+        elif kind in {"ellipse", "elipse"}:
+            closed_wires.append(_ellipse_wire(entity))
+        elif kind in {"bspline", "spline", "curve"}:
+            closed_wires.append(_bspline_wire(entity))
         elif kind == "polyline":
             wire = _polyline_wire(entity)
             if _wire_is_closed(wire):
@@ -126,9 +279,13 @@ def build_profile_from_sketch(sketch: dict[str, Any]) -> tuple[Any, Any]:
             raise ValueError(f"Unsupported sketch entity kind: {kind}")
 
     if not closed_wires and loose_edges:
-        candidate_wire = Part.Wire(loose_edges)
-        if _wire_is_closed(candidate_wire):
-            closed_wires.append(candidate_wire)
+        try:
+            chained = _chain_loose_edges(loose_edges)
+            candidate_wire = Part.Wire(chained)
+            if _wire_is_closed(candidate_wire):
+                closed_wires.append(candidate_wire)
+        except Exception:
+            pass
 
     if not closed_wires:
         raise ValueError(
@@ -169,7 +326,7 @@ def _cross(left: tuple[float, float, float], right: tuple[float, float, float]) 
 
 
 def write_glb_preview(shape: Any, output_path: Path) -> None:
-    vertices, facets = shape.tessellate()
+    vertices, facets = shape.tessellate(0.1)
     positions: list[float] = []
     normals: list[float] = []
 
@@ -732,5 +889,5 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" or (len(sys.argv) > 4 and sys.argv[0].endswith("freecad_worker.py")):
     raise SystemExit(main())

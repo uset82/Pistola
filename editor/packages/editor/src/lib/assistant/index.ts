@@ -46,3 +46,20 @@ export {
   type BoxBodySummary,
   type CadAttachmentBodySpec,
 } from './box-features'
+export {
+  executeAgentTool,
+  inspectScene,
+  getNodes,
+  measure,
+  searchCatalog,
+  listCapabilities,
+  getWorkspaceState,
+  validateActions,
+} from './agent-tools'
+export {
+  CREATION_RECIPES,
+  findMatchingRecipe,
+  listCreationRecipes,
+  type CreationRecipe,
+} from './recipes/creation-recipes'
+

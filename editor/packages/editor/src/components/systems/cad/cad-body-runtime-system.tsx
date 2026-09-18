@@ -111,6 +111,18 @@ export const CadBodyRuntimeSystem = () => {
     dirtyNodes.forEach((id) => {
       const node = nodes[id]
       if (!node || node.type !== 'cad-body' || node.regenStatus !== 'pending') return
+      // MAC-generated bodies are build123d solids — do not FreeCAD-regenerate them.
+      const cadEngine =
+        node.metadata &&
+        typeof node.metadata === 'object' &&
+        !Array.isArray(node.metadata) &&
+        'cadEngine' in node.metadata
+          ? (node.metadata as { cadEngine?: unknown }).cadEngine
+          : null
+      if (cadEngine === 'mac') {
+        clearDirty(id)
+        return
+      }
       if (activeJobsRef.current.has(id)) return
 
       activeJobsRef.current.add(id)

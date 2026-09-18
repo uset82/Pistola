@@ -14,7 +14,13 @@ import { FurnishTools } from './furnish-tools'
 import { StructureTools } from './structure-tools'
 import { ViewToggles } from './view-toggles'
 
-export function ActionMenu({ className }: { className?: string }) {
+export function ActionMenu({
+  className,
+  enableCadRuntime = true,
+}: {
+  className?: string
+  enableCadRuntime?: boolean
+}) {
   const phase = useEditor((state) => state.phase)
   const mode = useEditor((state) => state.mode)
   const tool = useEditor((state) => state.tool)
@@ -105,7 +111,7 @@ export function ActionMenu({ className }: { className?: string }) {
               transition={transition}
             >
               <div className="mx-auto w-max">
-                <CadTools />
+                <CadTools enableCadRuntime={enableCadRuntime} />
               </div>
             </motion.div>
           )}

@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server'
 import { normalizeCadJobCreateResponse } from '@pascal-app/editor/lib/cad/contracts'
 import { requireRouteAuthSession } from '@/lib/auth/route'
+import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import { fetchCadHelper } from '../_helper'
+
+export const OPTIONS = pistolaCorsPreflight
 
 export async function POST(request: Request) {
   try {
     const auth = await requireRouteAuthSession()
     if (auth.response) {
-      return auth.response
+      return withPistolaCors(request, auth.response)
     }
 
     const contentType = request.headers.get('content-type') || ''
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
     const payload = await response.json()
 
     if (!response.ok) {
-      return NextResponse.json(
+      return withPistolaCors(request, NextResponse.json(
         {
           error:
             typeof payload?.error === 'string'
@@ -29,21 +32,21 @@ export async function POST(request: Request) {
               : 'Unable to create CAD helper job.',
         },
         { status: response.status },
-      )
+      ))
     }
 
-    return NextResponse.json(normalizeCadJobCreateResponse(payload), {
+    return withPistolaCors(request, NextResponse.json(normalizeCadJobCreateResponse(payload), {
       status: response.status,
       headers: {
         'Cache-Control': 'no-store',
       },
-    })
+    }))
   } catch (error) {
-    return NextResponse.json(
+    return withPistolaCors(request, NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Unable to create CAD helper job.',
       },
       { status: 503 },
-    )
+    ))
   }
 }

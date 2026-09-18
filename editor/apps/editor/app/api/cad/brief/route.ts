@@ -1,4 +1,4 @@
-import { CadAiProviderError, createCadBriefResult, getCadAiConfig, type CadBriefRequest, type CadAiProvider } from '@/lib/cad-ai-provider'
+import { CadAiProviderError, createCadBriefResult, getCadAiConfig, type CadBriefRequest } from '@/lib/cad-ai-provider'
 import { classifyAiFailure, logAiFailure } from '@/lib/ai-provider-shared'
 import { requireRouteAuthSession } from '@/lib/auth/route'
 import { NextResponse } from 'next/server'

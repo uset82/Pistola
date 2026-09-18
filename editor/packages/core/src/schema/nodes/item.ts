@@ -78,9 +78,11 @@ const assetSchema = z.object({
   id: z.string(),
   category: z.string(),
   name: z.string(),
-  thumbnail: z.string(),
-  src: z.string(),
-  primitive: z.enum(['box']).optional(),
+  thumbnail: z.string().default(''),
+  src: z.string().default(''),
+  primitive: z
+    .enum(['box', 'sphere', 'cylinder', 'cone', 'torus', 'capsule', 'wedge'])
+    .optional(),
   color: z.string().optional(),
   dimensions: z.tuple([z.number(), z.number(), z.number()]).default([1, 1, 1]), // [w, h, d]
   attachTo: z.enum(['wall', 'wall-side', 'ceiling']).optional(),

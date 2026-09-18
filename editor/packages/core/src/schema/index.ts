@@ -31,7 +31,7 @@ export {
   normalizeCadBodyOperations,
 } from './nodes/cad-body'
 export {
-  type CadSketchEntity,
+  CadSketchEntity,
   CadSketchNode,
   CadSketchNodeSchema,
   CadSketchConstraint,
