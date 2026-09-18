@@ -59,6 +59,7 @@ const cadToolGroups: CadToolGroup[] = [
 
 export function CadTools({ enableCadRuntime = true }: { enableCadRuntime?: boolean }) {
   const activeTool = useEditor((state) => state.tool)
+  const activeWorkplane = useEditor((state) => state.activeWorkplane)
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto px-1 py-1 scrollbar-hide">
@@ -112,6 +113,26 @@ export function CadTools({ enableCadRuntime = true }: { enableCadRuntime?: boole
           })}
         </div>
         ))}
+
+      <div className="mx-1 h-5 w-px bg-border/50" />
+      <div className="flex items-center gap-1">
+        {(['XY', 'XZ', 'YZ', 'level'] as const).map((plane) => (
+          <button
+            key={plane}
+            onClick={() => void runAssistantCommand([{ type: 'set_cad_workplane', workplane: plane }])}
+            className={cn(
+              'px-2 py-1 rounded-md text-[11px] font-medium transition-colors',
+              activeWorkplane === plane
+                ? 'bg-cyan-400/20 text-cyan-200 border border-cyan-400/40'
+                : 'text-muted-foreground hover:text-foreground hover:bg-black/20'
+            )}
+            title={`Workplane ${plane.toUpperCase()}`}
+            type="button"
+          >
+            {plane.toUpperCase()}
+          </button>
+        ))}
+      </div>
 
       {!enableCadRuntime ? (
         <div className="ml-2 whitespace-nowrap text-[10px] text-muted-foreground">
