@@ -1570,6 +1570,7 @@ const roomKeywordMap = [
   { key: 'bedroom', aliases: ['bedroom', 'bed room', 'habitacion', 'habitación', 'dormitorio', 'cuarto'] },
   { key: 'bathroom', aliases: ['bathroom', 'bath room', 'bano', 'baño'] },
   { key: 'dining', aliases: ['dining room', 'dining', 'comedor'] },
+  { key: 'studio', aliases: ['studio', 'estudio', 'atelier'] },
 ] as const
 
 const getPromptRoomKind = (normalizedPrompt: string) =>
@@ -1712,7 +1713,18 @@ const getRecipeLevelTarget = (
       ? ((context.buildingSummary as Record<string, unknown>).id as string)
       : null)
 
-  if (!buildingId) return null
+  if (!buildingId) {
+    const buildingRefId = '$ref_building_0'
+    const levelRefId = '$ref_level_0'
+    return {
+      levelId: levelRefId,
+      levelRefId,
+      actions: [
+        withRefId({ type: 'create_building', name: 'Building 1' }, buildingRefId),
+        withRefId({ type: 'create_level', buildingId: buildingRefId, name: 'Level 0', level: 0 }, levelRefId),
+      ],
+    }
+  }
 
   const levelRefId = '$ref_level_0'
   return {
@@ -1792,11 +1804,11 @@ const buildRoomRecipeTurn = (
   selection: AssistantSelectionContext,
 ) => {
   const roomRequest =
-    /\b(room|zone|space|sala|habitacion|habitación|cuarto|dormitorio|cocina|bathroom|bano|baño)\b/.test(
+    /\b(room|zone|space|studio|estudio|sala|habitacion|habitación|cuarto|dormitorio|cocina|bathroom|bano|baño)\b/.test(
       normalizedPrompt,
     ) && CREATION_REQUEST_PATTERN.test(normalizedPrompt)
 
-  if (!roomRequest || HOUSE_NOUN_PATTERN.test(normalizedPrompt)) return null
+  if (!roomRequest || HOUSE_NOUN_PATTERN.test(normalizedPrompt) || /\b(reception|lobby|lounge)\b/.test(normalizedPrompt)) return null
 
   const target = getRecipeLevelTarget(body.context, selection)
   if (!target) {
@@ -1821,12 +1833,26 @@ const buildRoomRecipeTurn = (
             ? 'Bathroom'
             : roomKind?.key === 'dining'
               ? 'Dining Room'
-              : 'Room'
+              : roomKind?.key === 'studio'
+                ? 'Studio'
+                : 'Room'
   const levelId = target.levelId
   const wantsRoof = /\broof|techo\b/.test(normalizedPrompt)
   const wantsCeiling = wantsRoof || /\bceiling|cielo\b/.test(normalizedPrompt)
   const wantsDoor = /\bdoor|puerta\b/.test(normalizedPrompt)
   const wantsWindow = /\bwindow|windows|ventana|ventanas\b/.test(normalizedPrompt)
+  const wantsSouthWall = /\b(south( wall)?|pared sur)\b/.test(normalizedPrompt)
+  const wantsLargeWindow = /\b(large|big|grandes?|amplias?)\b/.test(normalizedPrompt)
+  const isOakOrWood = /\b(oak|wood|madera|roble|parquet)\b/.test(normalizedPrompt)
+  const slabName = isOakOrWood ? `${roomName} Oak Floor Slab` : `${roomName} Slab`
+
+  const windowWallId = wantsSouthWall ? '$ref_room_wall_0' : '$ref_room_wall_2'
+  const windowWidth = wantsLargeWindow
+    ? Math.min(3.0, Number((width * 0.4).toFixed(3)))
+    : Math.min(1.5, Number((width * 0.35).toFixed(3)))
+  const windowHeight = wantsLargeWindow ? 1.6 : 1.2
+  const windowY = wantsLargeWindow ? 1.1 : 1.4
+
   const polygon = [
     [0, 0],
     [width, 0],
@@ -1842,7 +1868,7 @@ const buildRoomRecipeTurn = (
         levelId,
         name: roomName,
         polygon,
-        color: '#eab308',
+        color: isOakOrWood ? '#b45309' : '#eab308',
       },
       '$ref_zone_room',
     ),
@@ -1862,14 +1888,14 @@ const buildRoomRecipeTurn = (
       { type: 'create_wall', levelId, start: [0, depth], end: [0, 0], height: wallHeight, thickness: 0.15 },
       '$ref_room_wall_3',
     ),
-    { type: 'create_slab', levelId, name: `${roomName} Slab`, polygon },
+    { type: 'create_slab', levelId, name: slabName, polygon },
     ...(wantsCeiling ? [{ type: 'create_ceiling' as const, levelId, name: `${roomName} Ceiling`, polygon, height: wallHeight }] : []),
     ...(wantsRoof ? [{ type: 'create_roof' as const, levelId, name: `${roomName} Roof`, corner1: [0, 0] as [number, number], corner2: [width, depth] as [number, number], height: 1.4 }] : []),
     ...(wantsDoor
-      ? [{ type: 'place_door' as const, wallId: '$ref_room_wall_0', localX: Number((width * 0.3).toFixed(3)), width: 0.9, height: 2.1 }]
+      ? [{ type: 'place_door' as const, wallId: wantsSouthWall ? '$ref_room_wall_2' : '$ref_room_wall_0', localX: Number((width * 0.3).toFixed(3)), width: 0.9, height: 2.1 }]
       : []),
     ...(wantsWindow
-      ? [{ type: 'place_window' as const, wallId: '$ref_room_wall_2', localX: Number((width * 0.35).toFixed(3)), localY: 1.4, width: Math.min(1.5, Number((width * 0.35).toFixed(3))), height: 1.2 }]
+      ? [{ type: 'place_window' as const, wallId: windowWallId, localX: Number((width * 0.5).toFixed(3)), localY: windowY, width: windowWidth, height: windowHeight }]
       : []),
   ]
 
@@ -1878,6 +1904,8 @@ const buildRoomRecipeTurn = (
       ? `Using the requested editable room footprint of ${width} m x ${depth} m.`
       : `Using a default prototype room footprint of ${width} m x ${depth} m because exact dimensions were not provided.`,
     `Using a standard wall height of ${wallHeight} m.`,
+    ...(isOakOrWood ? ['Configured slab with natural oak finish.'] : []),
+    ...(wantsSouthWall && wantsWindow ? ['Positioned large windows on the south wall ($ref_room_wall_0).'] : []),
   ]
 
   return buildReviewPlanTurn(
@@ -3424,12 +3452,29 @@ const buildDeterministicAssistantTurn = (
       depth: requestedDimensions?.depth ?? undefined,
       position: [0, 0, 0],
     })
+
+    if (/\borbit\b/i.test(normalizedPrompt)) {
+      actions.push({ type: 'orbit_camera', direction: 'ccw' })
+    }
+    if (/\bfocus\b/i.test(normalizedPrompt)) {
+      const rootAction = actions.find(
+        (a) => 'refId' in a && typeof a.refId === 'string' && a.refId,
+      )
+      if (rootAction && 'refId' in rootAction && typeof rootAction.refId === 'string') {
+        actions.push({ type: 'focus_camera_on_nodes', nodeIds: [rootAction.refId] })
+      } else {
+        actions.push({ type: 'focus_camera_on_nodes', nodeIds: [] })
+      }
+    }
+
     return {
       reply: `I have prepared the plan to build ${matchingRecipe.name}.`,
       mode: 'plan',
       assumptions: [
         `Generated 3D elements for ${matchingRecipe.name}.`,
         'Positioned at workspace origin.',
+        ...(actions.some((a) => a.type === 'orbit_camera') ? ['Orbits camera to view the generated model.'] : []),
+        ...(actions.some((a) => a.type === 'focus_camera_on_nodes' || a.type === 'focus_building') ? ['Frames camera on the generated model.'] : []),
       ],
       ambiguities: [],
       actions,

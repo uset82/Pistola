@@ -469,10 +469,15 @@ export function AiAssistantPanel() {
   const stopContinuationRef = useRef(false)
   const stopTaskPlanRef = useRef(false)
 
-  // Unified Model Switcher State
+  // Unified Model Switcher & API Config State
   const [activeModel, setActiveModel] = useState('openrouter/free')
   const [activeProvider, setActiveProvider] = useState('openrouter')
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
+  const [showApiSettings, setShowApiSettings] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [baseUrlInput, setBaseUrlInput] = useState('https://openrouter.ai/api/v1')
+  const [isSavingApiConfig, setIsSavingApiConfig] = useState(false)
+  const [apiConfigMessage, setApiConfigMessage] = useState<string | null>(null)
   const [availableModels, setAvailableModels] = useState<
     Array<{
       id: string
@@ -494,9 +499,40 @@ export function AiAssistantPanel() {
         const data = await res.json()
         if (data.model) setActiveModel(data.model)
         if (data.provider) setActiveProvider(data.provider)
+        if (data.baseUrl) setBaseUrlInput(data.baseUrl)
       }
     } catch {
       // ignore
+    }
+  }
+
+  const handleSaveApiSettings = async () => {
+    setIsSavingApiConfig(true)
+    setApiConfigMessage(null)
+    try {
+      const res = await fetch('/api/ai/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: activeProvider,
+          model: activeModel,
+          apiKey: apiKeyInput.trim() || undefined,
+          baseUrl: baseUrlInput.trim() || undefined,
+        }),
+      })
+      if (res.ok) {
+        setApiConfigMessage('Settings saved successfully!')
+        showCommandToast('AI API configuration updated.')
+        setApiKeyInput('')
+        setTimeout(() => setShowApiSettings(false), 1200)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setApiConfigMessage(data.error || 'Failed to save settings.')
+      }
+    } catch (err) {
+      setApiConfigMessage(err instanceof Error ? err.message : 'Error saving settings.')
+    } finally {
+      setIsSavingApiConfig(false)
     }
   }
 
@@ -1594,23 +1630,37 @@ export function AiAssistantPanel() {
     const trimmed = prompt.trim()
     const lower = trimmed.toLowerCase()
 
-    // 1. Slash commands: /model
-    if (trimmed.startsWith('/model')) {
-      const parts = trimmed.split(/\s+/)
-      const arg = parts[1]?.toLowerCase()
+    // 1. Model Switching commands (supports /model <name> and natural language "Switch model to Claude 3.7 Sonnet")
+    const modelSwitchMatch =
+      trimmed.match(/^\/model\s*(.*)$/i) ||
+      lower.match(/^(?:switch|change|set|use|cambiar|cambia|usar)\s+(?:the\s+)?(?:ai\s+)?model\s+(?:to\s+)?(.+?)[.!]?$/i) ||
+      lower.match(/^(?:switch|change|set)\s+to\s+(?:model\s+)?(.+?)[.!]?$/i)
+
+    if (modelSwitchMatch) {
+      const rawArg = modelSwitchMatch[1]?.trim().replace(/[.!]^/, '').trim() || ''
+      const arg = rawArg.toLowerCase()
       if (!arg || arg === 'list') {
         setIsModelMenuOpen(true)
         void loadAvailableModels()
         setInput('')
         return
       }
-      let targetModel = parts[1]!
-      if (arg === 'free') targetModel = 'openrouter/free'
-      else if (arg === 'llama') targetModel = 'meta-llama/llama-3.3-70b-instruct:free'
-      else if (arg === 'deepseek') targetModel = 'deepseek/deepseek-chat'
-      else if (arg === 'gemini') targetModel = 'google/gemini-2.5-flash'
-      else if (arg === 'claude') targetModel = 'anthropic/claude-3.7-sonnet'
-      else if (arg === 'gpt' || arg === 'gpt-4o') targetModel = 'openai/gpt-4o'
+      let targetModel = rawArg
+      if (arg.includes('free')) targetModel = 'openrouter/free'
+      else if (arg.includes('llama')) targetModel = 'meta-llama/llama-3.3-70b-instruct:free'
+      else if (arg.includes('deepseek')) targetModel = 'deepseek/deepseek-chat'
+      else if (arg.includes('gemini')) targetModel = 'google/gemini-2.5-flash'
+      else if (arg.includes('claude')) targetModel = 'anthropic/claude-3.7-sonnet'
+      else if (arg.includes('gpt-4') || arg.includes('gpt4') || arg.includes('gpt')) targetModel = 'openai/gpt-4o'
+      else {
+        const found = availableModels.find(
+          (m) =>
+            m.id.toLowerCase() === arg ||
+            m.name.toLowerCase().includes(arg) ||
+            m.id.toLowerCase().includes(arg),
+        )
+        if (found) targetModel = found.id
+      }
 
       await handleSelectModel(targetModel)
       setMessages((current) => [
@@ -1626,14 +1676,39 @@ export function AiAssistantPanel() {
       return
     }
 
-    if (trimmed === '/undo') {
+    if (/^(?:\/undo|undo|deshacer|revert|undo what you just did|deshaz lo que acabas de hacer)[.!]?$/i.test(trimmed)) {
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+      ])
       undoLastAssistantTurn()
       setInput('')
       return
     }
 
     // 2. Direct Viewport & Camera commands
-    if (/\b(top view|vista superior|camara arriba|vista desde arriba|top-down view)\b/i.test(lower)) {
+    const asksTopView = /\b(top view|vista superior|camara arriba|vista desde arriba|top-down view)\b/i.test(lower)
+    const asksSnapshot = /\b(snapshot|screenshot|captura de pantalla|captura|take a snapshot|take snapshot)\b/i.test(lower)
+
+    if (asksTopView && asksSnapshot) {
+      await executeAssistantPlan([{ type: 'camera_top_view' }], { reviewConfirmed: true })
+      const canvas = document.querySelector('canvas')
+      const snapshotUrl = canvas instanceof HTMLCanvasElement ? canvas.toDataURL('image/png') : undefined
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          text: 'Switched to top-down orthographic camera view and captured viewport snapshot.',
+          imageUrl: snapshotUrl,
+        },
+      ])
+      setInput('')
+      return
+    }
+
+    if (asksTopView) {
       await executeAssistantPlan([{ type: 'camera_top_view' }], { reviewConfirmed: true })
       setMessages((current) => [
         ...current,
@@ -1708,12 +1783,19 @@ export function AiAssistantPanel() {
       return
     }
 
-    if (/\b(take screenshot|screenshot|captura de pantalla|captura)\b/i.test(lower)) {
+    if (asksSnapshot) {
+      const canvas = document.querySelector('canvas')
+      const snapshotUrl = canvas instanceof HTMLCanvasElement ? canvas.toDataURL('image/png') : undefined
       await executeAssistantPlan([{ type: 'take_screenshot' }], { reviewConfirmed: true })
       setMessages((current) => [
         ...current,
         { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
-        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Captured high-resolution viewport screenshot and saved to downloads.' },
+        {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          text: 'Captured high-resolution viewport screenshot and saved to downloads.',
+          imageUrl: snapshotUrl,
+        },
       ])
       setInput('')
       return
@@ -2326,6 +2408,59 @@ export function AiAssistantPanel() {
                   )}
                 </button>
               ))
+            )}
+          </div>
+
+          {/* Collapsible API Key & Custom Configuration */}
+          <div className="border-t border-white/10 pt-1.5">
+            <button
+              onClick={() => setShowApiSettings((v) => !v)}
+              className="flex w-full items-center justify-between py-1 text-[10px] text-white/50 hover:text-white transition"
+              type="button"
+            >
+              <span className="flex items-center gap-1">
+                <span>⚙️</span>
+                <span>Custom API Key & Endpoint</span>
+              </span>
+              <span>{showApiSettings ? '▲' : '▼'}</span>
+            </button>
+
+            {showApiSettings && (
+              <div className="mt-1 space-y-1.5 rounded-xl bg-black/40 p-2 border border-white/10">
+                <div>
+                  <label className="block text-[9px] text-white/50 mb-0.5">API Key (OpenRouter / OpenAI)</label>
+                  <input
+                    type="password"
+                    placeholder="sk-or-v1-..."
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[10px] text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] text-white/50 mb-0.5">Base URL</label>
+                  <input
+                    type="text"
+                    placeholder="https://openrouter.ai/api/v1"
+                    value={baseUrlInput}
+                    onChange={(e) => setBaseUrlInput(e.target.value)}
+                    className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[10px] text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
+                  />
+                </div>
+                {apiConfigMessage && (
+                  <div className="text-[9px] text-cyan-300">{apiConfigMessage}</div>
+                )}
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => void handleSaveApiSettings()}
+                    disabled={isSavingApiConfig}
+                    className="rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-2.5 py-0.5 text-[10px] font-medium text-cyan-200 hover:bg-cyan-500/30 transition"
+                    type="button"
+                  >
+                    {isSavingApiConfig ? 'Saving...' : 'Save & Apply'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

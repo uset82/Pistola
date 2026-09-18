@@ -488,6 +488,36 @@ server.tool(
   },
 )
 
+server.tool(
+  'pistola_camera',
+  'Control the live viewport camera: top-down view, perspective/orthographic modes, orbit, or focus nodes.',
+  {
+    view: z.enum(['top', 'perspective', 'orthographic']).optional(),
+    orbit: z.enum(['cw', 'ccw']).optional(),
+    focusNodeId: z.string().optional(),
+    sessionId: z.string().optional(),
+  },
+  async ({ view, orbit, focusNodeId, sessionId }) => {
+    try {
+      const actions: unknown[] = []
+      if (view === 'top') actions.push({ type: 'camera_top_view' })
+      else if (view === 'perspective') actions.push({ type: 'set_camera_mode', cameraMode: 'perspective' })
+      else if (view === 'orthographic') actions.push({ type: 'set_camera_mode', cameraMode: 'orthographic' })
+      if (orbit) actions.push({ type: 'orbit_camera', direction: orbit })
+      if (focusNodeId) actions.push({ type: 'focus_camera_on_nodes', nodeIds: [focusNodeId] })
+
+      const enqueued = (await pistolaFetch('/api/workspace/command', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'execute', actions, sessionId }),
+      })) as { sessionId: string; command: { id: string } }
+      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
+      return jsonResult(result)
+    } catch (error) {
+      return textResult(error instanceof Error ? error.message : String(error), true)
+    }
+  },
+)
+
 const transport = new StdioServerTransport()
 await server.connect(transport)
 

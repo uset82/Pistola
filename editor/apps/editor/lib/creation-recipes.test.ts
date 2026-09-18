@@ -123,3 +123,66 @@ test('createAssistantTurnResult creates a humanoid robot assembly', async () => 
     }
   }
 })
+
+test('Acceptance Prompt 1: Generate robotic arm with gripper, then orbit and focus', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'Generate a robotic arm with 3 joint segments and a gripper, then orbit camera to focus on it.',
+      context: {},
+    },
+    NO_AUTH_ENV,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.ok(result.turn.actions.length >= 10)
+  const actionTypes = result.turn.actions.map((a) => a.type)
+  assert.ok(actionTypes.includes('place_item'))
+  assert.ok(actionTypes.includes('orbit_camera'))
+  assert.ok(actionTypes.includes('focus_camera_on_nodes'))
+})
+
+test('Acceptance Prompt 2: Create a 3D red heart solid with a smooth base', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'Create a 3D red heart solid with a smooth base.',
+      context: {},
+    },
+    NO_AUTH_ENV,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.equal(result.turn.actions.length, 1)
+  const action = result.turn.actions[0]
+  assert.ok(action)
+  assert.equal(action?.type, 'execute_cad_brief')
+  if (action?.type === 'execute_cad_brief') {
+    assert.equal(action.brief.sketchPlans[0]?.entities[0]?.type, 'heart')
+    assert.equal(action.brief.operationGraph[0]?.op, 'extrude')
+  }
+})
+
+test('Acceptance Prompt 3: Build 10m x 8m modern studio with large windows on south wall and oak floor', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'Build a 10m x 8m modern studio with large windows on the south wall and an oak floor.',
+      context: {},
+    },
+    NO_AUTH_ENV,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  const actionTypes = result.turn.actions.map((a) => a.type)
+  assert.ok(actionTypes.includes('create_building'))
+  assert.ok(actionTypes.includes('create_level'))
+  assert.ok(actionTypes.includes('create_zone'))
+  assert.ok(actionTypes.includes('create_wall'))
+  assert.ok(actionTypes.includes('create_slab'))
+  assert.ok(actionTypes.includes('place_window'))
+
+  const slab = result.turn.actions.find((a) => a.type === 'create_slab')
+  assert.ok(slab && 'name' in slab && slab.name.includes('Oak Floor'))
+
+  const window = result.turn.actions.find((a) => a.type === 'place_window')
+  assert.ok(window && 'wallId' in window && window.wallId === '$ref_room_wall_0')
+})
+
