@@ -1,8 +1,4 @@
-import type {
-  CadBodyNode,
-  CadBodyOperation,
-  CadSketchNode,
-} from '@pascal-app/core'
+import { pistolaApiUrl, pistolaRemoteInit } from '../api-base'
 import {
   DEFAULT_CAD_HELPER_URL,
   normalizeCadHelperHealth,
@@ -17,24 +13,15 @@ import {
 
 export type { CadHelperHealth, CadHelperJobCreateResponse, CadHelperJobRequest, CadHelperJobResult, CadJobType }
 
-const getApiBase = () => process.env.NEXT_PUBLIC_PISTOLA_API_BASE?.trim().replace(/\/+$/, '') || ''
+const toApiUrl = (pathname: string) => pistolaApiUrl(pathname)
 
-const toApiUrl = (pathname: string) => `${getApiBase()}${pathname}`
-
-const remoteRequestInit = (init: RequestInit = {}): RequestInit =>
-  getApiBase()
-    ? {
-        ...init,
-        // Canner owns the session; the static Sites app never receives a token.
-        credentials: 'include',
-      }
-    : init
+const remoteRequestInit = (init: RequestInit = {}): RequestInit => pistolaRemoteInit(init)
 
 const toRemoteArtifactUrl = (value: string | null | undefined) =>
   value?.startsWith('/api/cad/artifacts/') ? toApiUrl(value) : value || null
 
 const withRemoteArtifactUrls = (job: CadHelperJobResult): CadHelperJobResult => {
-  if (!getApiBase() || !job.result) return job
+  if (!job.result) return job
 
   const artifacts = job.result.artifacts
   return {
