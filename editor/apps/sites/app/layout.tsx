@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  description: 'A browser-based 3D editor for turning ideas into editable scenes.',
-  title: 'Pistola — 3D Editor',
+  description: 'Say the object. Get a model.',
+  title: 'Pistola',
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

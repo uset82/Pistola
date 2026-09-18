@@ -1,5 +1,5 @@
-import { HostedEditor } from '../components/hosted-editor'
+import { HowPistolaWorks } from '../../editor/components/auth/HowPistolaWorks'
 
 export default function HomePage() {
-  return <HostedEditor />
+  return <HowPistolaWorks configured={false} legalOrigin="https://pistola.canner.app" />
 }

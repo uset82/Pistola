@@ -73,6 +73,7 @@ import {
 import { classifyRequestComplexity } from '../../lib/assistant-agent-router'
 import { runAgentTurn } from '../../lib/assistant-agent/run-agent-turn'
 import { AssistantTaskPlanCard } from './AssistantTaskPlanCard'
+import { pistolaFetch } from '../../lib/pistola-fetch'
 
 const isObservationPrompt = (text: string) => {
   const norm = text.toLowerCase()
@@ -494,7 +495,7 @@ export function AiAssistantPanel() {
 
   const loadAiModelConfig = async () => {
     try {
-      const res = await fetch('/api/ai/config')
+      const res = await pistolaFetch('/api/ai/config')
       if (res.ok) {
         const data = await res.json()
         if (data.model) setActiveModel(data.model)
@@ -510,7 +511,7 @@ export function AiAssistantPanel() {
     setIsSavingApiConfig(true)
     setApiConfigMessage(null)
     try {
-      const res = await fetch('/api/ai/config', {
+      const res = await pistolaFetch('/api/ai/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -539,7 +540,7 @@ export function AiAssistantPanel() {
   const loadAvailableModels = async (force = false) => {
     setLoadingModels(true)
     try {
-      const res = await fetch(
+      const res = await pistolaFetch(
         `/api/ai/models?provider=${activeProvider}${force ? '&forceRefresh=1' : ''}`,
       )
       if (res.ok) {
@@ -559,7 +560,7 @@ export function AiAssistantPanel() {
     setActiveModel(newModelId)
     setIsModelMenuOpen(false)
     try {
-      await fetch('/api/ai/config', {
+      await pistolaFetch('/api/ai/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1237,7 +1238,7 @@ export function AiAssistantPanel() {
     const workspaceContext = getAssistantWorkspaceContext()
     assistantRequestWorkspaceContextRef.current = workspaceContext
 
-    const response = await fetch('/api/assistant/plan', {
+    const response = await pistolaFetch('/api/assistant/plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

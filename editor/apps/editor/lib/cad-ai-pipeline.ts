@@ -4,6 +4,7 @@ import { useCad } from '@pascal-app/editor'
 import { z } from 'zod'
 import { shapeCadPlanningContext } from './ai-context-shaping'
 import { cleanJsonString } from './ai-provider-shared'
+import { pistolaFetch } from './pistola-fetch'
 
 type CadPromptContext = {
   nodes: AnyNode[]
@@ -112,7 +113,7 @@ const requestCadBrief = async (
     nodes: context.nodes.map(summarizeNode),
   })
 
-  const response = await fetch('/api/cad/brief', {
+  const response = await pistolaFetch('/api/cad/brief', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

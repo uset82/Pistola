@@ -1,30 +1,30 @@
 # @pistola/sites — static browser preview
 
-Static Next.js export of the Pistola editor for hosting on ChatGPT/Codex **Sites**
-(`https://pistolacodex.gi-o-vi-n-ch-5540.chatgpt.site/`). It renders the full
-`@pascal-app/editor` UI without a Next.js server of its own.
+Static Next.js export of the official Pistola product for ChatGPT/Codex **Sites**.
+The landing page is How Pistola Works. `/workspace` is the same editor chrome as
+[pistola.canner.app](https://pistola.canner.app/): Architecture and CAD worlds, plus
+the AI Assistant. Sites has no API of its own.
 
 ## CAD features on Sites
-
-Sites is a CAD workspace, not a viewer-only preview.
 
 - Browser sketcher: sketch, line, rectangle, circle, arc, polyline, constraints.
 - **FreeCAD** solids: extrude, revolve, boolean, fillet, chamfer, STEP I/O.
 - **Multi-Agent-CAD**: text-to-part generation from [Pan-Chera/Multi-Agent-CAD](https://github.com/Pan-Chera/Multi-Agent-CAD).
 
-Solid jobs run through the Canner editor API (`NEXT_PUBLIC_PISTOLA_API_BASE`,
-default `https://pistola.canner.app`). The CAD Runtime panel shows both
-engines. If the host has no FreeCADCmd or MAC clone, Canner starts the bundled
-preview helpers so the Sites CAD loop still completes.
+Solid jobs and the AI Assistant call the official Canner API
+(`NEXT_PUBLIC_PISTOLA_API_BASE`, default `https://pistola.canner.app`). The CAD
+Runtime panel shows both engines. If the host has no FreeCADCmd or MAC clone,
+Canner starts the bundled preview helpers so the Sites CAD loop still completes.
 
-Enabled via `<Editor enableCad enableCadRuntime />` in `components/hosted-editor.tsx`.
+The workspace shell is `PistolaWorkspaceShell` (shared with the Canner editor)
+plus the invisible WebMCP scene tools.
 
 ## Build and verify
 
 ```bash
 cd editor
 bun run build:sites   # next build (static export) + copy editor/public + sync to editor/out
-bun run smoke:sites   # serves editor/out headlessly and checks the CAD tab and MAC generator
+bun run smoke:sites   # serves editor/out and checks landing, worlds, and the AI Assistant
 ```
 
 `apps/sites/scripts/sync-hosting-output.mjs` mirrors `apps/sites/out` into the

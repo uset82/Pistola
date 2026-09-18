@@ -7,6 +7,7 @@ import type {
   AssistantAction,
   AssistantTurnResult,
 } from '../../../../packages/editor/src/lib/assistant/types'
+import { pistolaFetch } from '../pistola-fetch'
 import type {
   AgentMessage,
   AgentStepBudget,
@@ -107,7 +108,7 @@ export async function runAgentTurn(options: RunAgentTurnOptions): Promise<RunAge
       budgets,
     }
 
-    const res = await fetch('/api/assistant/agent/step', {
+    const res = await pistolaFetch('/api/assistant/agent/step', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(stepRequest),

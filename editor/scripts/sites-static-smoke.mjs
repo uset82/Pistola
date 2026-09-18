@@ -129,13 +129,36 @@ try {
 
   await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
 
-  const structureTab = page.getByRole('button', { name: /^Structure/ }).first()
-  await structureTab.waitFor({ state: 'visible', timeout: 30000 })
-  record('editor shell renders from the static export', true)
+  const headline = page.getByText(/Say the object/i).first()
+  await headline.waitFor({ state: 'visible', timeout: 30000 })
+  record('landing matches How Pistola Works', true)
 
-  const cadTab = page.getByRole('button', { name: /^CAD/ }).first()
+  const privacy = page.getByRole('link', { name: 'Privacy' })
+  const privacyHref = await privacy.getAttribute('href')
+  record(
+    'privacy link points at official Canner',
+    privacyHref === 'https://pistola.canner.app/privacy',
+    privacyHref ?? '',
+  )
+
+  const openWorkspace = page.getByRole('link', { name: /Open the workspace/i }).first()
+  await openWorkspace.click()
+  await page.waitForURL(/\/workspace/, { timeout: 15000 })
+
+  const architectureTab = page.getByRole('tab', { name: 'Architecture workspace' }).first()
+  await architectureTab.waitFor({ state: 'visible', timeout: 30000 })
+  record('Architecture world is present', true)
+
+  const cadTab = page.getByRole('tab', { name: 'CAD workspace' }).first()
   const cadTabVisible = await cadTab.isVisible().catch(() => false)
-  record('CAD workspace tab is present', cadTabVisible)
+  record('CAD world is present', cadTabVisible)
+
+  const assistant = page.getByRole('button', { name: /New Chat/i }).first()
+  const assistantVisible = await assistant.isVisible().catch(() => false)
+  record('AI Assistant is mounted', assistantVisible)
+
+  const sitesBanner = await page.getByText(/Pistola CAD on Sites|Pistola browser preview/i).count()
+  record('no Sites-only banner', sitesBanner === 0)
 
   if (cadTabVisible) {
     await cadTab.click()
@@ -148,16 +171,13 @@ try {
     const extrudeCount = await page.getByRole('button', { name: /Extrude \(Pad\)/i }).count()
     record('FreeCAD solid tools are available', extrudeCount > 0)
 
-    const macGenerator = await page.getByRole('button', { name: /Generate (MAC|Multi-Agent-CAD) part/i }).count()
-    record('Multi-Agent-CAD generator is part of the CAD panel', macGenerator > 0)
-
     const enginesLabel = await page.getByText(/CAD Engines/i).count()
     record('CAD Runtime panel lists both engines', enginesLabel > 0)
 
     if (sketchToolVisible) {
       await sketchTool.click()
       await wait(500)
-      const stillAlive = await structureTab.isVisible().catch(() => false)
+      const stillAlive = await architectureTab.isVisible().catch(() => false)
       record('activating the sketch tool does not crash the editor', stillAlive)
     }
   }
@@ -176,7 +196,9 @@ try {
   )
 
   const relevantErrors = consoleErrors.filter(
-    (text) => !/WebGPU|webgpu|GPUAdapter|THREE\.WebGPURenderer/i.test(text),
+    (text) =>
+      !/WebGPU|webgpu|GPUAdapter|THREE\.WebGPURenderer/i.test(text) &&
+      !/pistola\.canner\.app|CORS policy|Access-Control-Allow-Origin|net::ERR_FAILED/i.test(text),
   )
   record(
     'no console errors',

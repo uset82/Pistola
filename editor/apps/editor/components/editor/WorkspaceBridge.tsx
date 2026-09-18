@@ -12,10 +12,10 @@ import {
 import { useViewer } from '@pascal-app/viewer'
 import { executeCadBrief } from '../../lib/cad-brief-executor'
 import { generateMacPart } from '../../lib/mac-part-executor'
+import { pistolaEventSource, pistolaFetch } from '../../lib/pistola-fetch'
+import type { WorkspaceCommand } from '../../lib/workspace-bridge'
 
 const SESSION_STORAGE_KEY = 'pistola-workspace-session-id'
-
-import type { WorkspaceCommand } from '../../lib/workspace-bridge'
 
 const getOrCreateSessionId = () => {
   if (typeof window === 'undefined') return crypto.randomUUID()
@@ -43,7 +43,7 @@ async function reportResult(
   commandId: string,
   payload: Record<string, unknown>,
 ) {
-  await fetch('/api/workspace/result', {
+  await pistolaFetch('/api/workspace/result', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId, commandId, ...payload }),
@@ -80,7 +80,7 @@ export function WorkspaceBridge() {
     }
 
     const register = async () => {
-      const response = await fetch('/api/workspace/session', {
+      const response = await pistolaFetch('/api/workspace/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildSnapshot()),
@@ -180,7 +180,7 @@ export function WorkspaceBridge() {
         }
 
         // Prompt: plan via assistant API then execute.
-        const planResponse = await fetch('/api/assistant/plan', {
+        const planResponse = await pistolaFetch('/api/assistant/plan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -233,7 +233,7 @@ export function WorkspaceBridge() {
     }
 
     const connectEvents = () => {
-      eventSource = new EventSource(
+      eventSource = pistolaEventSource(
         `/api/workspace/events?sessionId=${encodeURIComponent(sessionId)}`,
       )
       eventSource.addEventListener('command', (event) => {
@@ -254,12 +254,16 @@ export function WorkspaceBridge() {
       }
     }
 
-    void register().then(() => {
-      if (!closed) connectEvents()
-    })
+    void register()
+      .then(() => {
+        if (!closed) connectEvents()
+      })
+      .catch(() => {
+        // Static Sites has no local API. The editor still renders.
+      })
 
     const heartbeat = window.setInterval(() => {
-      void fetch('/api/workspace/session', {
+      void pistolaFetch('/api/workspace/session', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildSnapshot()),

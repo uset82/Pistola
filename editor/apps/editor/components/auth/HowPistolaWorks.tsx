@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { startTransition, useState } from 'react'
 
@@ -8,6 +7,7 @@ type AuthMode = 'signin' | 'signup'
 
 type HowPistolaWorksProps = {
   configured: boolean
+  legalOrigin?: string
 }
 
 const LOOP = [
@@ -49,7 +49,9 @@ const PROMPTS = [
   'Make a 50×50×6 mm plate with a 20 mm central hole.',
 ]
 
-export function HowPistolaWorks({ configured }: HowPistolaWorksProps) {
+export function HowPistolaWorks({ configured, legalOrigin }: HowPistolaWorksProps) {
+  const privacyHref = legalOrigin ? `${legalOrigin.replace(/\/+$/, '')}/privacy` : '/privacy'
+  const termsHref = legalOrigin ? `${legalOrigin.replace(/\/+$/, '')}/terms` : '/terms'
   const router = useRouter()
   const [mode, setMode] = useState<AuthMode>('signin')
   const [email, setEmail] = useState('')
@@ -170,12 +172,12 @@ export function HowPistolaWorks({ configured }: HowPistolaWorksProps) {
             builds. You refine in place.
           </p>
           <div className="rise mt-10 flex flex-wrap items-center gap-4" style={{ animationDelay: '200ms' }}>
-            <Link
+            <a
               className="inline-flex h-12 items-center rounded-full bg-[#c9844a] px-6 text-sm font-medium text-[#1a110b] transition hover:bg-[#d5975c]"
               href="/workspace"
             >
               Open the workspace
-            </Link>
+            </a>
             <a
               className="text-sm text-[#efe6d6]/55 underline-offset-4 transition hover:text-[#efe6d6] hover:underline"
               href="#loop"
@@ -268,12 +270,12 @@ export function HowPistolaWorks({ configured }: HowPistolaWorksProps) {
                 : 'No account wall. The editor is the product.'}
             </p>
           </div>
-          <Link
+          <a
             className="inline-flex h-12 items-center rounded-full bg-[#c9844a] px-6 text-sm font-medium text-[#1a110b] transition hover:bg-[#d5975c]"
             href="/workspace"
           >
             Enter the editor
-          </Link>
+          </a>
         </div>
 
         {configured ? (
@@ -334,12 +336,12 @@ export function HowPistolaWorks({ configured }: HowPistolaWorksProps) {
       </section>
 
       <footer className="flex items-center justify-between px-6 py-8 text-[11px] uppercase tracking-[0.18em] text-[#efe6d6]/35 sm:px-10">
-        <Link className="hover:text-[#efe6d6]" href="/privacy">
+        <a className="hover:text-[#efe6d6]" href={privacyHref}>
           Privacy
-        </Link>
-        <Link className="hover:text-[#efe6d6]" href="/terms">
+        </a>
+        <a className="hover:text-[#efe6d6]" href={termsHref}>
           Terms
-        </Link>
+        </a>
       </footer>
     </main>
   )
