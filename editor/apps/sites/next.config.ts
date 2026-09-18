@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     // FreeCAD and Multi-Agent-CAD work. This is intentionally public: auth
     // remains enforced by the Canner API session, never by a bundled secret.
     NEXT_PUBLIC_PISTOLA_API_BASE:
-      process.env.NEXT_PUBLIC_PISTOLA_API_BASE || 'https://pistola.app.canner.ca',
+      process.env.NEXT_PUBLIC_PISTOLA_API_BASE || 'https://pistolacodex.canner.app',
   },
   images: {
     unoptimized: true,

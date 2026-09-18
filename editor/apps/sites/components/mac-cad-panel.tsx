@@ -41,7 +41,7 @@ export function MacCadPanel() {
         {busy ? 'Generating…' : 'Generate MAC part'}
       </button>
       {status ? <p className="mt-2 text-emerald-100/80">{status}</p> : null}
-      <a className="mt-2 block text-emerald-300 underline" href="https://pistola.app.canner.ca/login" target="_blank" rel="noreferrer">
+      <a className="mt-2 block text-emerald-300 underline" href="https://pistolacodex.canner.app/login" target="_blank" rel="noreferrer">
         Sign in to Pistola Canner
       </a>
     </aside>
