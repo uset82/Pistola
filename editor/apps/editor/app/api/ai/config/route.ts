@@ -53,8 +53,12 @@ export async function PUT(request: Request) {
     }
 
     const body = (await request.json()) as Partial<InstalledAiConfig>
+    const existing = readInstalledAiConfig()
     const provider = body.provider === 'openai' ? 'openai' : 'openrouter'
-    const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : ''
+    const apiKey =
+      typeof body.apiKey === 'string' && body.apiKey.trim()
+        ? body.apiKey.trim()
+        : existing?.apiKey || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
     if (!apiKey) {
       return withPistolaCors(request, NextResponse.json({ error: 'apiKey is required.' }, { status: 400 }))
     }

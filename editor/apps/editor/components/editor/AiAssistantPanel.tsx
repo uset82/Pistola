@@ -1246,6 +1246,8 @@ export function AiAssistantPanel() {
       body: JSON.stringify({
         prompt,
         chatMode,
+        model: activeModel,
+        provider: activeProvider,
         sessionId: assistantSessionId,
         ...(assistantSessionMemory.codexThreadId
           ? { codexThreadId: assistantSessionMemory.codexThreadId }
