@@ -150,12 +150,13 @@ const isInteractiveDragTarget = (target: EventTarget | null) => {
 }
 
 const getCadParentId = (
-  levelId: string | null,
+  _levelId: string | null,
   rootNodeIds: string[],
   nodes: ReturnType<typeof useScene.getState>['nodes'],
 ) => {
-  if (levelId) return levelId
-  return rootNodeIds.find((rootId) => nodes[rootId as AnyNodeId]?.type === 'site') ?? null
+  // CAD definitions live in their own project world. Attaching them to a
+  // building level makes them disappear as soon as the CAD world is active.
+  return rootNodeIds.find((rootId) => nodes[rootId as AnyNodeId]?.type === 'cad-space') ?? null
 }
 
 const formatAction = (action: AssistantAction) => {
