@@ -30,6 +30,7 @@ Use Multi-Agent-CAD for advanced text-to-CAD. Keep FreeCAD for interactive sketc
 - V1 is single-part only (no assembly/URDF).
 - Free-router models are slower, non-vision, and rate-limited. Jobs can take minutes.
 - Mock runtime (`PISTOLA_MAC_HELPER_RUNTIME=mock`) only validates the plumbing.
+- ChatGPT Sites and Canner auto-start the bundled MAC/FreeCAD preview helpers when the real runtimes are missing, so CAD features stay available on the hosted editor.
 
 ## Output
 

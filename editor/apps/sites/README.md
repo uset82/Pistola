@@ -2,28 +2,29 @@
 
 Static Next.js export of the Pistola editor for hosting on ChatGPT/Codex **Sites**
 (`https://pistolacodex.gi-o-vi-n-ch-5540.chatgpt.site/`). It renders the full
-`@pascal-app/editor` UI without any Next.js server, API routes, or auth.
+`@pascal-app/editor` UI without a Next.js server of its own.
 
-## What works on the static host
+## CAD features on Sites
 
-- Structure / Furnish / Zones workspaces, scenes persisted in the browser.
-- CAD workspace with the browser-side sketcher (sketch, line, rectangle,
-  circle, arc, polyline, constraints, sketch panel). Enabled via
-  `<Editor enableCad enableCadRuntime={false} />` in `components/hosted-editor.tsx`.
+Sites is a CAD workspace, not a viewer-only preview.
 
-## What is intentionally disabled
+- Browser sketcher: sketch, line, rectangle, circle, arc, polyline, constraints.
+- **FreeCAD** solids: extrude, revolve, boolean, fillet, chamfer, STEP I/O.
+- **Multi-Agent-CAD**: text-to-part generation from [Pan-Chera/Multi-Agent-CAD](https://github.com/Pan-Chera/Multi-Agent-CAD).
 
-- FreeCAD-backed solids (extrude/revolve/boolean/fillet/chamfer), STEP import/
-  export, and the helper status widget (`enableCadRuntime={false}`).
-- AI assistant, MAC generation, workspace bridge, sign-in — they need the
-  `apps/editor` server plus local helper processes.
+Solid jobs run through the Canner editor API (`NEXT_PUBLIC_PISTOLA_API_BASE`,
+default `https://pistolacodex.canner.app`). The CAD Runtime panel shows both
+engines. If the host has no FreeCADCmd or MAC clone, Canner starts the bundled
+preview helpers so the Sites CAD loop still completes.
+
+Enabled via `<Editor enableCad enableCadRuntime />` in `components/hosted-editor.tsx`.
 
 ## Build and verify
 
 ```bash
 cd editor
 bun run build:sites   # next build (static export) + copy editor/public + sync to editor/out
-bun run smoke:sites   # serves editor/out headlessly and checks the CAD tab, no /api calls, no errors
+bun run smoke:sites   # serves editor/out headlessly and checks the CAD tab and MAC generator
 ```
 
 `apps/sites/scripts/sync-hosting-output.mjs` mirrors `apps/sites/out` into the

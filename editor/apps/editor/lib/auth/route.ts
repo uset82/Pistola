@@ -81,24 +81,15 @@ export const requireRouteAuthSession = async (
     }
   }
 
-  if (!isAuthConfigured()) {
-    // Allow unauthenticated local automation when auth DB isn't configured
-    // and a local API token is not required — keeps MCP usable in fresh clones.
-    if (isLocalUnauthenticatedAccessEnabled()) {
-      return {
-        response: null,
-        session: {
-          user: { id: 'local-mcp', email: 'local-mcp@pistola.local' },
-          sessionId: 'local-mcp',
-          expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
-        },
-        isLocalOperator: true,
-      }
-    }
+  if (!isAuthConfigured() || isLocalUnauthenticatedAccessEnabled()) {
     return {
-      response: unavailableAuthResponse(),
-      session: null,
-      isLocalOperator: false,
+      response: null,
+      session: {
+        user: { id: 'local-mcp', email: 'local-mcp@pistola.local' },
+        sessionId: 'local-mcp',
+        expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+      },
+      isLocalOperator: true,
     }
   }
 

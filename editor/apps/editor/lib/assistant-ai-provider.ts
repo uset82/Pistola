@@ -3408,7 +3408,14 @@ const buildDeterministicAssistantTurn = (
   )
   if (pendingBoxFollowUpTurn) return pendingBoxFollowUpTurn
 
-  const matchingRecipe = findMatchingRecipe(prompt)
+  const isReplaceRequest =
+    /\b(replace|swap|switch out|cambia|cambiar|reemplaza|reemplazar|sustituye|sustituir)\b/i.test(
+      normalizedPrompt,
+    )
+  const isFurnishRequest = /\b(furnish|amuebla|amueblar)\b/i.test(normalizedPrompt)
+
+  const matchingRecipe =
+    !isReplaceRequest && !isFurnishRequest ? findMatchingRecipe(prompt) : null
   if (matchingRecipe) {
     const requestedDimensions = parsePlanarMetricDimensions(prompt)
     const actions = matchingRecipe.generateActions({

@@ -1,4 +1,4 @@
-import { AuthScreen } from '@/components/auth/AuthScreen'
+import { HowPistolaWorks } from '@/components/auth/HowPistolaWorks'
 import { isAuthConfigured } from '@/lib/auth/config'
 import { getCurrentAuthSession } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
@@ -9,5 +9,5 @@ export default async function LoginPage() {
     redirect('/workspace')
   }
 
-  return <AuthScreen configured={isAuthConfigured()} />
+  return <HowPistolaWorks configured={isAuthConfigured()} />
 }

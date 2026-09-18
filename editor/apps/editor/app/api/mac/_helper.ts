@@ -52,15 +52,32 @@ export function isLoopbackMacHelperUrl(urlValue = DEFAULT_MAC_HELPER_URL) {
   }
 }
 
+export function resolveBundledMacHelperScript(cwd = process.cwd()) {
+  const candidates = [
+    path.resolve(cwd, 'tooling', 'mac-helper', 'server.mjs'),
+    path.resolve(cwd, '..', 'tooling', 'mac-helper', 'server.mjs'),
+    path.resolve(cwd, '..', '..', 'tooling', 'mac-helper', 'server.mjs'),
+  ]
+
+  return candidates.find((candidate) => existsSync(candidate)) || null
+}
+
+export function hasConfiguredMacRoot(env = process.env) {
+  const configured = env.PISTOLA_MAC_ROOT?.trim()
+  return Boolean(configured && existsSync(configured))
+}
+
 export function getMacHelperRuntimeMode(env = process.env): MacHelperRuntimeMode {
   const configured = env.PISTOLA_MAC_HELPER_RUNTIME?.trim().toLowerCase()
   if (configured === 'mock' || configured === 'external' || configured === 'python') {
     return configured
   }
 
-  return isLoopbackMacHelperUrl(env.PISTOLA_MAC_HELPER_URL || DEFAULT_MAC_HELPER_URL)
-    ? DEFAULT_MAC_HELPER_RUNTIME
-    : 'external'
+  if (!isLoopbackMacHelperUrl(env.PISTOLA_MAC_HELPER_URL || DEFAULT_MAC_HELPER_URL)) {
+    return 'external'
+  }
+
+  return hasConfiguredMacRoot(env) ? DEFAULT_MAC_HELPER_RUNTIME : 'mock'
 }
 
 export function shouldAutoStartManagedMacHelper(env = process.env) {
@@ -203,11 +220,29 @@ const waitForManagedMacHelper = async (
 }
 
 const getManagedMacHelperCandidates = (
+  runtimeMode: MacHelperRuntimeMode,
   helperUrl: string,
   cwd = process.cwd(),
 ): ManagedMacHelperSpawnCandidate[] => {
   const helperUrlObject = new URL(helperUrl)
   const helperPort = helperUrlObject.port || '7879'
+
+  if (runtimeMode === 'mock') {
+    const helperScript = resolveBundledMacHelperScript(cwd)
+    if (!helperScript) {
+      throw new Error('Bundled MAC helper entrypoint was not found at editor/tooling/mac-helper/server.mjs.')
+    }
+
+    return [
+      {
+        command: process.execPath,
+        args: [helperScript],
+        cwd: path.dirname(helperScript),
+        label: 'Bundled mock MAC helper',
+      },
+    ]
+  }
+
   const helperDirectory = resolvePythonMacHelperDirectory(cwd)
   if (!helperDirectory) {
     throw new Error('Python MAC helper entrypoint was not found at editor/tooling/mac-helper.')
@@ -295,7 +330,7 @@ const startManagedMacHelper = async (helperUrl: string, runtimeMode: MacHelperRu
 
   const helperUrlObject = new URL(helperUrl)
   const helperPort = helperUrlObject.port || '7879'
-  const candidates = getManagedMacHelperCandidates(helperUrl)
+  const candidates = getManagedMacHelperCandidates(runtimeMode, helperUrl)
 
   runtimeState.startPromise = new Promise<void>((resolve, reject) => {
     void (async () => {

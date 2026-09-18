@@ -1,10 +1,11 @@
 import { getCadBodyTransform, type CadBodyNode, useRegistry } from '@pascal-app/core'
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { Component, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { Box3, type Group, type Material, type Mesh, Vector3 } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { useNodeEvents } from '../../../hooks/use-node-events'
+import { shouldUseCadBodyAssetPreview } from './cad-body-preview'
 
 const getBodyColor = (node: CadBodyNode) => {
   if (node.regenStatus === 'error') return '#f87171'
@@ -12,12 +13,6 @@ const getBodyColor = (node: CadBodyNode) => {
   if (node.regenStatus === 'pending' || node.regenStatus === 'building') return '#facc15'
   return node.preview.color
 }
-
-const isRenderableAssetUrl = (url: string | null | undefined) =>
-  Boolean(url && (url.startsWith('/') || url.startsWith('http')) && /\.(glb|gltf)(\?.*)?$/i.test(url))
-
-const hasPlaceholderArtifacts = (node: CadBodyNode) =>
-  node.warnings.some((warning) => warning.toLowerCase().includes('placeholder artifact'))
 
 const getPlaceholderDimensions = (node: CadBodyNode): [number, number, number] =>
   node.preview.primitive === 'box'
@@ -31,6 +26,75 @@ const CadBodyAssetMesh = ({ url }: { url: string }) => {
   const centerY = bounds.getCenter(new Vector3()).y
 
   return <primitive object={scene} position-y={-centerY} />
+}
+
+class CadBodyAssetErrorBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children
+  }
+}
+
+const CadBodyPrimitiveMesh = ({
+  node,
+  material,
+  handlers,
+}: {
+  node: CadBodyNode
+  material: MeshStandardNodeMaterial
+  handlers: ReturnType<typeof useNodeEvents>
+}) => {
+  const placeholderDimensions = getPlaceholderDimensions(node)
+
+  return (
+    <>
+      {node.preview.primitive === 'box' ? (
+        <mesh
+          castShadow
+          material={material}
+          position-y={node.preview.dimensions[1] / 2}
+          receiveShadow
+          {...handlers}
+        >
+          <boxGeometry
+            args={[node.preview.dimensions[0], node.preview.dimensions[1], node.preview.dimensions[2]]}
+          />
+        </mesh>
+      ) : (
+        <mesh
+          castShadow
+          material={material}
+          position-y={node.preview.height / 2}
+          receiveShadow
+          rotation-x={Math.PI / 2}
+          {...handlers}
+        >
+          <cylinderGeometry
+            args={[
+              node.preview.radius,
+              node.preview.radius,
+              node.preview.height,
+              node.preview.radialSegments,
+            ]}
+          />
+        </mesh>
+      )}
+      {!node.artifacts.previewUrl && (
+        <mesh position-y={placeholderDimensions[1] / 2} renderOrder={3}>
+          <boxGeometry args={placeholderDimensions} />
+          <meshBasicMaterial color="#93c5fd" opacity={0.35} transparent wireframe />
+        </mesh>
+      )}
+    </>
+  )
 }
 
 export const CadBodyRenderer = ({ node }: { node: CadBodyNode }) => {
@@ -64,14 +128,18 @@ export const CadBodyRenderer = ({ node }: { node: CadBodyNode }) => {
 
   const placeholderDimensions = getPlaceholderDimensions(node)
   const previewUrl = node.artifacts.previewUrl || node.previewArtifactRef || null
-  const showAssetPreview = !hasPlaceholderArtifacts(node) && isRenderableAssetUrl(previewUrl)
-  const isBuilding = node.regenStatus === 'building' || node.regenStatus === 'queued' || node.regenStatus === 'running'
+  const showAssetPreview = shouldUseCadBodyAssetPreview(node)
+  const isBuilding =
+    node.regenStatus === 'building' || node.regenStatus === 'queued' || node.regenStatus === 'running'
+  const primitiveFallback = (
+    <CadBodyPrimitiveMesh handlers={handlers} material={material} node={node} />
+  )
 
   useFrame(({ clock }) => {
     if (overlayRef.current && (node.regenStatus === 'pending' || node.regenStatus === 'building')) {
-      const material = overlayRef.current.material as Material & { opacity?: number }
-      if (typeof material.opacity === 'number') {
-        material.opacity = 0.12 + (Math.sin(clock.elapsedTime * 4) + 1) * 0.08
+      const overlayMaterial = overlayRef.current.material as Material & { opacity?: number }
+      if (typeof overlayMaterial.opacity === 'number') {
+        overlayMaterial.opacity = 0.12 + (Math.sin(clock.elapsedTime * 4) + 1) * 0.08
       }
     }
 
@@ -89,49 +157,15 @@ export const CadBodyRenderer = ({ node }: { node: CadBodyNode }) => {
       visible={node.visible}
     >
       {showAssetPreview && previewUrl ? (
-        <group {...handlers}>
-          <CadBodyAssetMesh url={previewUrl} />
-        </group>
+        <CadBodyAssetErrorBoundary fallback={primitiveFallback}>
+          <Suspense fallback={primitiveFallback}>
+            <group {...handlers}>
+              <CadBodyAssetMesh url={previewUrl} />
+            </group>
+          </Suspense>
+        </CadBodyAssetErrorBoundary>
       ) : (
-        <>
-          {node.preview.primitive === 'box' ? (
-            <mesh
-              castShadow
-              material={material}
-              position-y={node.preview.dimensions[1] / 2}
-              receiveShadow
-              {...handlers}
-            >
-              <boxGeometry
-                args={[node.preview.dimensions[0], node.preview.dimensions[1], node.preview.dimensions[2]]}
-              />
-            </mesh>
-          ) : (
-            <mesh
-              castShadow
-              material={material}
-              position-y={node.preview.height / 2}
-              receiveShadow
-              rotation-x={Math.PI / 2}
-              {...handlers}
-            >
-              <cylinderGeometry
-                args={[
-                  node.preview.radius,
-                  node.preview.radius,
-                  node.preview.height,
-                  node.preview.radialSegments,
-                ]}
-              />
-            </mesh>
-          )}
-          {!node.artifacts.previewUrl && (
-            <mesh position-y={placeholderDimensions[1] / 2} renderOrder={3}>
-              <boxGeometry args={placeholderDimensions} />
-              <meshBasicMaterial color="#93c5fd" opacity={0.35} transparent wireframe />
-            </mesh>
-          )}
-        </>
+        primitiveFallback
       )}
 
       {(node.regenStatus === 'pending' || node.regenStatus === 'building') && (
@@ -144,8 +178,10 @@ export const CadBodyRenderer = ({ node }: { node: CadBodyNode }) => {
       {isBuilding && (
         <group position-y={placeholderDimensions[1] + 0.18} ref={spinnerRef}>
           <mesh rotation-x={Math.PI / 2}>
-            <torusGeometry args={[Math.max(placeholderDimensions[0], placeholderDimensions[2]) * 0.28, 0.02, 12, 48]} />
-            <meshBasicMaterial color="#fde68a" depthWrite={false} transparent opacity={0.9} />
+            <torusGeometry
+              args={[Math.max(placeholderDimensions[0], placeholderDimensions[2]) * 0.28, 0.02, 12, 48]}
+            />
+            <meshBasicMaterial color="#fde68a" depthWrite={false} opacity={0.9} transparent />
           </mesh>
         </group>
       )}

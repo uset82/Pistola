@@ -13,8 +13,8 @@ const fontVariables: CSSProperties &
 }
 
 export const metadata: Metadata = {
-  title: 'Pascal Editor',
-  description: 'Standalone building editor',
+  title: 'Pistola',
+  description: 'From idea to prototype. Chat-driven 3D scenes and CAD.',
 }
 
 export default function RootLayout({

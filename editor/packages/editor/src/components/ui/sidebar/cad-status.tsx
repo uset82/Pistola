@@ -4,20 +4,26 @@ import { Bot, RefreshCcw } from 'lucide-react'
 import { useEffect } from 'react'
 import { cn } from '../../../lib/utils'
 import useCad, { cadHelperUnavailableMessage } from '../../../store/use-cad'
+import useMac from '../../../store/use-mac'
 
 export function CadStatus() {
   const helperStatus = useCad((state) => state.helperStatus)
   const helperInfo = useCad((state) => state.helperInfo)
   const lastError = useCad((state) => state.lastError)
   const refreshHealth = useCad((state) => state.refreshHealth)
+  const macStatus = useMac((state) => state.helperStatus)
+  const macInfo = useMac((state) => state.helperInfo)
+  const refreshMacHealth = useMac((state) => state.refreshHealth)
 
   useEffect(() => {
     void refreshHealth()
-  }, [refreshHealth])
+    void refreshMacHealth()
+  }, [refreshHealth, refreshMacHealth])
 
   const isStub =
     helperInfo?.engine === 'freecad-stub' ||
     helperInfo?.engine === 'mock' ||
+    helperInfo?.engine === 'mock-freecad' ||
     (helperInfo?.runtime === 'mock' && helperStatus === 'ready')
   const isRealFreecad = helperInfo?.engine === 'freecad'
   const isMissingBuild =
@@ -34,25 +40,25 @@ export function CadStatus() {
         : 'border-border/60 bg-background/40 text-muted-foreground'
 
   const engineLabel = isStub
-    ? 'mock'
+    ? 'freecad preview'
     : isRealFreecad
       ? 'freecad'
-      : helperInfo?.engine ?? ''
+      : helperInfo?.engine ?? 'freecad'
+  const macLabel =
+    macInfo?.engine === 'mac-mock' || macInfo?.runtime === 'mock'
+      ? 'mac preview'
+      : macStatus === 'ready'
+        ? 'mac'
+        : 'mac offline'
 
   const helperLabel =
-    helperStatus === 'error'
+    helperStatus === 'error' && macStatus === 'error'
       ? isMissingBuild
         ? 'Set FREECAD_PATH to FreeCADCmd.exe'
         : lastError || cadHelperUnavailableMessage
-      : helperInfo
-        ? `${engineLabel} • ${helperInfo.version}`
-        : 'Check runtime'
+      : `${engineLabel} • ${macLabel}`
 
-  const headerLabel = isStub
-    ? 'CAD Helper (Mock)'
-    : isRealFreecad
-      ? 'FreeCAD'
-      : 'CAD Helper'
+  const headerLabel = 'CAD Engines'
 
   return (
     <button
@@ -60,8 +66,11 @@ export function CadStatus() {
         'flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition-colors hover:bg-white/5',
         tone,
       )}
-      onClick={() => void refreshHealth()}
-      title={lastError || helperInfo?.runtime || 'Refresh CAD helper status'}
+      onClick={() => {
+        void refreshHealth()
+        void refreshMacHealth()
+      }}
+      title={lastError || helperInfo?.runtime || 'Refresh CAD and MAC helper status'}
       type="button"
     >
       <div className="flex items-center gap-2">

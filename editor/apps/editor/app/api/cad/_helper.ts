@@ -52,15 +52,37 @@ export function isLoopbackCadHelperUrl(urlValue = DEFAULT_CAD_HELPER_URL) {
   }
 }
 
-export function getCadHelperRuntimeMode(env = process.env): CadHelperRuntimeMode {
+export function resolveFreecadCmdPath(helperDirectory: string, env = process.env) {
+  const configuredPath = env.FREECAD_PATH?.trim()
+  if (configuredPath) {
+    return existsSync(configuredPath) ? configuredPath : null
+  }
+
+  return resolveDefaultFreecadCmdCandidatePaths(helperDirectory).find((candidate) =>
+    existsSync(candidate),
+  ) || null
+}
+
+export function hasIntegratedFreecadCmd(cwd = process.cwd(), env = process.env) {
+  const helperDirectory = resolvePythonCadHelperDirectory(cwd)
+  if (!helperDirectory) return false
+  return Boolean(resolveFreecadCmdPath(helperDirectory, env))
+}
+
+export function getCadHelperRuntimeMode(
+  env = process.env,
+  cwd = process.cwd(),
+): CadHelperRuntimeMode {
   const configured = env.PISTOLA_CAD_HELPER_RUNTIME?.trim().toLowerCase()
   if (configured === 'mock' || configured === 'external' || configured === 'python') {
     return configured
   }
 
-  return isLoopbackCadHelperUrl(env.PISTOLA_CAD_HELPER_URL || DEFAULT_CAD_HELPER_URL)
-    ? DEFAULT_CAD_HELPER_RUNTIME
-    : 'external'
+  if (!isLoopbackCadHelperUrl(env.PISTOLA_CAD_HELPER_URL || DEFAULT_CAD_HELPER_URL)) {
+    return 'external'
+  }
+
+  return hasIntegratedFreecadCmd(cwd, env) ? DEFAULT_CAD_HELPER_RUNTIME : 'mock'
 }
 
 export function shouldAutoStartManagedCadHelper(env = process.env) {
@@ -167,23 +189,17 @@ const ensureFreecadCmdAvailable = (
   helperDirectory: string,
   env = process.env,
 ) => {
+  const resolvedPath = resolveFreecadCmdPath(helperDirectory, env)
+  if (resolvedPath) return resolvedPath
+
   const configuredPath = env.FREECAD_PATH?.trim()
   if (configuredPath) {
-    if (!existsSync(configuredPath)) {
-      throw new Error(`FREECAD_PATH must point to FreeCADCmd.exe. Current value not found: ${configuredPath}`)
-    }
-    return configuredPath
+    throw new Error(`FREECAD_PATH must point to FreeCADCmd.exe. Current value not found: ${configuredPath}`)
   }
 
-  const defaultCandidates = resolveDefaultFreecadCmdCandidatePaths(helperDirectory)
-  const defaultPath = defaultCandidates.find((candidate) => existsSync(candidate))
-  if (!defaultPath) {
-    throw new Error(
-      `FREECAD_PATH is not set and no integrated FreeCAD executable was found. Checked: ${defaultCandidates.join(', ')}. Build editor/third_party/FreeCAD or set FREECAD_PATH explicitly.`,
-    )
-  }
-
-  return defaultPath
+  throw new Error(
+    `FREECAD_PATH is not set and no integrated FreeCAD executable was found. Checked: ${resolveDefaultFreecadCmdCandidatePaths(helperDirectory).join(', ')}. Build editor/third_party/FreeCAD or set FREECAD_PATH explicitly.`,
+  )
 }
 
 const attachStartupLogCapture = (child: ChildProcess) => {

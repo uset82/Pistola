@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server'
 import { requireRouteAuthSession } from '@/lib/auth/route'
+import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import {
   DEFAULT_INSTALLED_OPENROUTER_BASE_URL,
   readInstalledAiConfig,
 } from '@/lib/installed-ai-config'
 
+export const OPTIONS = pistolaCorsPreflight
+
 export async function POST(request: Request) {
+  const json = (body: unknown, init?: ResponseInit) =>
+    withPistolaCors(request, NextResponse.json(body, init))
+
   try {
     const auth = await requireRouteAuthSession()
     if (auth.response) {
-      return auth.response
+      return withPistolaCors(request, auth.response)
     }
 
     const body = (await request.json().catch(() => ({}))) as {
@@ -35,7 +41,7 @@ export async function POST(request: Request) {
       .replace(/\/+$/u, '')
 
     if (!apiKey) {
-      return NextResponse.json(
+      return json(
         { ok: false, error: 'No API key configured.' },
         { status: 400 },
       )
@@ -50,7 +56,7 @@ export async function POST(request: Request) {
       })
       if (!response.ok) {
         const text = await response.text()
-        return NextResponse.json(
+        return json(
           {
             ok: false,
             error: text || `OpenRouter returned ${response.status}.`,
@@ -58,7 +64,7 @@ export async function POST(request: Request) {
           { status: 502 },
         )
       }
-      return NextResponse.json({
+      return json({
         ok: true,
         provider,
         model,
@@ -74,20 +80,20 @@ export async function POST(request: Request) {
     })
     if (!response.ok) {
       const text = await response.text()
-      return NextResponse.json(
+      return json(
         { ok: false, error: text || `OpenAI returned ${response.status}.` },
         { status: 502 },
       )
     }
 
-    return NextResponse.json({
+    return json({
       ok: true,
       provider,
       model,
       message: 'OpenAI connection succeeded.',
     })
   } catch (error) {
-    return NextResponse.json(
+    return json(
       {
         ok: false,
         error: error instanceof Error ? error.message : 'Connection test failed.',

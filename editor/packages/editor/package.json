@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.tsx",
     "./lib/assistant/box-features": "./src/lib/assistant/box-features.ts",
-    "./lib/cad/contracts": "./src/lib/cad/contracts.ts"
+    "./lib/cad/contracts": "./src/lib/cad/contracts.ts",
+    "./lib/mac/contracts": "./src/lib/mac/contracts.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

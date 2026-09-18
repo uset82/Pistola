@@ -1,5 +1,5 @@
 import { EditorWorkspace } from '@/components/editor/EditorWorkspace'
-import { isLocalUnauthenticatedAccessEnabled } from '@/lib/auth/config'
+import { isAuthConfigured, isLocalUnauthenticatedAccessEnabled } from '@/lib/auth/config'
 import { getCurrentAuthSession } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 
@@ -9,7 +9,7 @@ export default async function WorkspacePage() {
     return <EditorWorkspace userEmail={session.user.email} />
   }
 
-  if (isLocalUnauthenticatedAccessEnabled()) {
+  if (!isAuthConfigured() || isLocalUnauthenticatedAccessEnabled()) {
     return <EditorWorkspace />
   }
 

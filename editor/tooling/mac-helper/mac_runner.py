@@ -31,7 +31,6 @@ def _write_mock_artifacts(job_dir: Path, prompt: str) -> MacArtifactRefs:
     """Create placeholder artifacts so the import path can be exercised without MAC."""
     job_dir.mkdir(parents=True, exist_ok=True)
     step_path = job_dir / "part.step"
-    glb_path = job_dir / "part.glb"
     code_path = job_dir / "temp_design_0.py"
     measurements_path = job_dir / "temp_measurements_0.json"
 
@@ -49,8 +48,6 @@ def _write_mock_artifacts(job_dir: Path, prompt: str) -> MacArtifactRefs:
         "END-ISO-10303-21;\n",
         encoding="utf-8",
     )
-    # Tiny GLB-looking placeholder bytes; FreeCAD import uses STEP primarily.
-    glb_path.write_bytes(b"glTF")
     code_path.write_text(
         f'# Mock MAC output for: {prompt}\nfrom build123d import *\n\nprint("mock")\n',
         encoding="utf-8",
@@ -58,12 +55,12 @@ def _write_mock_artifacts(job_dir: Path, prompt: str) -> MacArtifactRefs:
     measurements_path.write_text(json.dumps({"mock": True, "prompt": prompt}), encoding="utf-8")
 
     return MacArtifactRefs(
-        previewUrl=_artifact_url(job_dir.name, glb_path.name),
+        previewUrl=None,
         cadUrl=_artifact_url(job_dir.name, step_path.name),
         stlUrl=None,
         codeUrl=_artifact_url(job_dir.name, code_path.name),
         measurementsUrl=_artifact_url(job_dir.name, measurements_path.name),
-        previewArtifactRef=str(glb_path.resolve()),
+        previewArtifactRef=None,
         cadArtifactRef=str(step_path.resolve()),
         codeArtifactRef=str(code_path.resolve()),
     )

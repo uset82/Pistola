@@ -20,11 +20,23 @@ test('loopback helper URLs are treated as locally managed candidates', () => {
   assert.equal(isLoopbackCadHelperUrl('https://cad.example.com'), false)
 })
 
-test('runtime mode defaults to python on local loopback helper URLs', () => {
+test('runtime mode defaults to mock on local loopback when FreeCAD is missing', () => {
   assert.equal(
     getCadHelperRuntimeMode({
       NODE_ENV: 'test',
       PISTOLA_CAD_HELPER_URL: 'http://127.0.0.1:7878',
+      FREECAD_PATH: 'D:\\missing-freecad\\FreeCADCmd.exe',
+    } as NodeJS.ProcessEnv),
+    'mock',
+  )
+})
+
+test('runtime mode stays python on local loopback when FreeCADCmd is configured', () => {
+  assert.equal(
+    getCadHelperRuntimeMode({
+      NODE_ENV: 'test',
+      PISTOLA_CAD_HELPER_URL: 'http://127.0.0.1:7878',
+      PISTOLA_CAD_HELPER_RUNTIME: 'python',
     } as NodeJS.ProcessEnv),
     'python',
   )

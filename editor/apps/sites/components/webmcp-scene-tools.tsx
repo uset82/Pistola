@@ -1,10 +1,9 @@
 'use client'
 
 import { useScene } from '@pascal-app/core'
-import { executeAssistantPlan, getAssistantWorkspaceContext } from '@pascal-app/editor'
+import { executeAssistantPlan, generateMacPart, getAssistantWorkspaceContext } from '@pascal-app/editor'
 import { defineTool, registerTools } from '@nekuda/webmcp-sdk'
 import { useEffect } from 'react'
-import { generateHostedMacPart } from '../lib/mac-part-executor'
 
 type SceneActionsInput = {
   actions: Record<string, unknown>[]
@@ -34,7 +33,7 @@ const getPistolaSceneContext = defineTool({
   name: 'get_pistola_scene_context',
   title: 'Get Pistola scene context',
   description:
-    'Read the current Pistola scene, selection, active level, available catalog assets, and browser CAD capability. Call this before planning a scene change and again after a mutation to verify the result. This does not change the scene.',
+    'Read the current Pistola scene, selection, active level, available catalog assets, and CAD capability. Call this before planning a scene change and again after a mutation to verify the result. This does not change the scene.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -52,16 +51,15 @@ const applyPistolaSceneActions = defineTool<SceneActionsInput>({
   name: 'apply_pistola_scene_actions',
   title: 'Apply Pistola scene actions',
   description:
-    'Apply an ordered, validated batch of Pistola scene actions to the live editor. This changes the shared page. Read get_pistola_scene_context first and use the Canner-backed runtime for FreeCAD solids, STEP operations, and generate_mac_part. A signed-in Pistola Canner session is required for server-side jobs. Return the execution result and inspect the scene afterward.',
+    'Apply an ordered, validated batch of Pistola scene actions to the live editor. This changes the shared page. Read get_pistola_scene_context first. Use FreeCAD actions for sketches and solids, and generate_mac_part for Multi-Agent-CAD. Return the execution result and inspect the scene afterward.',
   inputSchema: sceneActionSchema,
   intent: 'act',
   async execute({ actions }) {
     const result = await executeAssistantPlan(actions, {
       maxActions: 50,
-      // The host browser presents its own review for this mutating WebMCP tool.
       reviewConfirmed: true,
       runtime: {
-        generateMacPart: generateHostedMacPart,
+        generateMacPart,
       },
     })
 
@@ -107,7 +105,6 @@ export function WebMcpSceneTools() {
   useEffect(() => {
     const registration = registerTools(
       [getPistolaSceneContext, applyPistolaSceneActions, undoPistolaSceneChange],
-      // Keep the public, browser-only editor free of third-party usage telemetry.
       { telemetry: false },
     )
 

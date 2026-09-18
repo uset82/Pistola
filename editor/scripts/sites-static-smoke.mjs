@@ -110,13 +110,21 @@ try {
   })
   page.on('request', (request) => {
     const url = new URL(request.url())
-    if (url.pathname.startsWith('/api/')) apiRequests.push(url.pathname)
+    if (url.origin === baseUrl && url.pathname.startsWith('/api/')) {
+      apiRequests.push(url.pathname)
+    }
   })
   page.on('requestfailed', (request) => {
-    failedRequests.push(`${request.url()} (${request.failure()?.errorText ?? 'failed'})`)
+    const url = new URL(request.url())
+    if (url.origin === baseUrl) {
+      failedRequests.push(`${request.url()} (${request.failure()?.errorText ?? 'failed'})`)
+    }
   })
   page.on('response', (response) => {
-    if (response.status() >= 400) failedRequests.push(`${response.url()} (${response.status()})`)
+    const url = new URL(response.url())
+    if (url.origin === baseUrl && response.status() >= 400) {
+      failedRequests.push(`${response.url()} (${response.status()})`)
+    }
   })
 
   await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
@@ -138,10 +146,13 @@ try {
     record('CAD sketch tools are available', sketchToolVisible)
 
     const extrudeCount = await page.getByRole('button', { name: /Extrude \(Pad\)/i }).count()
-    record('FreeCAD-only Part Design tools are hidden', extrudeCount === 0)
+    record('FreeCAD solid tools are available', extrudeCount > 0)
 
-    const runtimeNote = await page.getByText(/require the desktop FreeCAD runtime/i).count()
-    record('Runtime limitation note is shown', runtimeNote > 0)
+    const macGenerator = await page.getByRole('button', { name: /Generate (MAC|Multi-Agent-CAD) part/i }).count()
+    record('Multi-Agent-CAD generator is part of the CAD panel', macGenerator > 0)
+
+    const enginesLabel = await page.getByText(/CAD Engines/i).count()
+    record('CAD Runtime panel lists both engines', enginesLabel > 0)
 
     if (sketchToolVisible) {
       await sketchTool.click()
@@ -154,12 +165,12 @@ try {
   await wait(1500)
 
   record(
-    'no /api/* requests are issued by the static site',
+    'the static host does not serve /api/* itself',
     apiRequests.length === 0,
     apiRequests.length ? [...new Set(apiRequests)].join(', ') : '',
   )
   record(
-    'no failed network requests',
+    'no failed same-origin network requests',
     failedRequests.length === 0,
     failedRequests.length ? failedRequests.slice(0, 5).join(' | ') : '',
   )
