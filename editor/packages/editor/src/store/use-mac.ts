@@ -17,8 +17,15 @@ type MacState = {
   generatePart: (prompt: string) => Promise<string | null>
 }
 
-const getMacUnavailableMessage = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : macHelperUnavailableMessage
+const getMacUnavailableMessage = (error: unknown) => {
+  if (error instanceof Error && error.message) {
+    if (error.message === 'fetch failed' || error.message.includes('fetch failed')) {
+      return macHelperUnavailableMessage
+    }
+    return error.message
+  }
+  return macHelperUnavailableMessage
+}
 
 const useMac = create<MacState>()((set) => ({
   helperStatus: 'unknown',
@@ -30,10 +37,12 @@ const useMac = create<MacState>()((set) => ({
     set({ helperStatus: 'checking', lastError: null })
     try {
       const helperInfo = await fetchMacHealth()
+      const errorMsg =
+        helperInfo.error === 'fetch failed' ? macHelperUnavailableMessage : helperInfo.error || null
       set({
         helperInfo,
         helperStatus: helperInfo.status === 'ready' ? 'ready' : 'error',
-        lastError: helperInfo.error || null,
+        lastError: errorMsg,
       })
     } catch (error) {
       set({

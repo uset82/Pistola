@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { handleMockMacRequest } from './_mock'
 
 const DEFAULT_MAC_HELPER_URL = 'http://127.0.0.1:7879'
 const DEFAULT_MAC_HELPER_RUNTIME = 'python'
@@ -399,6 +400,10 @@ export async function ensureMacHelperAvailable() {
   const helperUrl = getMacHelperUrl()
   const runtimeMode = getMacHelperRuntimeMode()
 
+  if (runtimeMode === 'mock') {
+    return
+  }
+
   if (await isMacHelperHealthy(helperUrl)) {
     return
   }
@@ -421,17 +426,50 @@ export async function ensureMacHelperAvailable() {
   await startManagedMacHelper(helperUrl, runtimeMode)
 }
 
-export async function fetchMacHelper(pathname: string, init?: RequestInit) {
-  await ensureMacHelperAvailable()
+export async function fetchMacHelper(pathname: string, init?: RequestInit): Promise<Response> {
+  const helperUrl = getMacHelperUrl()
+  const runtimeMode = getMacHelperRuntimeMode()
+
+  if (runtimeMode === 'mock') {
+    return handleMockMacRequest(pathname, init)
+  }
+
+  if (await isMacHelperHealthy(helperUrl)) {
+    const headers = new Headers(init?.headers)
+    if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+    return fetch(`${helperUrl}${pathname}`, {
+      ...init,
+      cache: 'no-store',
+      headers,
+    })
+  }
+
+  try {
+    await ensureMacHelperAvailable()
+  } catch (error) {
+    if (isLoopbackMacHelperUrl(helperUrl) && process.env.PISTOLA_MAC_HELPER_RUNTIME !== 'python') {
+      return handleMockMacRequest(pathname, init)
+    }
+    throw error
+  }
 
   const headers = new Headers(init?.headers)
   if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
-  return fetch(`${getMacHelperUrl()}${pathname}`, {
-    ...init,
-    cache: 'no-store',
-    headers,
-  })
+  try {
+    return await fetch(`${helperUrl}${pathname}`, {
+      ...init,
+      cache: 'no-store',
+      headers,
+    })
+  } catch (error) {
+    if (isLoopbackMacHelperUrl(helperUrl) && process.env.PISTOLA_MAC_HELPER_RUNTIME !== 'python') {
+      return handleMockMacRequest(pathname, init)
+    }
+    throw error
+  }
 }

@@ -84,3 +84,41 @@ test('helper discovery resolves the canonical python helper and optional bundled
     path.join(workspaceRoot, 'tooling', 'cad-helper', 'server.mjs'),
   )
 })
+
+test('in-process mock CAD helper handles health check and jobs without child process', async () => {
+  const { fetchCadHelper } = await import('./_helper')
+  const previousRuntime = process.env.PISTOLA_CAD_HELPER_RUNTIME
+  process.env.PISTOLA_CAD_HELPER_RUNTIME = 'mock'
+
+  try {
+    const healthResponse = await fetchCadHelper('/health')
+    assert.equal(healthResponse.status, 200)
+    const healthPayload = await healthResponse.json()
+    assert.equal(healthPayload.status, 'ready')
+    assert.equal(healthPayload.runtime, 'mock')
+    assert.equal(healthPayload.engine, 'mock-freecad')
+
+    const createJobResponse = await fetchCadHelper('/v1/cad/jobs', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'sketch_to_solid',
+        payload: {
+          sketch: { id: 'sketch-1', entities: [] },
+          depth: 2.5,
+        },
+      }),
+    })
+    assert.equal(createJobResponse.status, 200)
+    const jobPayload = await createJobResponse.json()
+    assert.ok(jobPayload.jobId)
+
+    const getJobResponse = await fetchCadHelper(`/v1/cad/jobs/${jobPayload.jobId}`)
+    assert.equal(getJobResponse.status, 200)
+    const jobDetail = await getJobResponse.json()
+    assert.equal(jobDetail.status, 'succeeded')
+    assert.equal(jobDetail.result.preview.primitive, 'box')
+  } finally {
+    process.env.PISTOLA_CAD_HELPER_RUNTIME = previousRuntime
+  }
+})
+

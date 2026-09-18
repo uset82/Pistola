@@ -22,6 +22,12 @@ export async function GET(request: Request) {
       headers: { 'Cache-Control': 'no-store' },
     }))
   } catch (error) {
+    const rawError = error instanceof Error ? error.message : 'MAC helper unavailable'
+    const cleanError =
+      rawError === 'fetch failed'
+        ? `MAC helper at ${getMacHelperUrl()} is unreachable`
+        : rawError
+
     return withPistolaCors(request, NextResponse.json(
       normalizeMacHelperHealth(
         {
@@ -30,7 +36,7 @@ export async function GET(request: Request) {
           engine: 'mac-build123d',
           version: 'unknown',
           helperUrl: getMacHelperUrl(),
-          error: error instanceof Error ? error.message : 'MAC helper unavailable',
+          error: cleanError,
         },
         getMacHelperUrl(),
       ),

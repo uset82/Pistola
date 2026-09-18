@@ -180,7 +180,7 @@ test('Acceptance Prompt 3: Build 10m x 8m modern studio with large windows on so
   assert.ok(actionTypes.includes('place_window'))
 
   const slab = result.turn.actions.find((a) => a.type === 'create_slab')
-  assert.ok(slab && 'name' in slab && slab.name.includes('Oak Floor'))
+  assert.ok(slab && 'name' in slab && slab.name?.includes('Oak Floor'))
 
   const window = result.turn.actions.find((a) => a.type === 'place_window')
   assert.ok(window && 'wallId' in window && window.wallId === '$ref_room_wall_0')

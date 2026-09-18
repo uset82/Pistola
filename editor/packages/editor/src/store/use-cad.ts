@@ -114,8 +114,15 @@ const getDefaultSketchPosition = (): [number, number, number] => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-const getCadHelperUnavailableMessage = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : cadHelperUnavailableMessage
+const getCadHelperUnavailableMessage = (error: unknown) => {
+  if (error instanceof Error && error.message) {
+    if (error.message === 'fetch failed' || error.message.includes('fetch failed')) {
+      return cadHelperUnavailableMessage
+    }
+    return error.message
+  }
+  return cadHelperUnavailableMessage
+}
 
 const ensureCadHelperReady = async (
   set: (partial: Partial<CadState>) => void,

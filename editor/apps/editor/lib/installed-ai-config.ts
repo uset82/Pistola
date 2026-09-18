@@ -134,24 +134,23 @@ export const applyInstalledAiConfigToEnv = (
     next.PISTOLA_ASSISTANT_AI_PROVIDER =
       next.PISTOLA_ASSISTANT_AI_PROVIDER || 'openrouter'
     next.PISTOLA_CAD_AI_PROVIDER = next.PISTOLA_CAD_AI_PROVIDER || 'openrouter'
-    next.PISTOLA_ASSISTANT_MODEL = next.PISTOLA_ASSISTANT_MODEL || installed.model
-    next.PISTOLA_CAD_MODEL = next.PISTOLA_CAD_MODEL || installed.model
-    next.PISTOLA_MAC_MODEL = next.PISTOLA_MAC_MODEL || installed.model
-    next.PISTOLA_ASSISTANT_AI_BASE_URL =
-      next.PISTOLA_ASSISTANT_AI_BASE_URL || installed.baseUrl
-    next.PISTOLA_CAD_AI_BASE_URL = next.PISTOLA_CAD_AI_BASE_URL || installed.baseUrl
-    next.PISTOLA_MAC_AI_BASE_URL = next.PISTOLA_MAC_AI_BASE_URL || installed.baseUrl
+    // The installed file is the user's latest explicit choice from the panel,
+    // so its model and base URL win over (possibly stale) env values.
+    next.PISTOLA_ASSISTANT_MODEL = installed.model
+    next.PISTOLA_CAD_MODEL = installed.model
+    next.PISTOLA_MAC_MODEL = installed.model
+    next.PISTOLA_ASSISTANT_AI_BASE_URL = installed.baseUrl
+    next.PISTOLA_CAD_AI_BASE_URL = installed.baseUrl
+    next.PISTOLA_MAC_AI_BASE_URL = installed.baseUrl
   }
 
   if (installed.provider === 'openai') {
     next.OPENAI_API_KEY = installed.apiKey
     next.PISTOLA_AI_PROVIDER = next.PISTOLA_AI_PROVIDER || 'openai'
-    next.PISTOLA_ASSISTANT_MODEL = next.PISTOLA_ASSISTANT_MODEL || installed.model
-    next.PISTOLA_CAD_MODEL = next.PISTOLA_CAD_MODEL || installed.model
-    next.PISTOLA_ASSISTANT_AI_BASE_URL =
-      next.PISTOLA_ASSISTANT_AI_BASE_URL || `${installed.baseUrl}/responses`
-    next.PISTOLA_CAD_AI_BASE_URL =
-      next.PISTOLA_CAD_AI_BASE_URL || `${installed.baseUrl}/responses`
+    next.PISTOLA_ASSISTANT_MODEL = installed.model
+    next.PISTOLA_CAD_MODEL = installed.model
+    next.PISTOLA_ASSISTANT_AI_BASE_URL = `${installed.baseUrl}/responses`
+    next.PISTOLA_CAD_AI_BASE_URL = `${installed.baseUrl}/responses`
   }
 
   return next

@@ -43,7 +43,9 @@ export function CadStatus() {
     ? 'freecad preview'
     : isRealFreecad
       ? 'freecad'
-      : helperInfo?.engine ?? 'freecad'
+      : helperStatus === 'error'
+        ? 'freecad offline'
+        : helperInfo?.engine ?? 'freecad'
   const macLabel =
     macInfo?.engine === 'mac-mock' || macInfo?.runtime === 'mock'
       ? 'mac preview'
@@ -55,8 +57,17 @@ export function CadStatus() {
     helperStatus === 'error' && macStatus === 'error'
       ? isMissingBuild
         ? 'Set FREECAD_PATH to FreeCADCmd.exe'
-        : lastError || cadHelperUnavailableMessage
+        : 'freecad offline • mac offline'
       : `${engineLabel} • ${macLabel}`
+
+  const cleanLastError =
+    lastError && !lastError.includes('fetch failed') ? lastError : null
+
+  const statusTooltip =
+    cleanLastError ||
+    (helperStatus === 'error' && macStatus === 'error'
+      ? 'FreeCAD and MAC helpers are offline. Click to refresh.'
+      : helperInfo?.runtime || `${engineLabel} • ${macLabel}`)
 
   const headerLabel = 'CAD Engines'
 
@@ -70,7 +81,7 @@ export function CadStatus() {
         void refreshHealth()
         void refreshMacHealth()
       }}
-      title={lastError || helperInfo?.runtime || 'Refresh CAD and MAC helper status'}
+      title={statusTooltip}
       type="button"
     >
       <div className="flex items-center gap-2">

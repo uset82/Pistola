@@ -967,6 +967,16 @@ const ASSISTANT_JSON_SCHEMA = {
 
 const ASSISTANT_SYSTEM_PROMPT = `You are the Pistola always-on editor assistant.
 Return JSON only.
+Output contract: return exactly one JSON object with these keys:
+- "reply": string, always non-empty, written directly to the user.
+- "mode": one of "chat", "clarify", "plan", "task-plan".
+- "assumptions": array of strings.
+- "ambiguities": array of strings.
+- "actions": array of action objects (empty when no editor action is needed).
+- Optional "steps" (task-plan only) and "continuation".
+Do not use any other top-level key for the answer (no "answer", "result", "output").
+Example for a general question: {"reply":"3 + 3 = 6.","mode":"chat","assumptions":[],"ambiguities":[],"actions":[]}
+Answer general questions (math, explanations, facts) directly in "reply" with mode "chat" and zero actions.
 You help across site, structure, furnish, and cad workspaces.
 Use response mode "chat" for general conversation or when the request is unsupported and you must explain the limitation plus the nearest buildable fallback.
 Use response mode "clarify" when the request is missing geometry, placement, target, or selection details needed to act. Clarify with ambiguities and zero actions.
@@ -5330,37 +5340,72 @@ const safeJsonParse = (cleaned: string): Record<string, unknown> => {
   }
 }
 
+const ASSISTANT_REPLY_FALLBACK_KEYS = [
+  'reply',
+  'message',
+  'response',
+  'explanation',
+  'answer',
+  'result',
+  'text',
+  'content',
+  'output',
+] as const
+
+const readReplyValue = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  return null
+}
+
+const stripReasoningTags = (raw: string) =>
+  raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+    .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
+    .trim()
+
+const buildPlainTextTurnJson = (raw: string): Record<string, unknown> => ({
+  reply:
+    stripReasoningTags(raw) ||
+    'I processed your request, but could not produce structured 3D actions.',
+  mode: 'chat',
+  assumptions: [],
+  ambiguities: [],
+  actions: [],
+})
+
 const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
   const cleaned = cleanJsonString(raw)
   let json: Record<string, unknown>
   try {
-    json = safeJsonParse(cleaned)
+    const parsed: unknown = safeJsonParse(cleaned)
+    json =
+      parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : buildPlainTextTurnJson(raw)
   } catch {
-    const plainText = raw
-      .replace(/<think>[\s\S]*?<\/think>/gi, '')
-      .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
-      .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
-      .trim()
-
-    json = {
-      reply: plainText || 'I processed your request, but could not produce structured 3D actions.',
-      mode: 'chat',
-      assumptions: [],
-      ambiguities: [],
-      actions: [],
-    }
+    json = buildPlainTextTurnJson(raw)
   }
 
-  // Ensure reply and mode are valid strings
+  // Ensure reply is a valid string, recovering the model's answer from alternate keys
   if (typeof json.reply !== 'string' || !json.reply.trim()) {
+    const hasActions =
+      (Array.isArray(json.actions) && json.actions.length > 0) ||
+      (Array.isArray(json.steps) && json.steps.length > 0)
+    const namedReply = ASSISTANT_REPLY_FALLBACK_KEYS.map((key) => readReplyValue(json[key])).find(
+      (value): value is string => Boolean(value),
+    )
+    const anyValueReply = hasActions
+      ? null
+      : Object.entries(json)
+          .filter(([key]) => key !== 'mode')
+          .map(([, value]) => readReplyValue(value))
+          .find((value): value is string => Boolean(value))
     json.reply =
-      typeof json.message === 'string' && json.message.trim()
-        ? json.message.trim()
-        : typeof json.response === 'string' && json.response.trim()
-          ? json.response.trim()
-          : typeof json.explanation === 'string' && json.explanation.trim()
-            ? json.explanation.trim()
-            : 'Processed assistant request.'
+      namedReply ??
+      anyValueReply ??
+      (hasActions ? 'Processed assistant request.' : stripReasoningTags(raw) || 'Processed assistant request.')
   }
 
   const validModes = ['chat', 'clarify', 'plan', 'task-plan']

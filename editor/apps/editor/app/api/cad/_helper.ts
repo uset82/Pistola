@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { handleMockCadRequest } from './_mock'
 
 const DEFAULT_CAD_HELPER_URL = 'http://127.0.0.1:7878'
 const DEFAULT_CAD_HELPER_RUNTIME = 'python'
@@ -433,6 +434,10 @@ export async function ensureCadHelperAvailable() {
   const helperUrl = getCadHelperUrl()
   const runtimeMode = getCadHelperRuntimeMode()
 
+  if (runtimeMode === 'mock') {
+    return
+  }
+
   if (await isCadHelperHealthy(helperUrl)) {
     return
   }
@@ -455,19 +460,52 @@ export async function ensureCadHelperAvailable() {
   await startManagedCadHelper(helperUrl, runtimeMode)
 }
 
-export async function fetchCadHelper(pathname: string, init?: RequestInit) {
-  await ensureCadHelperAvailable()
+export async function fetchCadHelper(pathname: string, init?: RequestInit): Promise<Response> {
+  const helperUrl = getCadHelperUrl()
+  const runtimeMode = getCadHelperRuntimeMode()
+
+  if (runtimeMode === 'mock') {
+    return handleMockCadRequest(pathname, init)
+  }
+
+  if (await isCadHelperHealthy(helperUrl)) {
+    const headers = new Headers(init?.headers)
+    if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json')
+    }
+    return fetch(`${helperUrl}${pathname}`, {
+      ...init,
+      cache: 'no-store',
+      headers,
+    })
+  }
+
+  try {
+    await ensureCadHelperAvailable()
+  } catch (error) {
+    if (isLoopbackCadHelperUrl(helperUrl) && process.env.PISTOLA_CAD_HELPER_RUNTIME !== 'python') {
+      return handleMockCadRequest(pathname, init)
+    }
+    throw error
+  }
 
   const headers = new Headers(init?.headers)
   if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
-  return fetch(`${getCadHelperUrl()}${pathname}`, {
-    ...init,
-    cache: 'no-store',
-    headers,
-  })
+  try {
+    return await fetch(`${helperUrl}${pathname}`, {
+      ...init,
+      cache: 'no-store',
+      headers,
+    })
+  } catch (error) {
+    if (isLoopbackCadHelperUrl(helperUrl) && process.env.PISTOLA_CAD_HELPER_RUNTIME !== 'python') {
+      return handleMockCadRequest(pathname, init)
+    }
+    throw error
+  }
 }
 
 export async function proxyCadHelper(pathname: string, init?: RequestInit) {

@@ -3587,3 +3587,34 @@ test('assistantAgenticOperatorFixtures corpus provides 30+ fixtures across all r
   assert.ok(languages.has('en'), 'missing English fixtures')
   assert.ok(languages.has('es'), 'missing Spanish fixtures')
 })
+
+const runOpenRouterRawTurn = (raw: string) =>
+  createAssistantTurnResult(
+    { prompt: '3+3', context: {} },
+    { ...NO_CODEX_AUTH, OPENROUTER_API_KEY: 'openrouter-key' },
+    { requestOpenRouterTurn: async () => raw },
+  )
+
+test('createAssistantTurnResult recovers the answer when the model uses a non-reply key', async () => {
+  const result = await runOpenRouterRawTurn(JSON.stringify({ answer: '6' }))
+
+  assert.equal(result.turn.mode, 'chat')
+  assert.equal(result.turn.reply, '6')
+  assert.deepEqual(result.turn.actions, [])
+})
+
+test('createAssistantTurnResult handles a bare JSON primitive from the model', async () => {
+  const result = await runOpenRouterRawTurn('6')
+
+  assert.equal(result.turn.mode, 'chat')
+  assert.equal(result.turn.reply, '6')
+})
+
+test('createAssistantTurnResult keeps a well-formed chat reply unchanged', async () => {
+  const result = await runOpenRouterRawTurn(
+    JSON.stringify({ reply: '3 + 3 = 6.', mode: 'chat', assumptions: [], ambiguities: [], actions: [] }),
+  )
+
+  assert.equal(result.turn.mode, 'chat')
+  assert.equal(result.turn.reply, '3 + 3 = 6.')
+})

@@ -27,15 +27,21 @@ export async function GET(request: Request) {
       },
     ))
   } catch (error) {
+    const rawError = error instanceof Error ? error.message : 'CAD helper unavailable'
+    const cleanError =
+      rawError === 'fetch failed'
+        ? `CAD helper at ${getCadHelperUrl()} is unreachable`
+        : rawError
+
     return withPistolaCors(request, NextResponse.json(
       normalizeCadHelperHealth(
         {
-        status: 'error',
-        runtime: 'unreachable',
-        engine: 'cad-helper',
-        version: 'unknown',
-        helperUrl: getCadHelperUrl(),
-        error: error instanceof Error ? error.message : 'CAD helper unavailable',
+          status: 'error',
+          runtime: 'unreachable',
+          engine: 'cad-helper',
+          version: 'unknown',
+          helperUrl: getCadHelperUrl(),
+          error: cleanError,
         },
         getCadHelperUrl(),
       ),
