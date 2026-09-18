@@ -94,6 +94,11 @@ const OPENAI_ASSISTANT_TIMEOUT_MS = 60_000
 const OPENROUTER_ASSISTANT_TIMEOUT_MS = 300_000
 const REMOTE_ASSISTANT_CHAT_TIMEOUT_MS = 180_000
 const COMPLEX_ASSISTANT_TIMEOUT_MS = 300_000
+// OpenRouter (especially openrouter/free) can land on a stalled or non-chat
+// model, so each attempt is short and a fresh attempt may route elsewhere.
+const OPENROUTER_ATTEMPT_TIMEOUT_MS = 60_000
+const OPENROUTER_COMPLEX_ATTEMPT_TIMEOUT_MS = 120_000
+const OPENROUTER_MAX_ATTEMPTS = 3
 const LOCAL_ASSISTANT_MODEL = 'deterministic-local'
 const GEMINI_ASSISTANT_MODEL = 'gemini-2.5-flash'
 
@@ -3284,6 +3289,11 @@ const getAssistantPlanningTimeoutMs = (body: AssistantPlanRequest) =>
     ? COMPLEX_ASSISTANT_TIMEOUT_MS
     : Math.max(OPENAI_ASSISTANT_TIMEOUT_MS, OPENROUTER_ASSISTANT_TIMEOUT_MS)
 
+const getOpenRouterAttemptTimeoutMs = (body: AssistantPlanRequest) =>
+  getRequestedComplexity(body) === 'complex' || body.prompt.trim().length > 100
+    ? OPENROUTER_COMPLEX_ATTEMPT_TIMEOUT_MS
+    : OPENROUTER_ATTEMPT_TIMEOUT_MS
+
 const shouldAnalyzeImageWithGemini = ({
   body,
   config,
@@ -4713,6 +4723,52 @@ const normalizeAssistantRequesterResult = (
   result: string | AssistantRequesterResult,
 ): AssistantRequesterResult => (typeof result === 'string' ? { raw: result } : result)
 
+// Safety classifiers (Llama Guard, Nemotron safety guard, ...) are reachable via
+// openrouter/free and answer with a verdict instead of an assistant turn.
+const SAFETY_CLASSIFIER_OUTPUT_PATTERNS = [
+  /^(?:user|prompt|response)\s+safety\s*:/i,
+  /^(?:safe|unsafe)(?:\s+S\d+(?:\s*,\s*S\d+)*)?$/i,
+]
+
+export const isNonAssistantModelOutput = (raw: string) => {
+  const text = stripReasoningTags(raw)
+  if (!text) return true
+  return text.length <= 300 && SAFETY_CLASSIFIER_OUTPUT_PATTERNS.some((pattern) => pattern.test(text))
+}
+
+const NON_RETRYABLE_PROVIDER_ERROR_PATTERN =
+  /\b(?:401|402|403)\b|unauthori[sz]ed|no auth credentials|invalid api key|insufficient credits|user not found|not a valid model/i
+
+const requestWithOpenRouterAttempts = async (
+  label: string,
+  request: () => Promise<AssistantRequesterResult>,
+): Promise<AssistantRequesterResult> => {
+  let lastError: unknown = null
+
+  for (let attempt = 1; attempt <= OPENROUTER_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const result = await request()
+      if (!isNonAssistantModelOutput(result.raw)) return result
+      lastError = new AiProviderError(
+        'openrouter',
+        `${label} returned a non-assistant response: ${stripReasoningTags(result.raw).slice(0, 120) || '(empty)'}`,
+        'provider',
+      )
+    } catch (error) {
+      lastError = error
+      const message = error instanceof Error ? error.message : String(error)
+      if (NON_RETRYABLE_PROVIDER_ERROR_PATTERN.test(message)) throw error
+    }
+
+    console.warn(
+      `[assistant] ${label} attempt ${attempt}/${OPENROUTER_MAX_ATTEMPTS} failed:`,
+      lastError instanceof Error ? lastError.message : lastError,
+    )
+  }
+
+  throw lastError
+}
+
 const assistantModelSupportsVision = (model: string) =>
   /gpt-5|gpt-4o|gemini|claude|vision|4o/i.test(model) &&
   !/openrouter\/free/i.test(model)
@@ -4907,7 +4963,7 @@ export const requestOpenRouterTurn = async (
   requestOpenRouterResponses(
     config,
     buildAssistantRequest(body, config.model),
-    getAssistantPlanningTimeoutMs(body),
+    getOpenRouterAttemptTimeoutMs(body),
     'OpenRouter assistant planning',
   )
 
@@ -4929,7 +4985,7 @@ export const requestOpenRouterChatTurn = async (
   requestOpenRouterResponses(
     config,
     buildAssistantChatRequest(body, config.model),
-    REMOTE_ASSISTANT_CHAT_TIMEOUT_MS,
+    OPENROUTER_ATTEMPT_TIMEOUT_MS,
     'OpenRouter assistant chat',
   )
 
@@ -5375,6 +5431,27 @@ const buildPlainTextTurnJson = (raw: string): Record<string, unknown> => ({
   actions: [],
 })
 
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.map((item) => readReplyValue(item)).filter((item): item is string => Boolean(item))
+    : []
+
+type OptionalTurnField =
+  | 'continuation'
+  | 'targetingExplanation'
+  | 'targetCandidates'
+  | 'imageInterpretation'
+
+const pickValidTurnField = (key: OptionalTurnField, value: unknown) => {
+  if (value === undefined || value === null) return {}
+  const result = AssistantTurnResultSchema.shape[key].safeParse(value)
+  if (!result.success) {
+    console.warn(`[assistant] Dropped invalid model field "${key}".`)
+    return {}
+  }
+  return { [key]: result.data }
+}
+
 const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
   const cleaned = cleanJsonString(raw)
   let json: Record<string, unknown>
@@ -5423,7 +5500,20 @@ const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
   const { valid: parsedSteps, invalidStepIssues: parsedInvalidStepIssues } = safeParseTaskPlanSteps(rawSteps)
   const actions = normalizeAssistantActions(parsedActions)
 
-  const partial = AssistantTurnResultSchema.parse({ ...json, actions, steps: parsedSteps })
+  const partial = AssistantTurnResultSchema.parse({
+    reply: json.reply,
+    mode: json.mode,
+    assumptions: toStringArray(json.assumptions),
+    ambiguities: toStringArray(json.ambiguities),
+    actions,
+    steps: parsedSteps,
+    // Optional model-supplied fields are kept only when valid; a malformed one
+    // (e.g. `continuation: []`) must not reject the whole turn.
+    ...pickValidTurnField('continuation', json.continuation),
+    ...pickValidTurnField('targetingExplanation', json.targetingExplanation),
+    ...pickValidTurnField('targetCandidates', json.targetCandidates),
+    ...pickValidTurnField('imageInterpretation', json.imageInterpretation),
+  })
 
   const flattenedStepActions = parsedSteps.flatMap((step) => step.actions)
   const effectiveActions = actions.length > 0 ? actions : flattenedStepActions
@@ -5688,8 +5778,10 @@ export const createAssistantTurnResult = async (
     }
 
     if (config.provider === 'openrouter') {
-      return normalizeAssistantRequesterResult(
-        await (requesters.requestOpenRouterTurn ?? requestOpenRouterTurn)(config, nextBody),
+      return requestWithOpenRouterAttempts('OpenRouter assistant planning', async () =>
+        normalizeAssistantRequesterResult(
+          await (requesters.requestOpenRouterTurn ?? requestOpenRouterTurn)(config, nextBody),
+        ),
       )
     }
 
@@ -5699,8 +5791,10 @@ export const createAssistantTurnResult = async (
   }
   const requestChatTurn = async (nextBody: AssistantPlanRequest) => {
     if (config.provider === 'openrouter') {
-      return normalizeAssistantRequesterResult(
-        await (requesters.requestOpenRouterChatTurn ?? requestOpenRouterChatTurn)(config, nextBody),
+      return requestWithOpenRouterAttempts('OpenRouter assistant chat', async () =>
+        normalizeAssistantRequesterResult(
+          await (requesters.requestOpenRouterChatTurn ?? requestOpenRouterChatTurn)(config, nextBody),
+        ),
       )
     }
     if (config.provider !== 'openai') {

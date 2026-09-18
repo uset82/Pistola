@@ -24,6 +24,7 @@ import {
   buildAssistantRequest,
   createAssistantTurnResult,
   getAssistantAiConfig,
+  isNonAssistantModelOutput,
 } from './assistant-ai-provider'
 import {
   assistantAcceptanceFixtures,
@@ -3617,4 +3618,67 @@ test('createAssistantTurnResult keeps a well-formed chat reply unchanged', async
 
   assert.equal(result.turn.mode, 'chat')
   assert.equal(result.turn.reply, '3 + 3 = 6.')
+})
+
+test('createAssistantTurnResult retries when openrouter/free lands on a safety classifier', async () => {
+  let calls = 0
+  const result = await createAssistantTurnResult(
+    { prompt: '3+3', context: {} },
+    { ...NO_CODEX_AUTH, OPENROUTER_API_KEY: 'openrouter-key' },
+    {
+      requestOpenRouterTurn: async () => {
+        calls += 1
+        return calls === 1
+          ? 'User Safety: safe'
+          : JSON.stringify({ reply: '3 + 3 = 6.', mode: 'chat', assumptions: [], ambiguities: [], actions: [] })
+      },
+    },
+  )
+
+  assert.equal(calls, 2)
+  assert.equal(result.turn.reply, '3 + 3 = 6.')
+})
+
+test('createAssistantTurnResult does not retry OpenRouter auth failures', async () => {
+  let calls = 0
+  await assert.rejects(
+    createAssistantTurnResult(
+      { prompt: '3+3', context: {} },
+      { ...NO_CODEX_AUTH, OPENROUTER_API_KEY: 'openrouter-key' },
+      {
+        requestOpenRouterTurn: async () => {
+          calls += 1
+          throw new Error('{"error":{"message":"No auth credentials found","code":401}}')
+        },
+      },
+    ),
+  )
+
+  assert.equal(calls, 1)
+})
+
+test('createAssistantTurnResult drops a malformed continuation instead of rejecting the turn', async () => {
+  const result = await runOpenRouterRawTurn(
+    JSON.stringify({
+      reply: 'What would you like me to build with 3?',
+      mode: 'clarify',
+      assumptions: [],
+      ambiguities: ['What should 3 refer to?'],
+      actions: [],
+      continuation: [],
+    }),
+  )
+
+  assert.equal(result.turn.mode, 'clarify')
+  assert.equal(result.turn.reply, 'What would you like me to build with 3?')
+  assert.equal(result.turn.continuation, undefined)
+})
+
+test('isNonAssistantModelOutput flags safety classifier verdicts only', () => {
+  assert.equal(isNonAssistantModelOutput('User Safety: safe'), true)
+  assert.equal(isNonAssistantModelOutput('User Safety: safe Response Safety: safe'), true)
+  assert.equal(isNonAssistantModelOutput('unsafe\nS1'), true)
+  assert.equal(isNonAssistantModelOutput(''), true)
+  assert.equal(isNonAssistantModelOutput('{"reply":"safe","mode":"chat"}'), false)
+  assert.equal(isNonAssistantModelOutput('3 + 3 = 6.'), false)
 })
