@@ -20,6 +20,10 @@ test('ChatGPT Sites origins are allowed for hosted CAD and MAC jobs', () => {
     isPistolaCorsOriginAllowed(requestFrom('https://pistolacodex.gi-o-vi-n-ch-5540.chatgpt.site')),
     true,
   )
+  assert.equal(
+    isPistolaCorsOriginAllowed(requestFrom('https://pistolacodex-cad.gi-o-vi-n-ch-5540.chatgpt.site')),
+    true,
+  )
 })
 
 test('unrelated origins stay blocked', () => {
