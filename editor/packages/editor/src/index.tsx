@@ -40,6 +40,7 @@ export {
   type AssistantWorkspaceContext,
   validateAssistantPlan,
   executeAgentTool,
+  calculatePolygonArea,
   listCreationRecipes,
 } from './lib/assistant'
 export type { SceneGraph } from './lib/scene'

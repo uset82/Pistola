@@ -1097,7 +1097,8 @@ const resolveNodeWithPosition = (nodeId?: string) => {
     node.type !== 'scan' &&
     node.type !== 'door' &&
     node.type !== 'window' &&
-    node.type !== 'roof'
+    node.type !== 'roof' &&
+    node.type !== 'cad-instance'
   ) {
     throw new Error(`Node "${node.id}" does not support transform actions.`)
   }
@@ -1158,7 +1159,7 @@ export const rotateTarget = (action: Extract<AssistantAction, { type: 'rotate_ta
 export const scaleTarget = (action: Extract<AssistantAction, { type: 'scale_target' }>) => {
   const node = resolveNodeWithPosition(action.nodeId)
 
-  if (!(node.type === 'item' || node.type === 'cad-body' || node.type === 'guide' || node.type === 'scan')) {
+  if (!(node.type === 'item' || node.type === 'cad-body' || node.type === 'cad-instance' || node.type === 'guide' || node.type === 'scan')) {
     throw new Error(`Node "${node.id}" does not support scaling.`)
   }
 

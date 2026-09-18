@@ -2,6 +2,7 @@ import dedent from 'dedent'
 import { z } from 'zod'
 import { BaseNode, nodeType, objectId } from '../base'
 import { CadBodyNode } from './cad-body'
+import { CadInstanceNode } from './cad-instance'
 import { CadSketchNode } from './cad-sketch'
 import { CeilingNode } from './ceiling'
 import { GuideNode } from './guide'
@@ -26,6 +27,7 @@ export const LevelNode = BaseNode.extend({
         RoofNode.shape.id,
         CadBodyNode.shape.id,
         CadSketchNode.shape.id,
+        CadInstanceNode.shape.id,
         ScanNode.shape.id,
         GuideNode.shape.id,
       ]),

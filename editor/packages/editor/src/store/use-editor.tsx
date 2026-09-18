@@ -20,6 +20,7 @@ import type {
 } from '../lib/transform-target'
 
 export type Phase = 'site' | 'structure' | 'furnish' | 'cad'
+export type Workspace = 'architecture' | 'cad'
 
 export type Mode = 'select' | 'edit' | 'delete' | 'build'
 
@@ -87,6 +88,8 @@ const getDefaultVisibleCadTool = (cadMode: CadMode): CadTool =>
   cadMode === 'solid' ? 'cad-extrude' : 'cad-sketch'
 
 type EditorState = {
+  workspace: Workspace
+  setWorkspace: (workspace: Workspace) => void
   phase: Phase
   setPhase: (phase: Phase) => void
   cadMode: CadMode
@@ -130,6 +133,25 @@ type EditorState = {
 }
 
 const useEditor = create<EditorState>()((set, get) => ({
+  workspace: 'architecture',
+  setWorkspace: (workspace) => {
+    const viewer = useViewer.getState()
+    if (get().workspace === workspace) {
+      viewer.setActiveWorkspace(workspace)
+      return
+    }
+
+    set({ workspace })
+    viewer.setActiveWorkspace(workspace)
+
+    if (workspace === 'cad') {
+      if (get().activeWorkplane === 'level') set({ activeWorkplane: 'XY' })
+      if (get().phase !== 'cad') get().setPhase('cad')
+      return
+    }
+
+    if (get().phase === 'cad') get().setPhase('structure')
+  },
   phase: 'site',
   cadMode: 'sketch',
   setCadMode: (cadMode) => set({ cadMode }),
@@ -149,6 +171,17 @@ const useEditor = create<EditorState>()((set, get) => ({
       transformMode: 'move',
       transformTarget: null,
     })
+
+    if (phase === 'cad') {
+      if (get().workspace !== 'cad') {
+        set({ workspace: 'cad' })
+        useViewer.getState().setActiveWorkspace('cad')
+      }
+      if (get().activeWorkplane === 'level') set({ activeWorkplane: 'XY' })
+    } else if (get().workspace === 'cad') {
+      set({ workspace: 'architecture' })
+      useViewer.getState().setActiveWorkspace('architecture')
+    }
 
     const { cadMode, mode, structureLayer } = get()
 

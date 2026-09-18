@@ -3,8 +3,12 @@ import {
   type BuildingNode,
   type CadBodyEvent,
   type CadBodyNode,
+  type CadInstanceEvent,
+  type CadInstanceNode,
   type CadSketchEvent,
   type CadSketchNode,
+  type CadSpaceEvent,
+  type CadSpaceNode,
   type CeilingEvent,
   type CeilingNode,
   type DoorEvent,
@@ -42,6 +46,8 @@ type NodeConfig = {
   item: { node: ItemNode; event: ItemEvent }
   'cad-sketch': { node: CadSketchNode; event: CadSketchEvent }
   'cad-body': { node: CadBodyNode; event: CadBodyEvent }
+  'cad-space': { node: CadSpaceNode; event: CadSpaceEvent }
+  'cad-instance': { node: CadInstanceNode; event: CadInstanceEvent }
   wall: { node: WallNode; event: WallEvent }
   building: { node: BuildingNode; event: BuildingEvent }
   level: { node: LevelNode; event: LevelEvent }

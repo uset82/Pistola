@@ -12,6 +12,7 @@ import {
   normalizeCadBodyOperations,
   useScene,
 } from '@pascal-app/core'
+import { resolveCadSpaceParentId } from '../lib/cad-parent'
 import { useViewer } from '@pascal-app/viewer'
 import { create } from 'zustand'
 import {
@@ -87,16 +88,7 @@ const levelSketchOffset = 0.01
 export const cadHelperUnavailableMessage =
   'CAD helper unavailable. The configured CAD runtime could not be reached.'
 
-const getParentIdForCadNodes = (): AnyNodeId | null => {
-  const levelId = useViewer.getState().selection.levelId
-  if (levelId) return levelId as AnyNodeId
-
-  const rootSiteId = useScene
-    .getState()
-    .rootNodeIds.find((rootId) => useScene.getState().nodes[rootId]?.type === 'site')
-
-  return (rootSiteId as AnyNodeId | undefined) ?? null
-}
+const getParentIdForCadNodes = (): AnyNodeId | null => resolveCadSpaceParentId()
 
 export const getSelectedCadLevelFloorY = () => {
   const levelId = useViewer.getState().selection.levelId
@@ -114,6 +106,7 @@ const getLevelAlignedSketchPosition = (
 ): [number, number, number] => [position?.[0] ?? 0, getSelectedCadLevelFloorY() + levelSketchOffset, position?.[2] ?? 0]
 
 const getDefaultSketchPosition = (): [number, number, number] => {
+  if (useEditor.getState().workspace === 'cad') return [0, levelSketchOffset, 0]
   const levelId = useViewer.getState().selection.levelId
   if (!levelId) return [0, levelSketchOffset, 0]
   return getLevelAlignedSketchPosition()
@@ -552,7 +545,7 @@ const useCad = create<CadState>()((set, get) => ({
   createDefaultSketch: (position) => {
     const parentId = getParentIdForCadNodes()
     if (!parentId) {
-      set({ lastError: 'No active site or level is selected for CAD sketch creation.' })
+      set({ lastError: 'CAD space is unavailable for sketch creation.' })
       return null
     }
 
@@ -573,9 +566,9 @@ const useCad = create<CadState>()((set, get) => ({
       plane: activeWorkplane,
       planeAnchorNodeId: null,
       position:
-        activeWorkplane === 'level'
-          ? getLevelAlignedSketchPosition(position)
-          : position ?? getDefaultSketchPosition(),
+        useEditor.getState().workspace === 'cad' || activeWorkplane !== 'level'
+          ? position ?? getDefaultSketchPosition()
+          : getLevelAlignedSketchPosition(position),
       rotation: [0, 0, 0],
       editStatus: 'editing',
       entities: [],

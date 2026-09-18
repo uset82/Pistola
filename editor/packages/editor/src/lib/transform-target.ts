@@ -1,6 +1,7 @@
 import type {
   AnyNode,
   CadBodyNode,
+  CadInstanceNode,
   DoorNode,
   GuideNode,
   ItemNode,
@@ -12,12 +13,15 @@ export type TransformMode = 'move' | 'rotate' | 'scale'
 export type TransformPivot = 'bounds-center' | 'asset-origin'
 
 export type TransformTarget =
-  | { kind: 'node'; nodeId: ItemNode['id'] | DoorNode['id'] | WindowNode['id'] | CadBodyNode['id'] }
+  | {
+      kind: 'node'
+      nodeId: ItemNode['id'] | DoorNode['id'] | WindowNode['id'] | CadBodyNode['id'] | CadInstanceNode['id']
+    }
   | { kind: 'reference'; nodeId: GuideNode['id'] | ScanNode['id'] }
 
 export type ReferenceTransformTarget = Extract<TransformTarget, { kind: 'reference' }>
-export type TransformTargetNode = ItemNode | DoorNode | WindowNode | GuideNode | ScanNode | CadBodyNode
-export type FullTransformTargetNode = ItemNode | GuideNode | ScanNode | CadBodyNode
+export type TransformTargetNode = ItemNode | DoorNode | WindowNode | GuideNode | ScanNode | CadBodyNode | CadInstanceNode
+export type FullTransformTargetNode = ItemNode | GuideNode | ScanNode | CadBodyNode | CadInstanceNode
 
 export type TransformCapabilities = {
   move: boolean
@@ -39,11 +43,21 @@ export const isCadBodyNode = (node: AnyNode): node is CadBodyNode => node.type =
 export const isMoveOnlyNode = (node: AnyNode): node is DoorNode | WindowNode =>
   node.type === 'door' || node.type === 'window'
 
+export const isCadInstanceNode = (node: AnyNode): node is CadInstanceNode => node.type === 'cad-instance'
+
 export const isTransformTargetNode = (node: AnyNode): node is TransformTargetNode =>
-  isTransformItemNode(node) || isCadBodyNode(node) || isMoveOnlyNode(node) || isReferenceNode(node)
+  isTransformItemNode(node) ||
+  isCadBodyNode(node) ||
+  isCadInstanceNode(node) ||
+  isMoveOnlyNode(node) ||
+  isReferenceNode(node)
 
 export const isFullTransformTargetNode = (node: TransformTargetNode): node is FullTransformTargetNode =>
-  node.type === 'item' || node.type === 'guide' || node.type === 'scan' || node.type === 'cad-body'
+  node.type === 'item' ||
+  node.type === 'guide' ||
+  node.type === 'scan' ||
+  node.type === 'cad-body' ||
+  node.type === 'cad-instance'
 
 export const resolveTransformTargetFromSelection = ({
   nodes,
@@ -67,7 +81,7 @@ export const resolveTransformTargetFromSelection = ({
   if (selectedIds.length !== 1) return null
 
   const node = nodes[selectedIds[0]!]
-  if (!(node && (isTransformItemNode(node) || isCadBodyNode(node) || isMoveOnlyNode(node)))) return null
+  if (!(node && (isTransformItemNode(node) || isCadBodyNode(node) || isCadInstanceNode(node) || isMoveOnlyNode(node)))) return null
 
   return {
     kind: 'node',

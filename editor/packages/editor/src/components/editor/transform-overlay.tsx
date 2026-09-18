@@ -46,7 +46,7 @@ const getNodeRotation = (node: FullTransformTargetNode) =>
   node.type === 'cad-body' ? getCadBodyTransform(node).rotation : node.rotation
 
 const getNodeScaleVector = (node: FullTransformTargetNode) => {
-  if (node.type === 'item') {
+  if (node.type === 'item' || node.type === 'cad-instance') {
     return new Vector3(node.scale[0], node.scale[1], node.scale[2])
   }
 
@@ -189,7 +189,7 @@ export function TransformOverlay() {
     tempEuler.setFromQuaternion(tempQuaternion, 'XYZ')
 
     const updates =
-      gizmoNode.type === 'item'
+      gizmoNode.type === 'item' || gizmoNode.type === 'cad-instance'
         ? {
             position: [tempPosition.x, tempPosition.y, tempPosition.z] as [number, number, number],
             rotation: [tempEuler.x, tempEuler.y, tempEuler.z] as [number, number, number],

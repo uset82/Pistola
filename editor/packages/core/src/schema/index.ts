@@ -30,6 +30,8 @@ export {
   normalizeCadBodyOperation,
   normalizeCadBodyOperations,
 } from './nodes/cad-body'
+export { CadInstanceNode } from './nodes/cad-instance'
+export { CadSpaceNode } from './nodes/cad-space'
 export {
   CadSketchEntity,
   CadSketchNode,

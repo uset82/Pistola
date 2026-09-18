@@ -15,6 +15,9 @@ import { IconRail, type PanelId } from './icon-rail'
 import { SettingsPanel, type SettingsPanelProps } from './panels/settings-panel'
 import { SitePanel, type SitePanelProps } from './panels/site-panel'
 import { WorkspaceSwitcher } from './workspace-switcher'
+import useEditor from '../../../store/use-editor'
+import { CadSpacePanel } from '../../../workspaces/cad'
+import { WorldSwitcher } from '../../../workspaces/world-switcher'
 
 interface AppSidebarProps {
   appMenuButton?: ReactNode
@@ -34,6 +37,8 @@ export function AppSidebar({
   enableCadRuntime = true,
 }: AppSidebarProps) {
   const [activePanel, setActivePanel] = useState<PanelId>('site')
+  const workspace = useEditor((state) => state.workspace)
+  const showArchitecture = !enableCad || workspace === 'architecture'
 
   useEffect(() => {
     // Widen default sidebar (288px → 432px) for better project title visibility
@@ -44,14 +49,9 @@ export function AppSidebar({
   }, [])
 
   const renderPanelContent = () => {
-    switch (activePanel) {
-      case 'site':
-        return <SitePanel {...sitePanelProps} />
-      case 'settings':
-        return <SettingsPanel {...settingsPanelProps} />
-      default:
-        return null
-    }
+    if (activePanel === 'settings') return <SettingsPanel {...settingsPanelProps} />
+    if (enableCad && workspace === 'cad') return <CadSpacePanel />
+    return <SitePanel {...sitePanelProps} />
   }
 
   return (
@@ -69,12 +69,15 @@ export function AppSidebar({
           <div className="flex flex-1 flex-col overflow-hidden">
             <SidebarHeader className="relative flex-col items-stretch justify-center gap-3 border-border/50 border-b px-3 py-3">
               {sidebarTop}
-              <WorkspaceSwitcher
-                enableCad={enableCad}
-                onWorkspaceChange={() => setActivePanel('site')}
-              />
+              {enableCad ? <WorldSwitcher /> : null}
+              {showArchitecture ? (
+                <WorkspaceSwitcher
+                  enableCad={false}
+                  onWorkspaceChange={() => setActivePanel('site')}
+                />
+              ) : null}
               <CommandsTrigger />
-              {enableCad && enableCadRuntime ? <CadStatus /> : null}
+              {enableCad && enableCadRuntime && workspace === 'cad' ? <CadStatus /> : null}
             </SidebarHeader>
 
             <SidebarContent className={cn('no-scrollbar flex flex-1 flex-col overflow-hidden')}>

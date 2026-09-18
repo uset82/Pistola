@@ -51,6 +51,7 @@ export {
   inspectScene,
   getNodes,
   measure,
+  calculatePolygonArea,
   searchCatalog,
   listCapabilities,
   getWorkspaceState,

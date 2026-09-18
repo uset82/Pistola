@@ -1,8 +1,9 @@
 'use client'
 
-import { type AnyNodeId, type CadBrief, useScene } from '@pascal-app/core'
+import { emitter, type AnyNodeId, type CadBrief, useScene } from '@pascal-app/core'
 import {
   applySceneGraphToEditor,
+  calculatePolygonArea,
   type AssistantAction,
   type AssistantContinuation,
   type AssistantExecutionResult,
@@ -1665,7 +1666,96 @@ export function AiAssistantPanel() {
       return
     }
 
-    // 3. Direct CAD workplane commands
+    if (/\b(perspective( view)?|3d view|vista 3d|perspectiva)\b/i.test(lower)) {
+      useViewer.getState().setCameraMode('perspective')
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Switched camera to 3D perspective mode.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(orthographic( view)?|isometric( view)?|vista isom[eé]trica)\b/i.test(lower)) {
+      useViewer.getState().setCameraMode('orthographic')
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Switched camera to orthographic isometric mode.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(focus( on)? selection|zoom to selection|enfocar( selecci[oó]n)?)\b/i.test(lower)) {
+      const selectedId = useViewer.getState().selection.selectedIds[0]
+      if (selectedId) {
+        emitter.emit('camera-controls:view', { nodeId: selectedId as AnyNodeId })
+        setMessages((current) => [
+          ...current,
+          { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+          { id: `${Date.now()}-assistant`, role: 'assistant', text: `Focused camera on node "${selectedId}".` },
+        ])
+      } else {
+        setMessages((current) => [
+          ...current,
+          { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+          { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Select an object in the scene first to focus on it.' },
+        ])
+      }
+      setInput('')
+      return
+    }
+
+    if (/\b(take screenshot|screenshot|captura de pantalla|captura)\b/i.test(lower)) {
+      await executeAssistantPlan([{ type: 'take_screenshot' }], { reviewConfirmed: true })
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Captured high-resolution viewport screenshot and saved to downloads.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(toggle grid|show grid|hide grid|mostrar cuadr[ií]cula|ocultar cuadr[ií]cula)\b/i.test(lower)) {
+      const nextGrid = !useViewer.getState().showGrid
+      useViewer.getState().setShowGrid(nextGrid)
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: nextGrid ? '3D grid enabled.' : '3D grid hidden.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(toggle scans|scans on|scans off)\b/i.test(lower)) {
+      const nextScans = !useViewer.getState().showScans
+      useViewer.getState().setShowScans(nextScans)
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: nextScans ? 'Scans overlay enabled.' : 'Scans overlay hidden.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(dark theme|light theme|tema oscuro|tema claro)\b/i.test(lower)) {
+      const isDark = /\b(dark|oscuro)\b/i.test(lower)
+      useViewer.getState().setTheme(isDark ? 'dark' : 'light')
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: `Theme switched to ${isDark ? 'Dark' : 'Light'}.` },
+      ])
+      setInput('')
+      return
+    }
+
+    // 3. Direct CAD commands
     if (/\b(workplane|switch plane|plano de trabajo)\b/i.test(lower)) {
       const planeMatch = lower.match(/\b(xy|xz|yz|level)\b/)
       if (planeMatch) {
@@ -1679,6 +1769,118 @@ export function AiAssistantPanel() {
         setInput('')
         return
       }
+    }
+
+    if (/\b(close sketch|cerrar boceto)\b/i.test(lower)) {
+      await executeAssistantPlan([{ type: 'close_cad_sketch' }], { reviewConfirmed: true })
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Closed active CAD sketch.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(new sketch|create sketch|nuevo boceto)\b/i.test(lower)) {
+      await executeAssistantPlan([{ type: 'create_default_cad_sketch', position: [0, 0, 0] }], { reviewConfirmed: true })
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Created new CAD sketch on active workplane.' },
+      ])
+      setInput('')
+      return
+    }
+
+    const macPromptMatch = lower.match(/(?:generate mac part|mac part|\/mac)\s+(.+)/i)
+    if (macPromptMatch) {
+      const macPartPrompt = macPromptMatch[1]!.trim()
+      setStatus('executing')
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: `Generating Multi-Agent-CAD solid part: "${macPartPrompt}"...` },
+      ])
+      try {
+        const result = await generateMacPartAction(macPartPrompt)
+        setMessages((current) => [
+          ...current,
+          {
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            text: `Successfully generated and imported MAC solid body (${result.bodyIds[0] ?? 'imported'}).`,
+          },
+        ])
+        setStatus('executed')
+      } catch (err) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            text: `MAC generation failed: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        ])
+        setStatus('idle')
+      }
+      setInput('')
+      return
+    }
+
+    // 4. Direct Scene Observation & Measurement queries
+    if (
+      /\b(longest wall|pared m[aá]s larga)\b/i.test(lower) ||
+      /\b(total (floor )?area|[aá]rea total)\b/i.test(lower)
+    ) {
+      const nodes = useScene.getState().nodes
+      let maxWallLen = 0
+      let maxWallName = ''
+      let totalFloorArea = 0
+      let zoneCount = 0
+      let totalNodes = 0
+
+      for (const node of Object.values(nodes)) {
+        if (!node) continue
+        totalNodes++
+        if (node.type === 'wall') {
+          const len = Math.hypot(node.end[0] - node.start[0], node.end[1] - node.start[1])
+          if (len > maxWallLen) {
+            maxWallLen = len
+            maxWallName = node.name || node.id
+          }
+        } else if (node.type === 'zone' || node.type === 'slab') {
+          const poly = (node as any).polygon ?? []
+          if (poly.length >= 3) {
+            totalFloorArea += calculatePolygonArea(poly)
+            zoneCount++
+          }
+        }
+      }
+
+      const asksWall = /\b(longest wall|pared m[aá]s larga)\b/i.test(lower)
+      const asksArea = /\b(total (floor )?area|[aá]rea total)\b/i.test(lower)
+
+      let answer = ''
+      if (asksWall && asksArea) {
+        answer = maxWallLen > 0
+          ? `The longest wall is **${maxWallName}** with a length of **${maxWallLen.toFixed(2)} m**. The total floor area is **${totalFloorArea.toFixed(2)} m²** across ${zoneCount} zone(s)/slab(s) (total ${totalNodes} nodes in scene).`
+          : `The total floor area is **${totalFloorArea.toFixed(2)} m²** across ${zoneCount} zone(s)/slab(s) (total ${totalNodes} nodes in scene). No walls are currently placed.`
+      } else if (asksWall) {
+        answer = maxWallLen > 0
+          ? `The longest wall in the scene is **${maxWallName}** measuring **${maxWallLen.toFixed(2)} m**.`
+          : 'There are no walls in the scene yet. Tell me what building you would like to construct!'
+      } else {
+        answer = `The total floor area is **${totalFloorArea.toFixed(2)} m²** across ${zoneCount} zone(s)/slab(s).`
+      }
+
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: answer },
+      ])
+      setInput('')
+      return
     }
 
     const promptImage =

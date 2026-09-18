@@ -10,6 +10,7 @@ import {
   useScene,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
+import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { cadHelperUnavailableMessage } from '../../store/use-cad'
 import useCad from '../../store/use-cad'
@@ -874,6 +875,9 @@ const executeAction = async (
     case 'set_phase':
       useEditor.getState().setPhase(action.phase)
       return {}
+    case 'set_workspace':
+      useEditor.getState().setWorkspace(action.workspace)
+      return {}
     case 'set_mode':
       useEditor.getState().setMode(action.mode)
       return {}
@@ -905,7 +909,7 @@ const executeAction = async (
       useViewer.getState().setShowGrid(action.enabled)
       return {}
     case 'set_cad_workplane':
-      useEditor.getState().setPhase('cad')
+      useEditor.getState().setWorkspace('cad')
       useEditor.getState().setActiveWorkplane(action.workplane)
       return {}
     case 'set_transform_mode': {
@@ -1046,6 +1050,7 @@ const executeAction = async (
     case 'update_polygon_holes':
       return { nodeId: updatePolygonHoles(action) }
     case 'create_wall':
+      useEditor.getState().setWorkspace('architecture')
       return { nodeId: createWall(action) }
     case 'create_zone':
       return { nodeId: createZone(action) }
@@ -1105,7 +1110,7 @@ const executeAction = async (
       if (!options.runtime?.executeCadBrief) {
         throw new Error('Direct CAD brief execution is not available in this runtime.')
       }
-      useEditor.getState().setPhase('cad')
+      useEditor.getState().setWorkspace('cad')
       const result = await options.runtime.executeCadBrief(action.brief)
       return {
         nodeId: result.bodyIds?.[0] ?? result.sketchIds?.[0] ?? null,
@@ -1117,7 +1122,7 @@ const executeAction = async (
       if (!options.runtime?.runCadPrompt) {
         throw new Error('CAD prompt execution is not available in this runtime.')
       }
-      useEditor.getState().setPhase('cad')
+      useEditor.getState().setWorkspace('cad')
       const result = await options.runtime.runCadPrompt(action.prompt)
       return {
         bodyIds: result.bodyIds ?? [],
@@ -1128,12 +1133,16 @@ const executeAction = async (
       if (!options.runtime?.generateMacPart) {
         throw new Error('MAC part generation is not available in this runtime.')
       }
-      useEditor.getState().setPhase('cad')
+      useEditor.getState().setWorkspace('cad')
       const result = await options.runtime.generateMacPart(action.prompt)
       return {
         bodyIds: result.bodyIds ?? [],
         nodeId: result.bodyIds?.[0] ?? null,
       }
+    }
+    case 'place_cad_body_in_architecture': {
+      const nodeId = placeCadBodyInArchitecture(action.bodyId, action.levelId)
+      return { nodeId }
     }
     case 'create_default_cad_sketch': {
       const sketch = useCad.getState().createDefaultSketch(action.position)
@@ -1143,7 +1152,7 @@ const executeAction = async (
     case 'extrude_cad_sketch': {
       const sketch = getCadSketchById(action.sketchId)
       if (!sketch) throw new Error('Select or open a CAD sketch before extruding.')
-      useEditor.getState().setPhase('cad')
+      useEditor.getState().setWorkspace('cad')
       useEditor.getState().setActiveSketchId(sketch.id)
       useViewer.getState().setSelection({ selectedIds: [sketch.id], zoneId: null })
       const bodyId = await useCad.getState().extrudeSelectedSketch({
@@ -1158,7 +1167,7 @@ const executeAction = async (
     case 'revolve_cad_sketch': {
       const sketch = getCadSketchById(action.sketchId)
       if (!sketch) throw new Error('Select or open a CAD sketch before revolving.')
-      useEditor.getState().setPhase('cad')
+      useEditor.getState().setWorkspace('cad')
       useEditor.getState().setActiveSketchId(sketch.id)
       useViewer.getState().setSelection({ selectedIds: [sketch.id], zoneId: null })
       const bodyId = await useCad.getState().revolveSelectedSketch({

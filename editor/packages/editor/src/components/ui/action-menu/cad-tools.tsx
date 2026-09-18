@@ -60,6 +60,8 @@ const cadToolGroups: CadToolGroup[] = [
 export function CadTools({ enableCadRuntime = true }: { enableCadRuntime?: boolean }) {
   const activeTool = useEditor((state) => state.tool)
   const activeWorkplane = useEditor((state) => state.activeWorkplane)
+  const workspace = useEditor((state) => state.workspace)
+  const workplanes = workspace === 'cad' ? (['XY', 'XZ', 'YZ'] as const) : (['XY', 'XZ', 'YZ', 'level'] as const)
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto px-1 py-1 scrollbar-hide">
@@ -116,7 +118,7 @@ export function CadTools({ enableCadRuntime = true }: { enableCadRuntime?: boole
 
       <div className="mx-1 h-5 w-px bg-border/50" />
       <div className="flex items-center gap-1">
-        {(['XY', 'XZ', 'YZ', 'level'] as const).map((plane) => (
+        {workplanes.map((plane) => (
           <button
             key={plane}
             onClick={() => void runAssistantCommand([{ type: 'set_cad_workplane', workplane: plane }])}

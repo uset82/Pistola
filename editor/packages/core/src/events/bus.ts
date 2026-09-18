@@ -3,7 +3,9 @@ import mitt from 'mitt'
 import type {
   BuildingNode,
   CadBodyNode,
+  CadInstanceNode,
   CadSketchNode,
+  CadSpaceNode,
   CeilingNode,
   DoorNode,
   GuideNode,
@@ -39,6 +41,8 @@ export type WallEvent = NodeEvent<WallNode>
 export type ItemEvent = NodeEvent<ItemNode>
 export type CadSketchEvent = NodeEvent<CadSketchNode>
 export type CadBodyEvent = NodeEvent<CadBodyNode>
+export type CadSpaceEvent = NodeEvent<CadSpaceNode>
+export type CadInstanceEvent = NodeEvent<CadInstanceNode>
 export type SiteEvent = NodeEvent<SiteNode>
 export type BuildingEvent = NodeEvent<BuildingNode>
 export type LevelEvent = NodeEvent<LevelNode>
@@ -105,6 +109,8 @@ type EditorEvents = GridEvents &
   NodeEvents<'item', ItemEvent> &
   NodeEvents<'cad-sketch', CadSketchEvent> &
   NodeEvents<'cad-body', CadBodyEvent> &
+  NodeEvents<'cad-space', CadSpaceEvent> &
+  NodeEvents<'cad-instance', CadInstanceEvent> &
   NodeEvents<'site', SiteEvent> &
   NodeEvents<'building', BuildingEvent> &
   NodeEvents<'level', LevelEvent> &

@@ -3,7 +3,9 @@
 export type {
   BuildingEvent,
   CadBodyEvent,
+  CadInstanceEvent,
   CadSketchEvent,
+  CadSpaceEvent,
   CameraControlEvent,
   CeilingEvent,
   DoorEvent,
@@ -38,6 +40,7 @@ export { useSpatialQuery } from './hooks/spatial-grid/use-spatial-query'
 // Asset storage
 export { loadAssetUrl, saveAsset } from './lib/asset-storage'
 export { getCadBodyTransform } from './lib/cad-body-transform'
+export { ensureProjectWorlds, type WorldMigrationResult } from './lib/worlds'
 export {
   getNodeBimMetadata,
   serializeSceneToIfc,

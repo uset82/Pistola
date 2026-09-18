@@ -13,9 +13,19 @@ import { useViewer } from '@pascal-app/viewer'
 import { useEffect, useRef } from 'react'
 import useEditor from './../../store/use-editor'
 
+const applySelectionPhase = (targetPhase: 'site' | 'structure' | 'furnish' | 'cad') => {
+  const editor = useEditor.getState()
+  if (targetPhase === 'cad') {
+    editor.setWorkspace('cad')
+    return
+  }
+  if (editor.workspace === 'cad') editor.setWorkspace('architecture')
+  if (useEditor.getState().phase !== targetPhase) useEditor.getState().setPhase(targetPhase)
+}
+
 const isNodeInCurrentLevel = (node: AnyNode): boolean => {
   const currentLevelId = useViewer.getState().selection.levelId
-  if (!currentLevelId) return true // No level selected, allow all
+  if (!currentLevelId) return true
   const nodeLevelId = resolveLevelId(node, useScene.getState().nodes)
   return nodeLevelId === currentLevelId
 }
@@ -25,6 +35,7 @@ type SelectableNodeType =
   | 'item'
   | 'cad-body'
   | 'cad-sketch'
+  | 'cad-instance'
   | 'building'
   | 'zone'
   | 'slab'
@@ -196,7 +207,7 @@ const SELECTION_STRATEGIES: Record<string, SelectionStrategy> = {
   },
 
   furnish: {
-    types: ['item', 'scan', 'guide'],
+    types: ['item', 'cad-instance', 'scan', 'guide'],
     handleSelect: (node, nativeEvent, modifierKeys) => {
       if (node.type === 'scan' || node.type === 'guide') {
         selectReference(node)
@@ -227,9 +238,12 @@ const SELECTION_STRATEGIES: Record<string, SelectionStrategy> = {
     isValid: (node) => {
       if (!isNodeInCurrentLevel(node)) return false
       if (node.type === 'scan' || node.type === 'guide') return true
-      if (node.type !== 'item') return false
-      const item = node as ItemNode
-      return item.asset.category !== 'door' && item.asset.category !== 'window'
+      if (node.type === 'item') {
+        const item = node as ItemNode
+        return item.asset.category !== 'door' && item.asset.category !== 'window'
+      }
+      if (node.type === 'cad-instance') return true
+      return false
     },
   },
 
@@ -270,13 +284,11 @@ const SELECTION_STRATEGIES: Record<string, SelectionStrategy> = {
       useViewer.getState().setSelection({ selectedIds: [] })
     },
     isValid: (node) => {
+      if (node.type === 'cad-body' || node.type === 'cad-sketch') {
+        return useViewer.getState().activeWorkspace === 'cad' || !useViewer.getState().selection.levelId
+      }
       if (!isNodeInCurrentLevel(node)) return false
-      return (
-        node.type === 'cad-body' ||
-        node.type === 'cad-sketch' ||
-        node.type === 'scan' ||
-        node.type === 'guide'
-      )
+      return node.type === 'scan' || node.type === 'guide'
     },
   },
 }
@@ -347,12 +359,14 @@ export const SelectionManager = () => {
             } else {
               targetPhase = 'furnish'
             }
+          } else if (node.type === 'cad-instance') {
+            targetPhase = 'furnish'
           } else if (node.type === 'cad-body' || node.type === 'cad-sketch') {
             targetPhase = 'cad'
           }
 
           if (targetPhase !== currentPhase) {
-            useEditor.getState().setPhase(targetPhase)
+            applySelectionPhase(targetPhase)
             if (targetPhase === 'structure' && useEditor.getState().structureLayer === 'zones') {
               useEditor.getState().setStructureLayer('elements')
             }
@@ -387,6 +401,7 @@ export const SelectionManager = () => {
       'item',
       'cad-body',
       'cad-sketch',
+      'cad-instance',
       'building',
       'zone',
       'slab',
@@ -484,6 +499,8 @@ export const SelectionManager = () => {
         } else {
           targetPhase = 'furnish'
         }
+      } else if (node.type === 'cad-instance') {
+        targetPhase = 'furnish'
       } else if (node.type === 'cad-body' || node.type === 'cad-sketch') {
         targetPhase = 'cad'
       } else if (node.type === 'scan' || node.type === 'guide') {
@@ -497,7 +514,7 @@ export const SelectionManager = () => {
       if (targetPhase && targetPhase !== useEditor.getState().phase) {
         event.stopPropagation()
 
-        useEditor.getState().setPhase(targetPhase)
+        applySelectionPhase(targetPhase)
 
         if (targetPhase === 'structure' && useEditor.getState().structureLayer === 'zones') {
           useEditor.getState().setStructureLayer('elements')
@@ -515,6 +532,7 @@ export const SelectionManager = () => {
       'item',
       'cad-body',
       'cad-sketch',
+      'cad-instance',
       'building',
       'slab',
       'ceiling',

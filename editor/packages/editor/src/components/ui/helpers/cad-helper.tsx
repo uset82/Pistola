@@ -12,6 +12,7 @@ import useMac, { macHelperUnavailableMessage } from '../../../store/use-mac'
 
 export function CadHelper() {
   const phase = useEditor((state) => state.phase)
+  const workspace = useEditor((state) => state.workspace)
   const activeSketchId = useEditor((state) => state.activeSketchId)
   const activeWorkplane = useEditor((state) => state.activeWorkplane)
   const helperStatus = useCad((state) => state.helperStatus)
@@ -116,7 +117,7 @@ export function CadHelper() {
       ? macHelperUnavailableMessage
       : isMacMock
         ? 'Hosted Multi-Agent-CAD preview. Clone https://github.com/Pan-Chera/Multi-Agent-CAD for engineered parts.'
-        : 'Describe a standalone mechanical or printable part. MAC imports a cad-body into this site.')
+        : 'Describe a standalone mechanical or printable part. MAC creates the definition in CAD space.')
 
   const selectionSummary =
     selectedNode?.type === 'cad-sketch'
@@ -202,8 +203,8 @@ export function CadHelper() {
           <div className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
             Workplane
           </div>
-          <div className="grid grid-cols-4 gap-1.5">
-            {(['XY', 'XZ', 'YZ', 'level'] as const).map((plane) => (
+          <div className={workspace === 'cad' ? 'grid grid-cols-3 gap-1.5' : 'grid grid-cols-4 gap-1.5'}>
+            {(workspace === 'cad' ? (['XY', 'XZ', 'YZ'] as const) : (['XY', 'XZ', 'YZ', 'level'] as const)).map((plane) => (
               <button
                 className={cn(
                   'rounded-md border px-2 py-1.5 font-medium text-[11px] transition-colors',

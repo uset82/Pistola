@@ -36,7 +36,13 @@ const IFC_BOOLEAN = {
 } as const
 
 const spatialTypes = new Set<SpatialType>(['site', 'building', 'level'])
-const skippedIfcTypes = new Set<AnyNode['type']>(['cad-sketch', 'scan', 'guide'])
+const skippedIfcTypes = new Set<AnyNode['type']>([
+  'cad-sketch',
+  'cad-space',
+  'cad-instance',
+  'scan',
+  'guide',
+])
 
 const sanitizeIfcGuid = (input: string) => {
   let hashA = 0

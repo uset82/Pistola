@@ -40,8 +40,25 @@ export const CustomCameraControls = () => {
     }
     if (firstLoad.current) {
       firstLoad.current = false
-      ;(controls.current as CameraControlsImpl).setLookAt(20, 20, 20, 0, 0, 0, true)
+      const workspace = useViewer.getState().activeWorkspace
+      const saved = useViewer.getState().worldCameras[workspace]
+      if (saved) {
+        ;(controls.current as CameraControlsImpl).setLookAt(
+          saved.position[0],
+          saved.position[1],
+          saved.position[2],
+          saved.target[0],
+          saved.target[1],
+          saved.target[2],
+          true,
+        )
+      } else if (workspace === 'cad') {
+        ;(controls.current as CameraControlsImpl).setLookAt(8, 6, 8, 0, 0, 0, true)
+      } else {
+        ;(controls.current as CameraControlsImpl).setLookAt(20, 20, 20, 0, 0, 0, true)
+      }
     }
+    if (useViewer.getState().activeWorkspace === 'cad') return
     ;(controls.current as CameraControlsImpl).getTarget(currentTarget)
     ;(controls.current as CameraControlsImpl).moveTo(
       currentTarget.x,
@@ -50,6 +67,41 @@ export const CustomCameraControls = () => {
       true,
     )
   }, [currentLevelId, isPreviewMode])
+
+  const activeWorkspace = useViewer((state) => state.activeWorkspace)
+  const previousWorkspace = useRef(activeWorkspace)
+  useEffect(() => {
+    if (!controls.current || isPreviewMode) return
+    if (previousWorkspace.current === activeWorkspace) return
+
+    const position = new Vector3()
+    const target = new Vector3()
+    controls.current.getPosition(position)
+    controls.current.getTarget(target)
+    useViewer.getState().setWorldCamera(previousWorkspace.current, {
+      position: [position.x, position.y, position.z],
+      target: [target.x, target.y, target.z],
+    })
+
+    const saved = useViewer.getState().worldCameras[activeWorkspace]
+    if (saved) {
+      controls.current.setLookAt(
+        saved.position[0],
+        saved.position[1],
+        saved.position[2],
+        saved.target[0],
+        saved.target[1],
+        saved.target[2],
+        true,
+      )
+    } else if (activeWorkspace === 'cad') {
+      controls.current.setLookAt(8, 6, 8, 0, 0, 0, true)
+    } else {
+      controls.current.setLookAt(20, 20, 20, 0, 0, 0, true)
+    }
+
+    previousWorkspace.current = activeWorkspace
+  }, [activeWorkspace, isPreviewMode])
 
   // Configure mouse buttons based on control mode and camera mode
   const cameraMode = useViewer((state) => state.cameraMode)

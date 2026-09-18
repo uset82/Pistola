@@ -5,6 +5,7 @@ import { assistantToolValues } from './tool-surface'
 export { assistantToolValues } from './tool-surface'
 
 export const assistantPhaseValues = ['site', 'structure', 'furnish', 'cad'] as const
+export const assistantWorkspaceValues = ['architecture', 'cad'] as const
 export const assistantModeValues = ['select', 'edit', 'delete', 'build'] as const
 export const assistantStructureLayerValues = ['zones', 'elements'] as const
 export const assistantCadBooleanModeValues = ['union', 'cut', 'intersect'] as const
@@ -33,6 +34,7 @@ export const assistantCatalogCategoryValues = [
 ] as const
 export const assistantActionTypeValues = [
   'reset_workspace_selection',
+  'set_workspace',
   'set_phase',
   'set_mode',
   'set_structure_layer',
@@ -101,6 +103,7 @@ export const assistantActionTypeValues = [
   'execute_cad_brief',
   'run_cad_prompt',
   'generate_mac_part',
+  'place_cad_body_in_architecture',
   'create_default_cad_sketch',
   'extrude_cad_sketch',
   'revolve_cad_sketch',
@@ -124,6 +127,7 @@ export const assistantActionTypeValues = [
 ] as const
 export const assistantSafeImmediateActionTypes = [
   'reset_workspace_selection',
+  'set_workspace',
   'set_phase',
   'set_mode',
   'set_structure_layer',
@@ -172,6 +176,7 @@ export const AssistantPhaseSchema = z.preprocess(
   },
   z.enum(assistantPhaseValues)
 )
+export const AssistantWorkspaceSchema = z.enum(assistantWorkspaceValues)
 export const AssistantModeSchema = z.enum(assistantModeValues)
 export const AssistantStructureLayerSchema = z.enum(assistantStructureLayerValues)
 export const AssistantCadBooleanModeSchema = z.enum(assistantCadBooleanModeValues)
@@ -198,6 +203,10 @@ export const AssistantForwardRefIdSchema = z.string().regex(/^\$ref_[A-Za-z0-9_-
 const AssistantActionUnionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('reset_workspace_selection'),
+  }),
+  z.object({
+    type: z.literal('set_workspace'),
+    workspace: AssistantWorkspaceSchema,
   }),
   z.object({
     type: z.literal('set_phase'),
@@ -699,6 +708,11 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('generate_mac_part'),
     prompt: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('place_cad_body_in_architecture'),
+    bodyId: z.string().optional(),
+    levelId: z.string().optional(),
   }),
   z.object({
     type: z.literal('create_default_cad_sketch'),

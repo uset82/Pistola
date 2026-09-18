@@ -141,6 +141,7 @@ export default function Editor({
 
   const [isSceneLoading, setIsSceneLoading] = useState(false)
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
+  const workspace = useEditor((s) => s.workspace)
 
   // Load scene on mount (or when onLoad identity changes, e.g. project switch)
   useEffect(() => {
@@ -225,12 +226,18 @@ export default function Editor({
             {enableCad && enableCadRuntime && <CadBodyRuntimeSystem />}
             {isPreviewMode ? <ViewerZoneSystem /> : <ZoneSystem />}
             <CeilingSystem />
-            {!isPreviewMode && <Grid cellColor="#aaa" fadeDistance={500} sectionColor="#ccc" />}
+            {!isPreviewMode && (
+              <Grid
+                cellColor="#aaa"
+                fadeDistance={workspace === 'cad' ? 4000 : 500}
+                sectionColor="#ccc"
+              />
+            )}
             {!isPreviewMode && <ToolManager />}
             <CustomCameraControls />
             <ThumbnailGenerator onThumbnailCapture={onThumbnailCapture} />
             <PresetThumbnailGenerator />
-            {!isPreviewMode && <SiteEdgeLabels />}
+            {!isPreviewMode && workspace === 'architecture' && <SiteEdgeLabels />}
             {isPreviewMode && <InteractiveSystem />}
           </Viewer>
           {!isPreviewMode && <ZoneLabelEditorSystem />}

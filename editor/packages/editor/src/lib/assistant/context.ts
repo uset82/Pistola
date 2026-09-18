@@ -11,6 +11,7 @@ export type AssistantNodeSummary = Record<string, unknown>
 
 export type AssistantWorkspaceContext = {
   phase: string
+  workspace: 'architecture' | 'cad'
   mode: string
   tool: string | null
   structureLayer: string
@@ -230,6 +231,7 @@ export const getAssistantWorkspaceContext = (): AssistantWorkspaceContext => {
 
   return {
     phase: editor.phase,
+    workspace: editor.workspace,
     mode: editor.mode,
     tool: editor.tool,
     structureLayer: editor.structureLayer,

@@ -1,6 +1,7 @@
-import { CadBodyNode as CadBodyNodeSchema, type AnyNodeId, useScene } from '@pascal-app/core'
+import { CadBodyNode as CadBodyNodeSchema, useScene } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
 import useEditor from '../../store/use-editor'
+import { resolveCadSpaceParentId } from '../cad-parent'
 import { createMacJob, waitForMacJob } from './client'
 import type { MacHelperJobResult } from './contracts'
 
@@ -12,15 +13,7 @@ export type GenerateMacPartResult = {
   qaSummary?: string | null
 }
 
-const getParentIdForCadNodes = () => {
-  const scene = useScene.getState()
-  const levelId = useViewer.getState().selection.levelId
-  if (levelId && scene.nodes[levelId as AnyNodeId]) return levelId
-
-  return (
-    scene.rootNodeIds.find((rootId) => scene.nodes[rootId as AnyNodeId]?.type === 'site') ?? null
-  )
-}
+const getParentIdForCadNodes = () => resolveCadSpaceParentId()
 
 const isMockMacJob = (job: MacHelperJobResult) => {
   const engine = job.result?.metadata?.engine
@@ -76,13 +69,13 @@ const buildMacBodyFromJob = (job: MacHelperJobResult, parentId: string) => {
 export async function generateMacPart(prompt: string): Promise<GenerateMacPartResult> {
   const parentId = getParentIdForCadNodes()
   if (!parentId) {
-    throw new Error('No active site or level is selected for MAC import.')
+    throw new Error('CAD space is unavailable for MAC import.')
   }
   if (!prompt.trim()) {
     throw new Error('Describe the part you want to generate.')
   }
 
-  useEditor.getState().setPhase('cad')
+  useEditor.getState().setWorkspace('cad')
 
   const created = await createMacJob({ prompt: prompt.trim(), mode: 'part' })
   if (!created.jobId) {

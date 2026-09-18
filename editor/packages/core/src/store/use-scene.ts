@@ -7,6 +7,7 @@ import { BuildingNode } from '../schema'
 import type { Collection, CollectionId } from '../schema/collections'
 import { generateCollectionId } from '../schema/collections'
 import { getCadBodyTransform } from '../lib/cad-body-transform'
+import { ensureProjectWorlds } from '../lib/worlds'
 import { LevelNode } from '../schema/nodes/level'
 import { SiteNode } from '../schema/nodes/site'
 import type { AnyNode, AnyNodeId } from '../schema/types'
@@ -138,27 +139,29 @@ const useScene: UseSceneStore = create<SceneState>()(
       },
 
       setScene: (nodes, rootNodeIds) => {
-        // Apply backward compatibility migrations
         const patchedNodes = migrateNodes(nodes)
+        const worlds = ensureProjectWorlds(patchedNodes, rootNodeIds)
 
         set({
-          nodes: patchedNodes,
-          rootNodeIds,
+          nodes: worlds.nodes,
+          rootNodeIds: worlds.rootNodeIds,
           dirtyNodes: new Set<AnyNodeId>(),
         })
-        // Mark all nodes as dirty to trigger re-validation
-        Object.values(patchedNodes).forEach((node) => {
+        Object.values(worlds.nodes).forEach((node) => {
           get().markDirty(node.id)
         })
       },
 
       loadScene: () => {
         if (get().rootNodeIds.length > 0) {
-          // Assign all nodes as dirty to force re-validation
+          const worlds = ensureProjectWorlds(get().nodes, get().rootNodeIds)
+          if (worlds.changed) {
+            set({ nodes: worlds.nodes, rootNodeIds: worlds.rootNodeIds })
+          }
           Object.values(get().nodes).forEach((node) => {
             get().markDirty(node.id)
           })
-          return // Scene already loaded
+          return
         }
 
         // Create hierarchy: Site → Building → Level
@@ -175,17 +178,14 @@ const useScene: UseSceneStore = create<SceneState>()(
           children: [building],
         })
 
-        // Define all nodes flat
         const nodes: Record<AnyNodeId, AnyNode> = {
           [site.id]: site,
           [building.id]: building,
           [level0.id]: level0,
         }
 
-        // Site is the root
-        const rootNodeIds = [site.id]
-
-        set({ nodes, rootNodeIds })
+        const worlds = ensureProjectWorlds(nodes, [site.id])
+        set({ nodes: worlds.nodes, rootNodeIds: worlds.rootNodeIds })
       },
 
       markDirty: (id) => {

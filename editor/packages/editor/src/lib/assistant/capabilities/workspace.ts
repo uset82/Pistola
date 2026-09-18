@@ -83,10 +83,45 @@ export const setNodeMetadataCapability = defineCapability({
   },
 })
 
+export const setWorkspaceCapability = defineCapability({
+  type: 'set_workspace',
+  domain: 'workspace',
+  schema: z.object({
+    type: z.literal('set_workspace'),
+    workspace: z.enum(['architecture', 'cad']),
+  }),
+  safeImmediate: true,
+  describe: 'Switch between the architecture world and the CAD world before phase tools',
+  examples: ['switch to CAD', 'open architecture', 'go to the part workspace'],
+  aliases: {
+    en: ['switch workspace', 'open cad world', 'open architecture world'],
+    es: ['cambiar espacio', 'abrir mundo cad', 'abrir arquitectura'],
+  },
+})
+
+export const placeCadBodyInArchitectureCapability = defineCapability({
+  type: 'place_cad_body_in_architecture',
+  domain: 'workspace',
+  schema: z.object({
+    type: z.literal('place_cad_body_in_architecture'),
+    bodyId: z.string().optional(),
+    levelId: z.string().optional(),
+  }),
+  safeImmediate: false,
+  describe: 'Place a CAD body definition into the architecture world as a level instance',
+  examples: ['put this bracket on the kitchen wall', 'place the CAD part in the building'],
+  aliases: {
+    en: ['place cad part', 'put part in building', 'insert cad body'],
+    es: ['colocar pieza cad', 'poner pieza en el edificio'],
+  },
+})
+
 export const workspaceCapabilities = [
   resetWorkspaceSelectionCapability,
+  setWorkspaceCapability,
   setPhaseCapability,
   setModeCapability,
   reparentNodeCapability,
   setNodeMetadataCapability,
+  placeCadBodyInArchitectureCapability,
 ]

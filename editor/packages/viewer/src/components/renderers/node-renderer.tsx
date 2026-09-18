@@ -3,7 +3,9 @@
 import { type AnyNode, useScene } from '@pascal-app/core'
 import { BuildingRenderer } from './building/building-renderer'
 import { CadBodyRenderer } from './cad-body/cad-body-renderer'
+import { CadInstanceRenderer } from './cad-instance/cad-instance-renderer'
 import { CadSketchRenderer } from './cad-sketch/cad-sketch-renderer'
+import { CadSpaceRenderer } from './cad-space/cad-space-renderer'
 import { CeilingRenderer } from './ceiling/ceiling-renderer'
 import { DoorRenderer } from './door/door-renderer'
 import { GuideRenderer } from './guide/guide-renderer'
@@ -29,6 +31,8 @@ export const NodeRenderer = ({ nodeId }: { nodeId: AnyNode['id'] }) => {
       {node.type === 'building' && <BuildingRenderer node={node} />}
       {node.type === 'cad-sketch' && <CadSketchRenderer node={node} />}
       {node.type === 'cad-body' && <CadBodyRenderer node={node} />}
+      {node.type === 'cad-space' && <CadSpaceRenderer node={node} />}
+      {node.type === 'cad-instance' && <CadInstanceRenderer node={node} />}
       {node.type === 'ceiling' && <CeilingRenderer node={node} />}
       {node.type === 'level' && <LevelRenderer node={node} />}
       {node.type === 'item' && <ItemRenderer node={node} />}

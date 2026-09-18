@@ -19,6 +19,16 @@ type Outliner = {
 }
 
 type ViewerState = {
+  activeWorkspace: 'architecture' | 'cad'
+  setActiveWorkspace: (workspace: 'architecture' | 'cad') => void
+  worldCameras: {
+    architecture: { position: [number, number, number]; target: [number, number, number] } | null
+    cad: { position: [number, number, number]; target: [number, number, number] } | null
+  }
+  setWorldCamera: (
+    workspace: 'architecture' | 'cad',
+    camera: { position: [number, number, number]; target: [number, number, number] },
+  ) => void
   selection: SelectionPath
   hoveredId: AnyNode['id'] | ZoneNode['id'] | null
   setHoveredId: (id: AnyNode['id'] | ZoneNode['id'] | null) => void
@@ -71,6 +81,16 @@ type ViewerState = {
 const useViewer = create<ViewerState>()(
   persist(
     (set) => ({
+      activeWorkspace: 'architecture',
+      setActiveWorkspace: (workspace) => set({ activeWorkspace: workspace }),
+      worldCameras: { architecture: null, cad: null },
+      setWorldCamera: (workspace, camera) =>
+        set((state) => ({
+          worldCameras: {
+            ...state.worldCameras,
+            [workspace]: camera,
+          },
+        })),
       selection: { buildingId: null, levelId: null, zoneId: null, selectedIds: [] },
       hoveredId: null,
       setHoveredId: (id) => set({ hoveredId: id }),
@@ -190,6 +210,8 @@ const useViewer = create<ViewerState>()(
         levelMode: state.levelMode,
         wallMode: state.wallMode,
         projectPreferences: state.projectPreferences,
+        activeWorkspace: state.activeWorkspace,
+        worldCameras: state.worldCameras,
       }),
     },
   ),

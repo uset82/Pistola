@@ -97,6 +97,16 @@ export function FurnishTools() {
           </ActionButton>
         )
       })}
+      <button
+        aria-label="Place CAD part in architecture"
+        className="rounded-lg border border-cyan-400/30 px-2 py-1 text-[11px] text-cyan-100 hover:bg-cyan-400/10"
+        onClick={() => {
+          void runAssistantCommand([{ type: 'place_cad_body_in_architecture' }])
+        }}
+        type="button"
+      >
+        CAD part
+      </button>
     </div>
   )
 }
