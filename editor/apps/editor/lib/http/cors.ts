@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 
 const DEFAULT_PUBLIC_ORIGINS = [
+  'https://pistola.canner.app',
+  'https://pistola.app.canner.ca',
   'https://pistolacodex.canner.app',
   'https://pistolacodex.app.canner.ca',
 ]

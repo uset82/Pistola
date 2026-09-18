@@ -9,6 +9,8 @@ const requestFrom = (origin: string) =>
   })
 
 test('Canner editor origins are allowed for the Sites CAD bridge', () => {
+  assert.equal(isPistolaCorsOriginAllowed(requestFrom('https://pistola.canner.app')), true)
+  assert.equal(isPistolaCorsOriginAllowed(requestFrom('https://pistola.app.canner.ca')), true)
   assert.equal(isPistolaCorsOriginAllowed(requestFrom('https://pistolacodex.canner.app')), true)
   assert.equal(isPistolaCorsOriginAllowed(requestFrom('https://pistolacodex.app.canner.ca')), true)
 })

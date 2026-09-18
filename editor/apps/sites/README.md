@@ -13,7 +13,7 @@ Sites is a CAD workspace, not a viewer-only preview.
 - **Multi-Agent-CAD**: text-to-part generation from [Pan-Chera/Multi-Agent-CAD](https://github.com/Pan-Chera/Multi-Agent-CAD).
 
 Solid jobs run through the Canner editor API (`NEXT_PUBLIC_PISTOLA_API_BASE`,
-default `https://pistolacodex.canner.app`). The CAD Runtime panel shows both
+default `https://pistola.canner.app`). The CAD Runtime panel shows both
 engines. If the host has no FreeCADCmd or MAC clone, Canner starts the bundled
 preview helpers so the Sites CAD loop still completes.
 
