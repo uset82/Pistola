@@ -468,6 +468,103 @@ export function AiAssistantPanel() {
   const stopContinuationRef = useRef(false)
   const stopTaskPlanRef = useRef(false)
 
+  // Unified Model Switcher State
+  const [activeModel, setActiveModel] = useState('openrouter/free')
+  const [activeProvider, setActiveProvider] = useState('openrouter')
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
+  const [availableModels, setAvailableModels] = useState<
+    Array<{
+      id: string
+      name: string
+      description?: string
+      contextLength?: number | null
+      isFree: boolean
+      isRecommended?: boolean
+    }>
+  >([])
+  const [modelSearch, setModelSearch] = useState('')
+  const [modelFilter, setModelFilter] = useState<'free' | 'recommended' | 'all'>('free')
+  const [loadingModels, setLoadingModels] = useState(false)
+
+  const loadAiModelConfig = async () => {
+    try {
+      const res = await fetch('/api/ai/config')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.model) setActiveModel(data.model)
+        if (data.provider) setActiveProvider(data.provider)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const loadAvailableModels = async (force = false) => {
+    setLoadingModels(true)
+    try {
+      const res = await fetch(
+        `/api/ai/models?provider=${activeProvider}${force ? '&forceRefresh=1' : ''}`,
+      )
+      if (res.ok) {
+        const data = await res.json()
+        if (data.ok && Array.isArray(data.models)) {
+          setAvailableModels(data.models)
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingModels(false)
+    }
+  }
+
+  const handleSelectModel = async (newModelId: string) => {
+    setActiveModel(newModelId)
+    setIsModelMenuOpen(false)
+    try {
+      await fetch('/api/ai/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: activeProvider,
+          model: newModelId,
+        }),
+      })
+      showCommandToast(`Active AI model switched to: ${newModelId}`)
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    void loadAiModelConfig()
+  }, [])
+
+  const filteredChatModels = useMemo(() => {
+    let list = availableModels
+    if (modelFilter === 'free') {
+      list = list.filter((m) => m.isFree)
+    } else if (modelFilter === 'recommended') {
+      list = list.filter((m) => m.isRecommended || m.isFree)
+    }
+    if (modelSearch.trim()) {
+      const q = modelSearch.toLowerCase().trim()
+      list = list.filter(
+        (m) =>
+          m.id.toLowerCase().includes(q) ||
+          m.name.toLowerCase().includes(q) ||
+          (m.description && m.description.toLowerCase().includes(q)),
+      )
+    }
+    return list
+  }, [availableModels, modelFilter, modelSearch])
+
+  const freeModelCount = useMemo(
+    () => availableModels.filter((m) => m.isFree).length,
+    [availableModels],
+  )
+
+
   const selectedSummary = useMemo(() => {
     if (zoneId) {
       const zone = nodes[zoneId as AnyNodeId]
@@ -1492,6 +1589,98 @@ export function AiAssistantPanel() {
       return
     }
     const prompt = promptValidation.prompt
+
+    const trimmed = prompt.trim()
+    const lower = trimmed.toLowerCase()
+
+    // 1. Slash commands: /model
+    if (trimmed.startsWith('/model')) {
+      const parts = trimmed.split(/\s+/)
+      const arg = parts[1]?.toLowerCase()
+      if (!arg || arg === 'list') {
+        setIsModelMenuOpen(true)
+        void loadAvailableModels()
+        setInput('')
+        return
+      }
+      let targetModel = parts[1]!
+      if (arg === 'free') targetModel = 'openrouter/free'
+      else if (arg === 'llama') targetModel = 'meta-llama/llama-3.3-70b-instruct:free'
+      else if (arg === 'deepseek') targetModel = 'deepseek/deepseek-chat'
+      else if (arg === 'gemini') targetModel = 'google/gemini-2.5-flash'
+      else if (arg === 'claude') targetModel = 'anthropic/claude-3.7-sonnet'
+      else if (arg === 'gpt' || arg === 'gpt-4o') targetModel = 'openai/gpt-4o'
+
+      await handleSelectModel(targetModel)
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          text: `Switched active AI model to \`${targetModel}\`. CAD, architecture, and assistant generation will now use this model.`,
+        },
+      ])
+      setInput('')
+      return
+    }
+
+    if (trimmed === '/undo') {
+      undoLastAssistantTurn()
+      setInput('')
+      return
+    }
+
+    // 2. Direct Viewport & Camera commands
+    if (/\b(top view|vista superior|camara arriba|vista desde arriba|top-down view)\b/i.test(lower)) {
+      await executeAssistantPlan([{ type: 'camera_top_view' }], { reviewConfirmed: true })
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Switched to top-down orthographic camera view.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(orbit (camera )?left|girar izquierda|rotar a la izquierda|orbit ccw)\b/i.test(lower)) {
+      await executeAssistantPlan([{ type: 'orbit_camera', direction: 'ccw' }], { reviewConfirmed: true })
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Rotated camera counter-clockwise.' },
+      ])
+      setInput('')
+      return
+    }
+
+    if (/\b(orbit (camera )?right|girar derecha|rotar a la derecha|orbit cw)\b/i.test(lower)) {
+      await executeAssistantPlan([{ type: 'orbit_camera', direction: 'cw' }], { reviewConfirmed: true })
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: 'Rotated camera clockwise.' },
+      ])
+      setInput('')
+      return
+    }
+
+    // 3. Direct CAD workplane commands
+    if (/\b(workplane|switch plane|plano de trabajo)\b/i.test(lower)) {
+      const planeMatch = lower.match(/\b(xy|xz|yz|level)\b/)
+      if (planeMatch) {
+        const wp = planeMatch[1]!.toLowerCase() as 'xy' | 'xz' | 'yz' | 'level'
+        await executeAssistantPlan([{ type: 'set_cad_workplane', workplane: wp }], { reviewConfirmed: true })
+        setMessages((current) => [
+          ...current,
+          { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+          { id: `${Date.now()}-assistant`, role: 'assistant', text: `Switched CAD workplane to ${wp.toUpperCase()}.` },
+        ])
+        setInput('')
+        return
+      }
+    }
+
     const promptImage =
       imageOverride
         ? imageOverride
@@ -1722,27 +1911,49 @@ export function AiAssistantPanel() {
       </div>
 
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 font-semibold text-sm tracking-tight">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 font-semibold text-sm tracking-tight flex-wrap">
             <span className="text-cyan-300">AI</span>
-            Assistant
+            <span>Assistant</span>
+            {/* Live Model Badge / Switcher Button */}
+            <button
+              onClick={() => {
+                setIsModelMenuOpen((v) => !v)
+                if (!isModelMenuOpen) void loadAvailableModels()
+              }}
+              className="inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] text-cyan-200 hover:bg-cyan-400/20 transition-colors"
+              title="Click to change AI Model (OpenRouter 445+ models)"
+              type="button"
+            >
+              <span className="truncate max-w-[130px]">
+                {activeModel === 'openrouter/free' ? '⭐ Free Router' : activeModel.split('/').pop()}
+              </span>
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
           </div>
           <div className="mt-1 text-[11px] text-white/55">
             {phase} · {levelId ?? 'no level'} · {selectedSummary}
           </div>
-          {tool && <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/40">{tool}</div>}
-          {turn?.providerMeta ? (
-            <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/35">
-              {turn.providerMeta.provider} · {turn.providerMeta.model}
-            </div>
-          ) : null}
+          {tool && (
+            <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/40">{tool}</div>
+          )}
         </div>
         <div className="flex gap-2">
           <button
-            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${executionPolicy === 'autopilot'
+            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${
+              executionPolicy === 'autopilot'
                 ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
                 : 'border-white/10 bg-white/5 text-white/75'
-              }`}
+            }`}
             data-testid="assistant-policy-toggle"
             onClick={() =>
               setExecutionPolicy((current) => (current === 'autopilot' ? 'review' : 'autopilot'))
@@ -1772,6 +1983,152 @@ export function AiAssistantPanel() {
         </div>
       </div>
 
+      {/* Model Selection Dropdown inside Assistant Panel */}
+      {isModelMenuOpen && (
+        <div className="rounded-2xl border border-cyan-500/30 bg-neutral-950/95 p-3 shadow-2xl space-y-2 backdrop-blur-md">
+          <div className="flex items-center justify-between text-[11px] text-white/70">
+            <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
+              <span>Select Model</span>
+              <span className="text-[10px] font-normal text-white/50">
+                ({availableModels.length || '445+'} OpenRouter models)
+              </span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                className="text-[10px] text-cyan-400 hover:text-cyan-300"
+                onClick={() => void loadAvailableModels(true)}
+                disabled={loadingModels}
+                type="button"
+              >
+                {loadingModels ? 'Loading...' : 'Refresh'}
+              </button>
+              <button
+                className="text-[11px] text-white/50 hover:text-white"
+                onClick={() => setIsModelMenuOpen(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Quick presets */}
+          <div className="flex flex-wrap gap-1">
+            {[
+              { id: 'openrouter/free', label: '⭐ Free Router' },
+              { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B' },
+              { id: 'deepseek/deepseek-chat', label: 'DeepSeek V3' },
+              { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5' },
+              { id: 'anthropic/claude-3.7-sonnet', label: 'Claude 3.7' },
+              { id: 'openai/gpt-4o', label: 'GPT-4o' },
+            ].map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => void handleSelectModel(preset.id)}
+                className={`rounded px-1.5 py-0.5 text-[10px] border transition-colors ${
+                  activeModel === preset.id
+                    ? 'border-cyan-400 bg-cyan-400/20 text-cyan-100 font-medium'
+                    : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+                type="button"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search bar */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search 445+ models (e.g. free, llama, deepseek, claude)..."
+              value={modelSearch}
+              onChange={(e) => setModelSearch(e.target.value)}
+              className="w-full rounded-xl border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white placeholder:text-white/40 focus:border-cyan-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex gap-1 text-[10px]">
+            <button
+              onClick={() => setModelFilter('free')}
+              className={`rounded px-2 py-0.5 font-medium transition ${
+                modelFilter === 'free'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'text-white/50 hover:text-white'
+              }`}
+              type="button"
+            >
+              ⭐ Free Only ({freeModelCount})
+            </button>
+            <button
+              onClick={() => setModelFilter('recommended')}
+              className={`rounded px-2 py-0.5 font-medium transition ${
+                modelFilter === 'recommended'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  : 'text-white/50 hover:text-white'
+              }`}
+              type="button"
+            >
+              ⚡ Recommended
+            </button>
+            <button
+              onClick={() => setModelFilter('all')}
+              className={`rounded px-2 py-0.5 font-medium transition ${
+                modelFilter === 'all'
+                  ? 'bg-white/15 text-white border border-white/25'
+                  : 'text-white/50 hover:text-white'
+              }`}
+              type="button"
+            >
+              All ({availableModels.length})
+            </button>
+          </div>
+
+          {/* Model list */}
+          <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
+            {loadingModels ? (
+              <div className="py-3 text-center text-[11px] text-white/50">Loading real models...</div>
+            ) : filteredChatModels.length === 0 ? (
+              <div className="py-3 text-center text-[11px] text-white/50">No models found</div>
+            ) : (
+              filteredChatModels.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => void handleSelectModel(m.id)}
+                  className={`flex w-full items-center justify-between gap-1.5 rounded-lg p-1.5 text-left text-[11px] transition ${
+                    activeModel === m.id
+                      ? 'bg-cyan-400/20 text-cyan-100 border border-cyan-400/30'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                  type="button"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="font-medium truncate">{m.name}</span>
+                      {m.isFree && (
+                        <span className="rounded bg-emerald-500/20 px-1 py-0.1 text-[8px] font-bold text-emerald-300 border border-emerald-500/30">
+                          FREE
+                        </span>
+                      )}
+                      {m.contextLength && (
+                        <span className="text-[9px] text-white/40">
+                          {Math.round(m.contextLength / 1000)}k
+                        </span>
+                      )}
+                    </div>
+                    <div className="font-mono text-[9px] text-white/40 truncate">{m.id}</div>
+                  </div>
+                  {activeModel === m.id && (
+                    <span className="text-cyan-300 text-xs">✓</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {([
           { id: 'ask', label: 'Ask' },
@@ -1796,7 +2153,7 @@ export function AiAssistantPanel() {
 
       {(messages.length > 0 || pendingAssistantMessage) && (
         <div className="flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.045] p-3">
-          {messages.map((message) => (
+          {messages.map((message, idx) => (
             <div
               className={`rounded-2xl px-3 py-2 text-[12px] leading-5 flex flex-col gap-2 ${message.role === 'user' ? 'self-end bg-cyan-300 text-black' : 'bg-black/25 text-white/85'
                 }`}
@@ -1810,6 +2167,17 @@ export function AiAssistantPanel() {
                 />
               )}
               {message.text}
+              {message.role === 'assistant' && idx === messages.length - 1 && lastUndoSnapshot && (
+                <div className="pt-1 flex justify-end border-t border-white/5 mt-1">
+                  <button
+                    onClick={undoLastAssistantTurn}
+                    className="text-[10px] text-cyan-300/80 hover:text-cyan-200 underline decoration-dotted transition-colors"
+                    type="button"
+                  >
+                    ↩ Undo this action
+                  </button>
+                </div>
+              )}
             </div>
           ))}
           {pendingAssistantMessage ? (
