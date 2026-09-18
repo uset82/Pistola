@@ -34,6 +34,12 @@ Recommended repository layout:
       SKILL.md
     scene-validation/
       SKILL.md
+    ide-orchestration/
+      SKILL.md
+    export-readiness/
+      SKILL.md
+    mac-cad-generation/
+      SKILL.md
 ```
 
 Current status:
@@ -45,6 +51,7 @@ Current status:
 - `ide-orchestration` implemented
 - `scene-validation` implemented
 - `export-readiness` implemented
+- `mac-cad-generation` implemented
 
 ## Foundational skill catalog
 
@@ -143,6 +150,19 @@ Expected outputs:
 - export assumptions
 - compatibility notes
 - known limitations
+
+### 8. `mac-cad-generation`
+
+Use when:
+
+- the user wants an advanced mechanical / printable part from natural language
+- FreeCAD sketch/extrude is insufficient and Multi-Agent-CAD should run
+
+Expected outputs:
+
+- MAC job + STEP/GLB artifacts
+- `cad-body` import with `metadata.cadEngine = 'mac'`
+- QA / repair summary when available
 
 ## Skill governance
 

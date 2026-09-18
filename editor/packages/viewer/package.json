@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@pascal/typescript-config": "*",
+    "@types/node": "^22.19.12",
     "@types/react": "19.2.2",
     "typescript": "5.9.3",
     "@types/three": "^0.183.0"

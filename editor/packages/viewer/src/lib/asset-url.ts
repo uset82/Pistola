@@ -1,6 +1,12 @@
 import { loadAssetUrl } from '@pascal-app/core'
 
-const configuredAssetsCdnUrl = process.env.NEXT_PUBLIC_ASSETS_CDN_URL?.trim()
+declare const process:
+  | {
+      env?: Record<string, string | undefined>
+    }
+  | undefined
+
+const configuredAssetsCdnUrl = process?.env?.NEXT_PUBLIC_ASSETS_CDN_URL?.trim()
 
 export const ASSETS_CDN_URL =
   configuredAssetsCdnUrl === undefined ? 'https://editor.pascal.app' : configuredAssetsCdnUrl

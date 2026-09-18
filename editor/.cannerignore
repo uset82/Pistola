@@ -1,0 +1,29 @@
+# Canner deployment ignore rules (no trailing slashes for CLI compatibility)
+# Heavy binaries & runtimes (FreeCAD, Python wheels, etc.)
+third_party
+.codex-runtime
+
+# Heavy media assets that exceed Starter plan 100MB cap
+audios
+*.mp4
+*.webm
+Screenshot*
+
+# Build artifacts & caches
+dist
+out
+build
+coverage
+*.tsbuildinfo
+*.log
+
+# Tooling and testing droppings
+.pytest_cache
+.artifacts
+_cdp_out
+.playwright-mcp
+
+# Local secrets & env overrides
+.env
+.env.local
+.env.*.local
