@@ -14,6 +14,7 @@ import {
   summarizeAssistantNode,
   useCad,
   useEditor,
+  validateAssistantPlan,
 } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import {
@@ -350,10 +351,25 @@ const restoreAssistantUndoSnapshot = (snapshot: AssistantUndoSnapshot) => {
   useViewer.getState().setSelection(snapshot.selection)
 }
 
+const getTurnReviewState = (turn: AssistantTurnResult) => {
+  const validation = validateAssistantPlan(turn.actions)
+
+  return {
+    requiresReview: turn.requiresReview || (validation.valid && validation.requiresReview),
+    destructiveActionCount: Math.max(
+      turn.destructiveActionCount,
+      validation.valid ? validation.destructiveActionCount : 0,
+    ),
+  }
+}
+
 const requiresManualReview = (
   turn: AssistantTurnResult,
   executionPolicy: ExecutionPolicy,
-) => turn.requiresReview && (executionPolicy === 'review' || turn.destructiveActionCount > 0)
+) => {
+  const reviewState = getTurnReviewState(turn)
+  return reviewState.requiresReview && (executionPolicy === 'review' || reviewState.destructiveActionCount > 0)
+}
 
 const lowercaseFirst = (value: string) => (value ? `${value.charAt(0).toLowerCase()}${value.slice(1)}` : value)
 
@@ -2137,7 +2153,7 @@ export function AiAssistantPanel() {
           initialTurn: nextTurn,
           prompt,
           image: promptImage,
-          reviewConfirmed: nextTurn.requiresReview,
+          reviewConfirmed: getTurnReviewState(nextTurn).requiresReview,
           requestId,
         })
         return
