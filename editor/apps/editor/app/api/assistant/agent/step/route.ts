@@ -4,8 +4,11 @@ import { runAgentStep } from '@/lib/assistant-agent/step'
 import { requireRouteAuthSession } from '@/lib/auth/route'
 import { classifyAiFailure, logAiFailure } from '@/lib/ai-provider-shared'
 import { getAssistantAiConfig } from '@/lib/assistant-ai-provider'
+import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 
 export const runtime = 'nodejs'
+
+export const OPTIONS = pistolaCorsPreflight
 
 export async function POST(request: Request) {
   let provider = getAssistantAiConfig().provider
@@ -14,7 +17,7 @@ export async function POST(request: Request) {
   try {
     const auth = await requireRouteAuthSession()
     if (auth.response) {
-      return auth.response
+      return withPistolaCors(request, auth.response)
     }
 
     const raw = await request.json()
@@ -23,11 +26,14 @@ export async function POST(request: Request) {
     promptSnippet = body.prompt.slice(0, 160)
     const result = await runAgentStep(body)
 
-    return NextResponse.json(result, {
-      headers: {
-        'Cache-Control': 'no-store',
-      },
-    })
+    return withPistolaCors(
+      request,
+      NextResponse.json(result, {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }),
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to complete agent step.'
     const kind = classifyAiFailure(error)
@@ -46,13 +52,16 @@ export async function POST(request: Request) {
       status,
     })
 
-    return NextResponse.json(
-      {
-        error: message,
-        provider,
-        kind,
-      },
-      { status },
+    return withPistolaCors(
+      request,
+      NextResponse.json(
+        {
+          error: message,
+          provider,
+          kind,
+        },
+        { status },
+      ),
     )
   }
 }

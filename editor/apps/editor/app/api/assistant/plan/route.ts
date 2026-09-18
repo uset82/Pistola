@@ -7,9 +7,12 @@ import {
 import { AssistantAiProviderError } from '@/lib/assistant-ai-provider'
 import { classifyAiFailure, logAiFailure } from '@/lib/ai-provider-shared'
 import { requireRouteAuthSession } from '@/lib/auth/route'
+import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
+
+export const OPTIONS = pistolaCorsPreflight
 
 export async function POST(request: Request) {
   let provider = getAssistantAiConfig().provider
@@ -18,14 +21,17 @@ export async function POST(request: Request) {
   try {
     const auth = await requireRouteAuthSession()
     if (auth.response) {
-      return auth.response
+      return withPistolaCors(request, auth.response)
     }
 
     const body = AssistantPlanRequestSchema.parse(await request.json())
     if (!body.prompt.trim()) {
-      return NextResponse.json(
-        { error: 'Assistant prompt is required.', provider, kind: 'validation' },
-        { status: 400 },
+      return withPistolaCors(
+        request,
+        NextResponse.json(
+          { error: 'Assistant prompt is required.', provider, kind: 'validation' },
+          { status: 400 },
+        ),
       )
     }
 
@@ -34,11 +40,14 @@ export async function POST(request: Request) {
     const result = await createAssistantTurnResult(body)
     const turn = AssistantTurnResultSchema.parse(result.turn)
 
-    return NextResponse.json(turn, {
-      headers: {
-        'Cache-Control': 'no-store',
-      },
-    })
+    return withPistolaCors(
+      request,
+      NextResponse.json(turn, {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }),
+    )
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unable to create an assistant response.'
@@ -60,13 +69,16 @@ export async function POST(request: Request) {
       status,
     })
 
-    return NextResponse.json(
-      {
-        error: message,
-        provider: errorProvider,
-        kind,
-      },
-      { status },
+    return withPistolaCors(
+      request,
+      NextResponse.json(
+        {
+          error: message,
+          provider: errorProvider,
+          kind,
+        },
+        { status },
+      ),
     )
   }
 }

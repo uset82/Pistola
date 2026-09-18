@@ -73,6 +73,10 @@ import {
 import { classifyRequestComplexity } from '../../lib/assistant-agent-router'
 import { runAgentTurn } from '../../lib/assistant-agent/run-agent-turn'
 import { AssistantTaskPlanCard } from './AssistantTaskPlanCard'
+import {
+  FALLBACK_OPENROUTER_MODELS,
+  fetchOpenRouterModelCatalog,
+} from '../../lib/openrouter-model-catalog'
 import { pistolaFetch } from '../../lib/pistola-fetch'
 
 const isObservationPrompt = (text: string) => {
@@ -524,6 +528,7 @@ export function AiAssistantPanel() {
       if (res.ok) {
         setApiConfigMessage('Settings saved successfully!')
         showCommandToast('AI API configuration updated.')
+        await loadAvailableModels(true)
         setApiKeyInput('')
         setTimeout(() => setShowApiSettings(false), 1200)
       } else {
@@ -540,17 +545,34 @@ export function AiAssistantPanel() {
   const loadAvailableModels = async (force = false) => {
     setLoadingModels(true)
     try {
-      const res = await pistolaFetch(
-        `/api/ai/models?provider=${activeProvider}${force ? '&forceRefresh=1' : ''}`,
-      )
-      if (res.ok) {
-        const data = await res.json()
-        if (data.ok && Array.isArray(data.models)) {
-          setAvailableModels(data.models)
+      try {
+        const res = await pistolaFetch(
+          `/api/ai/models?provider=${activeProvider}${force ? '&forceRefresh=1' : ''}`,
+        )
+        if (res.ok) {
+          const data = await res.json()
+          if (data.ok && Array.isArray(data.models) && data.models.length > 0) {
+            setAvailableModels(data.models)
+            return
+          }
         }
+      } catch {
+        // Sites cannot read Canner's catalog until that API sends CORS headers.
       }
-    } catch {
-      // ignore
+
+      if (activeProvider === 'openai') {
+        setAvailableModels([])
+        return
+      }
+
+      try {
+        const models = await fetchOpenRouterModelCatalog({
+          baseUrl: baseUrlInput,
+        })
+        setAvailableModels(models)
+      } catch {
+        setAvailableModels(FALLBACK_OPENROUTER_MODELS)
+      }
     } finally {
       setLoadingModels(false)
     }
@@ -576,6 +598,7 @@ export function AiAssistantPanel() {
 
   useEffect(() => {
     void loadAiModelConfig()
+    void loadAvailableModels()
   }, [])
 
   const filteredChatModels = useMemo(() => {
