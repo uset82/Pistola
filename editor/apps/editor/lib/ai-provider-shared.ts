@@ -348,6 +348,29 @@ export const normalizeOpenRouterResponsesRequest = (requestBody: Record<string, 
   return result
 }
 
+export const formatOpenRouterErrorMessage = (status: number, body: string, label: string) => {
+  let detail = body.trim()
+  try {
+    const parsed = JSON.parse(body) as { error?: { message?: unknown } }
+    if (typeof parsed?.error?.message === 'string' && parsed.error.message.trim()) {
+      detail = parsed.error.message.trim()
+    }
+  } catch {
+    // Non-JSON error body; keep the raw text.
+  }
+
+  if (status === 401) {
+    return `OpenRouter rejected the API key (401): ${detail || 'unauthorized'}. Check the key saved in AI settings.`
+  }
+  if (status === 402) {
+    return `OpenRouter reports insufficient credits (402): ${detail || 'payment required'}. Use a :free model or add credits.`
+  }
+  if (status === 429) {
+    return `OpenRouter rate limit reached (429): ${detail || 'too many requests'}. Free models allow 20 requests/minute and 50/day on accounts without purchased credits (1000/day after buying $10+).`
+  }
+  return `${label} failed (${status}): ${detail || 'request failed.'}`
+}
+
 export const requestOpenRouterResponses = async (
   config: SharedOpenRouterConfig,
   requestBody: Record<string, unknown>,
@@ -369,7 +392,11 @@ export const requestOpenRouterResponses = async (
 
     if (!response.ok) {
       const errorBody = await response.text()
-      throw new AiProviderError('openrouter', errorBody || `${label} request failed.`, 'provider')
+      throw new AiProviderError(
+        'openrouter',
+        formatOpenRouterErrorMessage(response.status, errorBody, label),
+        'provider',
+      )
     }
 
     return extractResponseText(await response.json())

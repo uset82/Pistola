@@ -4737,7 +4737,7 @@ export const isNonAssistantModelOutput = (raw: string) => {
 }
 
 const NON_RETRYABLE_PROVIDER_ERROR_PATTERN =
-  /\b(?:401|402|403)\b|unauthori[sz]ed|no auth credentials|invalid api key|insufficient credits|user not found|not a valid model/i
+  /\b(?:401|402|403|429)\b|unauthori[sz]ed|no auth credentials|invalid api key|insufficient credits|rate limit|user not found|not a valid model/i
 
 const requestWithOpenRouterAttempts = async (
   label: string,

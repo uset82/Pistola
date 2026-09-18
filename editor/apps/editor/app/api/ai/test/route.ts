@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireRouteAuthSession } from '@/lib/auth/route'
+import { formatOpenRouterErrorMessage } from '@/lib/ai-provider-shared'
 import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import {
   DEFAULT_INSTALLED_OPENROUTER_BASE_URL,
@@ -48,7 +49,9 @@ export async function POST(request: Request) {
     }
 
     if (provider === 'openrouter') {
-      const response = await fetch(`${baseUrl}/models`, {
+      // /models is public, so it cannot validate a key; /key requires a valid one
+      // and reports its label and free-model quota.
+      const response = await fetch(`${baseUrl}/key`, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
         },
@@ -59,16 +62,33 @@ export async function POST(request: Request) {
         return json(
           {
             ok: false,
-            error: text || `OpenRouter returned ${response.status}.`,
+            error: formatOpenRouterErrorMessage(response.status, text, 'OpenRouter key check'),
           },
           { status: 502 },
         )
       }
+      const keyInfo = ((await response.json().catch(() => null)) as {
+        data?: {
+          label?: unknown
+          is_free_tier?: unknown
+          free_model_daily_requests?: { used?: unknown; remaining?: unknown }
+        }
+      } | null)?.data
+      const label = typeof keyInfo?.label === 'string' ? keyInfo.label : null
+      const dailyUsed = keyInfo?.free_model_daily_requests?.used
+      const dailyRemaining = keyInfo?.free_model_daily_requests?.remaining
+      const quota =
+        typeof dailyUsed === 'number' && typeof dailyRemaining === 'number'
+          ? ` Free-model requests today: ${dailyUsed} used, ${dailyRemaining} remaining.`
+          : keyInfo?.is_free_tier === true
+            ? ' No credits purchased: free models are limited to 50 requests/day.'
+            : ''
       return json({
         ok: true,
         provider,
         model,
-        message: 'OpenRouter connection succeeded.',
+        keyLabel: label,
+        message: `OpenRouter key${label ? ` "${label}"` : ''} is valid.${quota}`,
       })
     }
 

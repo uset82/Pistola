@@ -16,6 +16,7 @@ import {
   assistantSideValues,
 } from '../../../packages/editor/src/lib/assistant/types'
 import { shapeAssistantPlanningContext, shapeCadPlanningContext } from './ai-context-shaping'
+import { formatOpenRouterErrorMessage } from './ai-provider-shared'
 import {
   type AssistantPlanRequest,
   AssistantPlanRequestSchema,
@@ -3681,4 +3682,40 @@ test('isNonAssistantModelOutput flags safety classifier verdicts only', () => {
   assert.equal(isNonAssistantModelOutput(''), true)
   assert.equal(isNonAssistantModelOutput('{"reply":"safe","mode":"chat"}'), false)
   assert.equal(isNonAssistantModelOutput('3 + 3 = 6.'), false)
+})
+
+test('createAssistantTurnResult does not retry OpenRouter rate limits', async () => {
+  let calls = 0
+  await assert.rejects(
+    createAssistantTurnResult(
+      { prompt: '3+3', context: {} },
+      { ...NO_CODEX_AUTH, OPENROUTER_API_KEY: 'openrouter-key' },
+      {
+        requestOpenRouterTurn: async () => {
+          calls += 1
+          throw new Error(
+            formatOpenRouterErrorMessage(
+              429,
+              '{"error":{"code":429,"message":"Rate limit exceeded: free-models-per-day"}}',
+              'OpenRouter assistant planning',
+            ),
+          )
+        },
+      },
+    ),
+    /rate limit reached \(429\).*50\/day/i,
+  )
+
+  assert.equal(calls, 1)
+})
+
+test('formatOpenRouterErrorMessage extracts the provider message from JSON bodies', () => {
+  assert.match(
+    formatOpenRouterErrorMessage(401, '{"error":{"message":"No auth credentials found","code":401}}', 'x'),
+    /^OpenRouter rejected the API key \(401\): No auth credentials found\./,
+  )
+  assert.equal(
+    formatOpenRouterErrorMessage(500, 'upstream exploded', 'OpenRouter assistant planning'),
+    'OpenRouter assistant planning failed (500): upstream exploded',
+  )
 })
