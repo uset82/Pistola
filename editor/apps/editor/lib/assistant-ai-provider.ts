@@ -5307,6 +5307,23 @@ const safeJsonParse = (cleaned: string): Record<string, unknown> => {
         .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
       return JSON.parse(repaired)
     } catch {
+      try {
+        const replyMatch = cleaned.match(
+          /"(?:reply|message|response|explanation)"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i,
+        )
+        const modeMatch = cleaned.match(/"mode"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i)
+        if (replyMatch?.[1]) {
+          return {
+            reply: replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'),
+            mode: modeMatch?.[1] ?? 'chat',
+            assumptions: [],
+            ambiguities: [],
+            actions: [],
+          }
+        }
+      } catch {
+        // ignore
+      }
       console.warn('[ai] Failed to parse JSON. Raw output was:', cleaned.slice(0, 500))
       throw initialError
     }
@@ -5315,7 +5332,46 @@ const safeJsonParse = (cleaned: string): Record<string, unknown> => {
 
 const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
   const cleaned = cleanJsonString(raw)
-  const json = safeJsonParse(cleaned)
+  let json: Record<string, unknown>
+  try {
+    json = safeJsonParse(cleaned)
+  } catch {
+    const plainText = raw
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+      .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
+      .trim()
+
+    json = {
+      reply: plainText || 'I processed your request, but could not produce structured 3D actions.',
+      mode: 'chat',
+      assumptions: [],
+      ambiguities: [],
+      actions: [],
+    }
+  }
+
+  // Ensure reply and mode are valid strings
+  if (typeof json.reply !== 'string' || !json.reply.trim()) {
+    json.reply =
+      typeof json.message === 'string' && json.message.trim()
+        ? json.message.trim()
+        : typeof json.response === 'string' && json.response.trim()
+          ? json.response.trim()
+          : typeof json.explanation === 'string' && json.explanation.trim()
+            ? json.explanation.trim()
+            : 'Processed assistant request.'
+  }
+
+  const validModes = ['chat', 'clarify', 'plan', 'task-plan']
+  if (typeof json.mode !== 'string' || !validModes.includes(json.mode)) {
+    json.mode = Array.isArray(json.actions) && json.actions.length > 0 ? 'plan' : 'chat'
+  }
+
+  if (!Array.isArray(json.assumptions)) json.assumptions = []
+  if (!Array.isArray(json.ambiguities)) json.ambiguities = []
+  if (!Array.isArray(json.actions)) json.actions = []
+
   const rawActions = Array.isArray(json?.actions) ? (json.actions as unknown[]) : []
   const rawSteps = Array.isArray(json?.steps) ? (json.steps as unknown[]) : []
   const { valid: parsedActions, invalidActionIssues: parsedInvalidActionIssues } = safeParseActions(rawActions)
@@ -5352,7 +5408,7 @@ const normalizeAssistantTurn = (raw: string): ParsedAssistantTurn => {
   const sequenceIssues = getAssistantTurnSequenceIssues(turn)
 
   return {
-    rawMode: json?.mode,
+    rawMode: json?.mode as string | undefined,
     rawActionCount: rawActions.length,
     invalidActionIssues: [...parsedInvalidActionIssues, ...sequenceIssues.actionIssues],
     rawStepCount: rawSteps.length,
@@ -5441,10 +5497,14 @@ export const createAssistantTurnResult = async (
   }
   const planImage = getAssistantPlanImage(body)
   const configuredProvider = getAssistantAiConfig(env)
-  const config =
+  const baseConfig =
     configuredProvider.provider === 'codex' && planImage
       ? getAssistantNonCodexAiConfig(env)
       : configuredProvider
+  const config = { ...baseConfig }
+  if (body.model && 'model' in config) {
+    ;(config as Record<string, unknown>).model = body.model
+  }
   const normalizedPrompt = normalizePrompt(body.prompt.trim())
   const imageInterpretation = interpretAssistantImage({
     prompt: body.prompt,
@@ -5492,13 +5552,18 @@ export const createAssistantTurnResult = async (
     }
   }
 
-  if (config.provider === 'fallback' && !isGeminiPlannerAvailable()) {
+  const hasGeminiPlanner =
+    (env.GEMINI_API_KEY !== undefined
+      ? Boolean(env.GEMINI_API_KEY.trim())
+      : isGeminiPlannerAvailable())
+
+  if (config.provider === 'fallback' && !hasGeminiPlanner) {
     throw new Error(
       'AI assistant provider is not configured. Set GEMINI_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY.',
     )
   }
 
-  if (config.provider === 'fallback' && isGeminiPlannerAvailable()) {
+  if (config.provider === 'fallback' && hasGeminiPlanner) {
     const geminiRequest = buildAssistantRequest(body, 'gemini-2.5-flash')
     const geminiInput = Array.isArray(geminiRequest.input) ? geminiRequest.input : []
     const geminiUserMessage = geminiInput[geminiInput.length - 1]
@@ -5667,7 +5732,33 @@ export const createAssistantTurnResult = async (
       }
     }
 
-    ensureExecutableAssistantTurn(firstParse)
+    try {
+      ensureExecutableAssistantTurn(firstParse)
+    } catch (validationError) {
+      const message =
+        validationError instanceof Error ? validationError.message : 'Action validation failed.'
+      const deterministicTurn = buildDeterministicAssistantTurn(body)
+      if (deterministicTurn) {
+        return {
+          turn: withAssistantTurnMetadata(deterministicTurn, {
+            imageInterpretation: imageInterpretation ?? undefined,
+            providerMeta: getLocalAssistantProviderMeta(),
+          }),
+          provider: config.provider,
+        }
+      }
+      return {
+        turn: buildClarifyTurn(
+          'I need a more specific target or a smaller first step before I can continue safely.',
+          [getAssistantPlannerFailureMessage(classifyAssistantPlannerFailure(message))],
+          {
+            imageInterpretation: imageInterpretation ?? undefined,
+            providerMeta: getLocalAssistantProviderMeta(),
+          },
+        ),
+        provider: config.provider,
+      }
+    }
 
     return {
       turn: withAssistantTurnMetadata(firstParse.turn, {
