@@ -124,6 +124,9 @@ export const assistantActionTypeValues = [
   'set_cad_sketch_plane',
   'reparent_node',
   'set_node_metadata',
+  // A structured CAD brief only adds editable sketch/body nodes. It is
+  // rollback-safe and does not replace or delete existing scene content.
+  'execute_cad_brief',
 ] as const
 export const assistantSafeImmediateActionTypes = [
   'reset_workspace_selection',

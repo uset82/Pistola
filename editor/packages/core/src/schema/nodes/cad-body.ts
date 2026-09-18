@@ -15,6 +15,13 @@ export const CadBodyPreview = z.discriminatedUnion('primitive', [
     radialSegments: z.number().int().positive().default(32),
     color: z.string().default('#60a5fa'),
   }),
+  z.object({
+    /** A deterministic local solid from a closed 2D CAD profile. */
+    primitive: z.literal('extruded-profile'),
+    points: z.array(z.tuple([z.number(), z.number()])).min(3),
+    height: z.number().positive(),
+    color: z.string().default('#60a5fa'),
+  }),
 ])
 
 const CadOperationBase = z.object({

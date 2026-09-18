@@ -2,7 +2,7 @@ import { getCadBodyTransform, type CadBodyNode, useRegistry } from '@pascal-app/
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { Component, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { Box3, type Group, type Material, type Mesh, Vector3 } from 'three'
+import { Box3, ExtrudeGeometry, type Group, type Material, type Mesh, Shape, Vector3 } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { useNodeEvents } from '../../../hooks/use-node-events'
 import { shouldUseCadBodyAssetPreview } from './cad-body-preview'
@@ -17,7 +17,50 @@ const getBodyColor = (node: CadBodyNode) => {
 const getPlaceholderDimensions = (node: CadBodyNode): [number, number, number] =>
   node.preview.primitive === 'box'
     ? node.preview.dimensions
-    : [node.preview.radius * 2, node.preview.height, node.preview.radius * 2]
+    : node.preview.primitive === 'cylinder'
+      ? [node.preview.radius * 2, node.preview.height, node.preview.radius * 2]
+      : [
+          Math.max(...node.preview.points.map((point) => point[0])) -
+            Math.min(...node.preview.points.map((point) => point[0])),
+          node.preview.height,
+          Math.max(...node.preview.points.map((point) => point[1])) -
+            Math.min(...node.preview.points.map((point) => point[1])),
+        ]
+
+const CadBodyExtrudedProfileMesh = ({
+  node,
+  material,
+  handlers,
+}: {
+  node: CadBodyNode
+  material: MeshStandardNodeMaterial
+  handlers: ReturnType<typeof useNodeEvents>
+}) => {
+  const geometry = useMemo(() => {
+    if (node.preview.primitive !== 'extruded-profile') return null
+    const [firstPoint, ...remainingPoints] = node.preview.points
+    if (!firstPoint) return null
+    const shape = new Shape()
+    shape.moveTo(firstPoint[0], firstPoint[1])
+    remainingPoints.forEach(([x, y]) => shape.lineTo(x, y))
+    shape.closePath()
+    const nextGeometry = new ExtrudeGeometry(shape, {
+      depth: node.preview.height,
+      bevelEnabled: false,
+      curveSegments: 12,
+    })
+    // Profiles are authored on the XY sketch plane; this maps their extrusion
+    // onto the editor's vertical Y axis while retaining X/Z as the footprint.
+    nextGeometry.rotateX(Math.PI / 2)
+    nextGeometry.translate(0, node.preview.height, 0)
+    return nextGeometry
+  }, [node.preview])
+
+  useEffect(() => () => geometry?.dispose(), [geometry])
+  if (!geometry) return null
+
+  return <mesh castShadow geometry={geometry} material={material} receiveShadow {...handlers} />
+}
 
 const CadBodyAssetMesh = ({ url }: { url: string }) => {
   const gltf = useGLTF(url)
@@ -56,7 +99,9 @@ const CadBodyPrimitiveMesh = ({
 
   return (
     <>
-      {node.preview.primitive === 'box' ? (
+      {node.preview.primitive === 'extruded-profile' ? (
+        <CadBodyExtrudedProfileMesh handlers={handlers} material={material} node={node} />
+      ) : node.preview.primitive === 'box' ? (
         <mesh
           castShadow
           material={material}
@@ -87,7 +132,7 @@ const CadBodyPrimitiveMesh = ({
           />
         </mesh>
       )}
-      {!node.artifacts.previewUrl && (
+      {!node.artifacts.previewUrl && node.preview.primitive !== 'extruded-profile' && (
         <mesh position-y={placeholderDimensions[1] / 2} renderOrder={3}>
           <boxGeometry args={placeholderDimensions} />
           <meshBasicMaterial color="#93c5fd" opacity={0.35} transparent wireframe />

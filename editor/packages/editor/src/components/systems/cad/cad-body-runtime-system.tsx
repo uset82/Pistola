@@ -110,7 +110,17 @@ export const CadBodyRuntimeSystem = () => {
 
     dirtyNodes.forEach((id) => {
       const node = nodes[id]
-      if (!node || node.type !== 'cad-body' || node.regenStatus !== 'pending') return
+      if (!node || node.type !== 'cad-body') return
+      // Local profile extrusions are valid editable browser geometry. They must
+      // not be overwritten by the primitive-only helper preview.
+      if (node.preview.primitive === 'extruded-profile') {
+        if (node.regenStatus !== 'idle') {
+          updateNode(id as AnyNodeId, { regenStatus: 'idle', regenError: null } as Partial<CadBodyNode>)
+        }
+        clearDirty(id)
+        return
+      }
+      if (node.regenStatus !== 'pending') return
       // MAC-generated bodies are build123d solids — do not FreeCAD-regenerate them.
       const cadEngine =
         node.metadata &&

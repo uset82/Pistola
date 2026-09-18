@@ -9,7 +9,14 @@ import { useNodeEvents } from '../../../hooks/use-node-events'
 const getSourceDimensions = (body: CadBodyNode | undefined): [number, number, number] => {
   if (!body) return [0.4, 0.4, 0.4]
   if (body.preview.primitive === 'box') return body.preview.dimensions
-  return [body.preview.radius * 2, body.preview.height, body.preview.radius * 2]
+  if (body.preview.primitive === 'cylinder') {
+    return [body.preview.radius * 2, body.preview.height, body.preview.radius * 2]
+  }
+  return [
+    Math.max(...body.preview.points.map((point) => point[0])) - Math.min(...body.preview.points.map((point) => point[0])),
+    body.preview.height,
+    Math.max(...body.preview.points.map((point) => point[1])) - Math.min(...body.preview.points.map((point) => point[1])),
+  ]
 }
 
 export const CadInstanceRenderer = ({ node }: { node: CadInstanceNode }) => {

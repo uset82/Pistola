@@ -13,6 +13,39 @@ import {
 
 const DEFAULT_SKETCH_ELEVATION = 0.01
 
+type CadPoint = [number, number]
+
+const getNumericParam = (params: Record<string, unknown>, key: string, fallback: number) =>
+  typeof params[key] === 'number' && Number.isFinite(params[key]) ? (params[key] as number) : fallback
+
+const getHeartProfilePoints = (entity: CadEntitySpec): CadPoint[] => {
+  const width = Math.max(getNumericParam(entity.params, 'width', 2), 0.1)
+  const height = Math.max(getNumericParam(entity.params, 'height', 2.5), 0.1)
+  const center = Array.isArray(entity.params.center) && entity.params.center.length === 2
+    ? entity.params.center
+    : [0, 0]
+  const centerX = typeof center[0] === 'number' ? center[0] : 0
+  const centerY = typeof center[1] === 'number' ? center[1] : 0
+  const raw = Array.from({ length: 96 }, (_, index) => {
+    const angle = (index / 96) * Math.PI * 2
+    return [
+      16 * Math.sin(angle) ** 3,
+      13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle),
+    ] as CadPoint
+  })
+  const minX = Math.min(...raw.map((point) => point[0]))
+  const maxX = Math.max(...raw.map((point) => point[0]))
+  const minY = Math.min(...raw.map((point) => point[1]))
+  const maxY = Math.max(...raw.map((point) => point[1]))
+  const scaleX = width / Math.max(maxX - minX, Number.EPSILON)
+  const scaleY = height / Math.max(maxY - minY, Number.EPSILON)
+
+  return raw.map(([x, y]) => [
+    centerX + (x - (minX + maxX) / 2) * scaleX,
+    centerY + (y - (minY + maxY) / 2) * scaleY,
+  ])
+}
+
 const getOperationOrder = (brief: CadBrief) => {
   const operationsById = new Map(brief.operationGraph.map((operation) => [operation.id, operation]))
   const pendingDependencies = new Map(
@@ -68,6 +101,16 @@ const getSketchPosition = (plane: CadBrief['sketchPlans'][number]['plane'], pare
 }
 
 const getEntityBounds = (entity: CadEntitySpec) => {
+  if (entity.type === 'heart') {
+    const points = getHeartProfilePoints(entity)
+    return {
+      minX: Math.min(...points.map((point) => point[0])),
+      maxX: Math.max(...points.map((point) => point[0])),
+      minY: Math.min(...points.map((point) => point[1])),
+      maxY: Math.max(...points.map((point) => point[1])),
+    }
+  }
+
   if (entity.type === 'rectangle') {
     const [start = [0, 0], end = [2, 1.5]] = entity.points
     return {
@@ -219,6 +262,13 @@ const buildSketchEntity = (entity: CadEntitySpec) => {
                 [1, 0],
               ] as [number, number][]),
         closed: Boolean(entity.params.closed),
+      }
+    case 'heart':
+      return {
+        id: entityId,
+        kind: 'polyline',
+        points: getHeartProfilePoints(entity),
+        closed: true,
       }
     default: {
       const [start = [0, 0], end = [1, 0]] = entity.points
@@ -525,11 +575,26 @@ export async function executeCadBrief(
 
       const preview =
         operation.op === 'extrude'
-          ? {
-              primitive: 'box',
-              dimensions: [sketchExtents.width, extrudeDistance, sketchExtents.depth],
-              color: '#60a5fa',
-            }
+          ? (() => {
+              const heartEntity = sketchPlan?.entities.find((entity) => entity.type === 'heart')
+              if (heartEntity) {
+                return {
+                  primitive: 'extruded-profile' as const,
+                  points: getHeartProfilePoints(heartEntity).map(([x, y]) => [
+                    x - sketchExtents.centerX,
+                    y - sketchExtents.centerY,
+                  ] as CadPoint),
+                  height: extrudeDistance,
+                  color: '#ef4444',
+                }
+              }
+
+              return {
+                primitive: 'box' as const,
+                dimensions: [sketchExtents.width, extrudeDistance, sketchExtents.depth] as [number, number, number],
+                color: '#60a5fa',
+              }
+            })()
           : {
               primitive: 'cylinder',
               radius: Math.max(sketchExtents.width, sketchExtents.depth) / 2,
@@ -549,7 +614,9 @@ export async function executeCadBrief(
         },
         sourceSketchId: sketch.id,
         sourceSketchIds: [sketch.id],
-        regenStatus: 'pending',
+        // The heart is an in-browser deterministic extrusion. Do not send it
+        // to a helper that only understands the basic primitive preview set.
+        regenStatus: preview.primitive === 'extruded-profile' ? 'idle' : 'pending',
         regenError: null,
         preview,
         operations: [cadOperation],
