@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createAssistantTurnResult } from './assistant-ai-provider'
+import { findMatchingRecipe } from '../../../packages/editor/src/lib/assistant/recipes/creation-recipes'
 
 const NO_AUTH_ENV = {
   OPENAI_API_KEY: '',
@@ -184,6 +185,11 @@ test('Acceptance Prompt 3: Build 10m x 8m modern studio with large windows on so
 
   const window = result.turn.actions.find((a) => a.type === 'place_window')
   assert.ok(window && 'wallId' in window && window.wallId === '$ref_room_wall_0')
+})
+
+test('findMatchingRecipe recognizes Spanish toy-car nouns', () => {
+  assert.equal(findMatchingRecipe('un carrito de juguete')?.id, 'car')
+  assert.equal(findMatchingRecipe('a toy car')?.id, 'car')
 })
 
 test('createAssistantTurnResult creates a 3D boat assembly for "hola genera un barquito 3D"', async () => {

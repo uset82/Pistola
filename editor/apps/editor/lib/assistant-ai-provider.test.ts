@@ -1524,8 +1524,6 @@ test('createAssistantTurnResult retries once when the planner returns invalid ac
             actions: [
               {
                 type: 'create_wall',
-                from: [0, 0],
-                to: [4, 0],
               },
             ],
             requiresReview: true,
@@ -1715,7 +1713,7 @@ test('createAssistantTurnResult normalizes redundant last-write-wins planner act
   ])
 })
 
-test('createAssistantTurnResult falls back to clarify when repaired planner actions are still invalid', async () => {
+test('createAssistantTurnResult coerces remote create_wall from/to into start/end', async () => {
   let callCount = 0
 
   const result = await createAssistantTurnResult(
@@ -1748,9 +1746,13 @@ test('createAssistantTurnResult falls back to clarify when repaired planner acti
     },
   )
 
-  assert.equal(callCount, 2)
-  assert.equal(result.turn.mode, 'clarify')
-  assert.match(result.turn.ambiguities[0] ?? '', /unsupported action values|malformed response/i)
+  assert.equal(callCount, 1)
+  assert.equal(result.turn.mode, 'plan')
+  assert.equal(result.turn.actions[0]?.type, 'create_wall')
+  if (result.turn.actions[0]?.type === 'create_wall') {
+    assert.deepEqual(result.turn.actions[0].start, [0, 0])
+    assert.deepEqual(result.turn.actions[0].end, [4, 0])
+  }
 })
 
 test('createAssistantTurnResult falls back to clarify when repaired reviewed plans stay sequence-invalid', async () => {
@@ -1797,6 +1799,90 @@ test('createAssistantTurnResult falls back to clarify when repaired reviewed pla
     result.turn.ambiguities[0] ?? '',
     /unsupported action values|more specific target|malformed response/i,
   )
+})
+
+test('createAssistantTurnResult generates a CAD part for a Spanish toy car in the CAD workspace', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'un carrito de juguete',
+      chatMode: 'create',
+      context: { workspace: 'cad' },
+    },
+    NO_CODEX_AUTH,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.deepEqual(
+    result.turn.actions.map((action) => action.type),
+    ['set_workspace', 'generate_mac_part'],
+  )
+  assert.equal(result.turn.actions[1]?.type, 'generate_mac_part')
+  if (result.turn.actions[1]?.type === 'generate_mac_part') {
+    assert.equal(result.turn.actions[1].prompt, 'un carrito de juguete')
+  }
+})
+
+test('createAssistantTurnResult generates a CAD part for a toy car in the CAD workspace', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'a toy car',
+      chatMode: 'create',
+      context: { workspace: 'cad' },
+    },
+    NO_CODEX_AUTH,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.equal(result.turn.actions[1]?.type, 'generate_mac_part')
+})
+
+test('createAssistantTurnResult builds the car recipe in architecture for a toy car', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'un carrito de juguete',
+      chatMode: 'create',
+      context: { workspace: 'architecture' },
+    },
+    NO_CODEX_AUTH,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.ok(result.turn.actions.some((action) => action.type === 'place_item'))
+  assert.equal(
+    result.turn.actions.some((action) => action.type === 'generate_mac_part'),
+    false,
+  )
+})
+
+test('createAssistantTurnResult coerces invented create_object actions into generate_mac_part', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'remote object test',
+      context: {},
+    },
+    {
+      ...NO_CODEX_AUTH,
+      OPENROUTER_API_KEY: 'openrouter-key',
+    },
+    {
+      requestOpenRouterTurn: async () =>
+        JSON.stringify({
+          reply: 'I will create that object.',
+          mode: 'plan',
+          assumptions: [],
+          ambiguities: [],
+          actions: [{ type: 'create_object', prompt: 'toy car' }],
+          requiresReview: true,
+          destructiveActionCount: 0,
+        }),
+    },
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.equal(result.turn.actions[0]?.type, 'generate_mac_part')
+  if (result.turn.actions[0]?.type === 'generate_mac_part') {
+    assert.equal(result.turn.actions[0].prompt, 'toy car')
+  }
 })
 
 test('createAssistantTurnResult falls back to a deterministic clarify turn when the remote planner times out on a box prompt', async () => {

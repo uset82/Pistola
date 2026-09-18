@@ -1758,7 +1758,11 @@ const PET_SHELTER_NOUN_PATTERN =
 const FULL_HOUSE_PROGRAM_PATTERN =
   /\b(dream house|family house|living room|kitchen|bed(room)?s?|bath(room)?s?|dining room|garage|hallway|stairs?|rooms?|floor plan|plano)\b/u
 const EXECUTION_INTENT_PATTERN =
-  /\b(create|build|make|generate|add|place|switch|set|move|rename|delete|edit|remove|furnish|refine|adjust|change|resize|scale|extrude|revolve|focus|export|select|open|close|activate|run|recreate|approximate|model|crea[\p{L}]*|construye[\p{L}]*|haz[\p{L}]*|genera[\p{L}]*|agrega[\p{L}]*|coloca[\p{L}]*|cambia[\p{L}]*|pon[\p{L}]*|mueve[\p{L}]*|renombra[\p{L}]*|borra[\p{L}]*|edita[\p{L}]*|refina[\p{L}]*|ajusta[\p{L}]*|extruye[\p{L}]*|revoluciona[\p{L}]*|exporta[\p{L}]*|recrea[\p{L}]*|modela[\p{L}]*)\b/u
+  /\b(create|build|make|generate|add|place|switch|set|move|rename|delete|edit|remove|furnish|refine|adjust|change|resize|scale|extrude|revolve|focus|export|select|open|close|activate|run|recreate|approximate|model|crea[\p{L}]*|construye[\p{L}]*|haz[\p{L}]*|genera[\p{L}]*|agrega[\p{L}]*|coloca[\p{L}]*|cambia[\p{L}]*|pon[\p{L}]*|mueve[\p{L}]*|renombra[\p{L}]*|borra[\p{L}]*|edita[\p{L}]*|refina[\p{L}]*|ajusta[\p{L}]*|extruye[\p{L}]*|revoluciona[\p{L}]*|exporta[\p{L}]*|recrea[\p{L}]*|modela[\p{L}]*|carrito|carro|juguete|pieza|parte|toy)\b/u
+const STANDALONE_OBJECT_PATTERN =
+  /\b(carrito|carro|juguete|toy car|toy|pieza|parte|coche)\b/u
+const ARCHITECTURE_NOUN_PATTERN =
+  /\b(wall|walls|slab|door|window|level|room|zone|roof|ceiling|house|casa|stair|floor|building|muro|puerta|ventana|nivel|habitacion|habitación)\b/u
 const INFORMATIONAL_PROMPT_PATTERN =
   /\b(what|what's|whats|waht|where|which|who|why|how|is|are|does|do|did|explain|describe|tell me|que|qué|cual|cuál|donde|dónde|como|cómo|por que|por qué)\b/u
 const IMAGE_SPATIAL_QUESTION_PATTERN =
@@ -2615,6 +2619,71 @@ const buildRefinementTurn = (
   return null
 }
 
+const getRequestWorkspace = (body: AssistantPlanRequest) =>
+  typeof body.context?.workspace === 'string' ? body.context.workspace : null
+
+const isStandaloneObjectPrompt = (normalizedPrompt: string, workspace: string | null) => {
+  if (isUnsupportedCreationPrompt(normalizedPrompt)) return false
+  if (
+    INFORMATIONAL_PROMPT_PATTERN.test(normalizedPrompt) &&
+    !STANDALONE_OBJECT_PATTERN.test(normalizedPrompt)
+  ) {
+    return false
+  }
+
+  if (workspace === 'cad') {
+    if (
+      ARCHITECTURE_NOUN_PATTERN.test(normalizedPrompt) &&
+      !STANDALONE_OBJECT_PATTERN.test(normalizedPrompt)
+    ) {
+      return false
+    }
+    return normalizedPrompt.split(/\s+/).some((token) => token.length > 2)
+  }
+
+  if (STANDALONE_OBJECT_PATTERN.test(normalizedPrompt)) return true
+
+  const tokenCount = normalizedPrompt.split(/\s+/).filter(Boolean).length
+  const hasCreateVerb =
+    /\b(crea[\p{L}]*|haz[\p{L}]*|genera[\p{L}]*|construye[\p{L}]*|build|create|generate|make)\b/u.test(
+      normalizedPrompt,
+    )
+  const isBroadScenePrompt =
+    /\b(furnish|furnished|office|lobby|lounge|reception|drawing|sketch|image|room|house)\b/u.test(
+      normalizedPrompt,
+    )
+  return (
+    hasCreateVerb &&
+    !ARCHITECTURE_NOUN_PATTERN.test(normalizedPrompt) &&
+    !isBroadScenePrompt &&
+    tokenCount >= 2 &&
+    tokenCount <= 6
+  )
+}
+
+const buildMacPartTurn = (prompt: string): AssistantTurnResult =>
+  buildReviewPlanTurn(
+    `I'll generate a CAD part for "${prompt.trim()}".`,
+    [
+      { type: 'set_workspace', workspace: 'cad' },
+      { type: 'generate_mac_part', prompt: prompt.trim() },
+    ],
+    ['The part is created in CAD space, not on the architecture site.'],
+  )
+
+const buildObjectGenerationFallback = (body: AssistantPlanRequest): AssistantTurnResult | null => {
+  if (getAssistantPlanImage(body)) return null
+  const prompt = body.prompt.trim()
+  const normalizedPrompt = normalizePrompt(prompt)
+  const workspace = getRequestWorkspace(body)
+  const chatMode = body.chatMode ?? 'create'
+  if (chatMode === 'ask' || chatMode === 'refine') return null
+  if (workspace !== 'cad' && chatMode !== 'create') return null
+  if (buildConversationalTurn(normalizedPrompt)) return null
+  if (!isStandaloneObjectPrompt(normalizedPrompt, workspace)) return null
+  return buildMacPartTurn(prompt)
+}
+
 const isUnsupportedCreationPrompt = (normalizedPrompt: string) =>
   /\b(exact|identical|1:1|photoreal|photorealistic)\b.*\b(ferrari|porsche|tesla|iphone|lego|disney)\b/.test(
     normalizedPrompt,
@@ -3465,7 +3534,9 @@ const buildDeterministicAssistantTurn = (
   const isFurnishRequest = /\b(furnish|amuebla|amueblar)\b/i.test(normalizedPrompt)
 
   const matchingRecipe =
-    !isReplaceRequest && !isFurnishRequest ? findMatchingRecipe(prompt) : null
+    getRequestWorkspace(body) !== 'cad' && !isReplaceRequest && !isFurnishRequest
+      ? findMatchingRecipe(prompt)
+      : null
   if (matchingRecipe) {
     const requestedDimensions = parsePlanarMetricDimensions(prompt)
     const actions = matchingRecipe.generateActions({
@@ -4553,6 +4624,9 @@ const buildDeterministicAssistantTurn = (
     }
   }
 
+  const objectTurn = buildObjectGenerationFallback(body)
+  if (objectTurn) return objectTurn
+
   return null
 }
 
@@ -5228,6 +5302,33 @@ const assistantActionTypeAliases: Partial<Record<string, AssistantAction['type']
   cameratopview: 'camera_top_view',
   'focus-camera': 'focus_camera_on_nodes',
   focuscamera: 'focus_camera_on_nodes',
+  'generate-mac-part': 'generate_mac_part',
+  generatemacpart: 'generate_mac_part',
+  generate_mac_part: 'generate_mac_part',
+  'generate-part': 'generate_mac_part',
+  generatepart: 'generate_mac_part',
+  generate_part: 'generate_mac_part',
+  'create-part': 'generate_mac_part',
+  createpart: 'generate_mac_part',
+  create_part: 'generate_mac_part',
+  'create-object': 'generate_mac_part',
+  createobject: 'generate_mac_part',
+  create_object: 'generate_mac_part',
+  'create-model': 'generate_mac_part',
+  createmodel: 'generate_mac_part',
+  create_model: 'generate_mac_part',
+  'generate-model': 'generate_mac_part',
+  generatemodel: 'generate_mac_part',
+  generate_model: 'generate_mac_part',
+  'make-part': 'generate_mac_part',
+  makepart: 'generate_mac_part',
+  make_part: 'generate_mac_part',
+  'run-cad-prompt': 'run_cad_prompt',
+  runcadprompt: 'run_cad_prompt',
+  run_cad_prompt: 'run_cad_prompt',
+  'set-workspace': 'set_workspace',
+  setworkspace: 'set_workspace',
+  set_workspace: 'set_workspace',
 }
 
 const assistantPhaseAliases: Record<string, string> = {
@@ -5273,6 +5374,24 @@ const normalizeAssistantActionCandidate = (item: unknown) => {
       assistantActionTypeAliases[normalizedTypeKey] ??
       assistantActionTypeAliases[record.type] ??
       record.type
+  }
+
+  if (record.type === 'create_wall') {
+    if (record.start == null && record.from != null) record.start = record.from
+    if (record.end == null && record.to != null) record.end = record.to
+  }
+
+  if (
+    (record.type === 'generate_mac_part' || record.type === 'run_cad_prompt') &&
+    typeof record.prompt !== 'string'
+  ) {
+    const prompt =
+      (typeof record.text === 'string' && record.text.trim()) ||
+      (typeof record.description === 'string' && record.description.trim()) ||
+      (typeof record.brief === 'string' && record.brief.trim()) ||
+      (typeof record.name === 'string' && record.name.trim()) ||
+      ''
+    if (prompt) record.prompt = prompt
   }
 
   if (record.type === 'set_phase') {
@@ -5857,6 +5976,16 @@ export const createAssistantTurnResult = async (
             provider: config.provider,
           }
         }
+        const objectFallback = buildObjectGenerationFallback(body)
+        if (objectFallback) {
+          return {
+            turn: withAssistantTurnMetadata(objectFallback, {
+              imageInterpretation: imageInterpretation ?? undefined,
+              providerMeta: getLocalAssistantProviderMeta(),
+            }),
+            provider: config.provider,
+          }
+        }
         return {
           turn: buildClarifyTurn(
             'I need a more specific target or a smaller first step before I can continue safely.',
@@ -5880,6 +6009,16 @@ export const createAssistantTurnResult = async (
       if (deterministicTurn) {
         return {
           turn: withAssistantTurnMetadata(deterministicTurn, {
+            imageInterpretation: imageInterpretation ?? undefined,
+            providerMeta: getLocalAssistantProviderMeta(),
+          }),
+          provider: config.provider,
+        }
+      }
+      const objectFallback = buildObjectGenerationFallback(body)
+      if (objectFallback) {
+        return {
+          turn: withAssistantTurnMetadata(objectFallback, {
             imageInterpretation: imageInterpretation ?? undefined,
             providerMeta: getLocalAssistantProviderMeta(),
           }),

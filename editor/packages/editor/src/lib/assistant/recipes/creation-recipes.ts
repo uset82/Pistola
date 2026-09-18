@@ -498,7 +498,20 @@ export const carRecipe: CreationRecipe = {
   id: 'car',
   name: 'Automobile Assembly',
   category: 'vehicle',
-  keywords: ['car', 'coche', 'auto', 'vehiculo', 'vehículo', 'automovil', 'automóvil'],
+  keywords: [
+    'car',
+    'coche',
+    'auto',
+    'vehiculo',
+    'vehículo',
+    'automovil',
+    'automóvil',
+    'carrito',
+    'carro',
+    'juguete',
+    'toy car',
+    'toy',
+  ],
   generateActions: ({ position = [0, 0, 0] }) => {
     const [x, y, z] = position
     const rootRef = '$ref_car_root'
