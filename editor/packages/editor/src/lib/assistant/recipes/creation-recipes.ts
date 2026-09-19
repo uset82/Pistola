@@ -1019,6 +1019,60 @@ export const boatRecipe: CreationRecipe = {
   },
 }
 
+export const boatDetailActions = ({ position = [0, 0, 0] }: { position?: [number, number, number] } = {}) => {
+  const [x, y, z] = position
+  return [
+    {
+      type: 'place_item' as const,
+      placement: 'explicit' as const,
+      name: 'Main Sail',
+      assetId: 'primitive-wedge',
+      allowOverlap: true,
+      position: [x + 0.1, y + 0.85, z + 0.55] as [number, number, number],
+      scale: [0.08, 2.65, 1.75] as [number, number, number],
+    },
+    {
+      type: 'place_item' as const,
+      placement: 'explicit' as const,
+      name: 'Jib Sail',
+      assetId: 'primitive-wedge',
+      allowOverlap: true,
+      position: [x - 0.1, y + 0.9, z + 2.2] as [number, number, number],
+      scale: [0.07, 1.8, 1.2] as [number, number, number],
+      rotation: [0, Math.PI, 0] as [number, number, number],
+    },
+    {
+      type: 'place_item' as const,
+      placement: 'explicit' as const,
+      name: 'Rudder',
+      assetId: 'primitive-box',
+      allowOverlap: true,
+      position: [x, y + 0.3, z - 2.65] as [number, number, number],
+      scale: [0.18, 0.6, 0.12] as [number, number, number],
+    },
+    {
+      type: 'place_item' as const,
+      placement: 'explicit' as const,
+      name: 'Port Porthole',
+      assetId: 'primitive-cylinder',
+      allowOverlap: true,
+      position: [x - 0.74, y + 1.3, z - 0.35] as [number, number, number],
+      scale: [0.24, 0.08, 0.24] as [number, number, number],
+      rotation: [0, 0, Math.PI / 2] as [number, number, number],
+    },
+    {
+      type: 'place_item' as const,
+      placement: 'explicit' as const,
+      name: 'Starboard Porthole',
+      assetId: 'primitive-cylinder',
+      allowOverlap: true,
+      position: [x + 0.74, y + 1.3, z - 0.35] as [number, number, number],
+      scale: [0.24, 0.08, 0.24] as [number, number, number],
+      rotation: [0, 0, Math.PI / 2] as [number, number, number],
+    },
+  ]
+}
+
 export const CREATION_RECIPES: CreationRecipe[] = [
   heartRecipe,
   boardRecipe,

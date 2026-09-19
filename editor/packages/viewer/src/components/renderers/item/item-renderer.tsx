@@ -143,6 +143,27 @@ const ProceduralItemRenderer = ({ node }: { node: ItemNode }) => {
           <torusGeometry args={[w / 2, Math.max(0.02, h / 4), 16, 48]} />
         ) : primitive === 'capsule' ? (
           <capsuleGeometry args={[w / 2, Math.max(0.01, h - w), 16, 32]} />
+        ) : primitive === 'wedge' ? (
+          <bufferGeometry>
+            <bufferAttribute
+              args={[
+                new Float32Array([
+                  -w / 2, -h / 2, -d / 2,
+                  w / 2, -h / 2, -d / 2,
+                  -w / 2, -h / 2, d / 2,
+                  w / 2, -h / 2, d / 2,
+                  -w / 2, h / 2, -d / 2,
+                  w / 2, h / 2, -d / 2,
+                ]),
+                3,
+              ]}
+              attach="attributes-position"
+            />
+            <bufferAttribute
+              args={[new Uint16Array([0, 2, 3, 0, 3, 1, 0, 1, 5, 0, 5, 4, 0, 4, 2, 1, 3, 5, 2, 4, 5, 2, 5, 3]), 1]}
+              attach="index"
+            />
+          </bufferGeometry>
         ) : (
           <boxGeometry args={[w, h, d]} />
         )}

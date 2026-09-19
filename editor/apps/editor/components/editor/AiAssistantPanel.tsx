@@ -26,7 +26,10 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { assistantToolPhaseMap, assistantToolValues } from '../../../../packages/editor/src/lib/assistant/tool-surface'
-import { findMatchingRecipe } from '../../../../packages/editor/src/lib/assistant/recipes/creation-recipes'
+import {
+  boatDetailActions,
+  findMatchingRecipe,
+} from '../../../../packages/editor/src/lib/assistant/recipes/creation-recipes'
 import { shouldRequestAssistantContinuation } from '../../lib/assistant-continuation'
 import {
   applyAssistantComposerSuggestion,
@@ -161,6 +164,24 @@ const getCadParentId = (
 }
 
 const buildLocalCreationRecipeTurn = (prompt: string): AssistantTurnResult | null => {
+  const normalized = prompt.toLowerCase()
+  const requestsBoatRefinement =
+    /\b(mejora|arregla|refina|fix|improve|detalla)\b/.test(normalized) &&
+    /\b(boat|barco|barquito|velero|sailboat|yacht|bote)\b/.test(normalized)
+
+  if (requestsBoatRefinement && useEditor.getState().workspace !== 'cad') {
+    return {
+      reply: 'I have prepared the finishing details for the existing toy sailboat.',
+      mode: 'plan',
+      assumptions: ['Adding visible sails, a rudder, and cabin portholes to the existing boat.'],
+      ambiguities: [],
+      actions: boatDetailActions(),
+      requiresReview: false,
+      destructiveActionCount: 0,
+      continuation: null,
+    }
+  }
+
   const recipe = findMatchingRecipe(prompt)
   if (!recipe) return null
 
