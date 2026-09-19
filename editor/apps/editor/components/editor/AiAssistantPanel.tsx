@@ -2367,7 +2367,7 @@ export function AiAssistantPanel() {
   if (collapsed) {
     return (
       <button
-        className={`pointer-events-auto fixed z-[130] rounded-full border border-white/10 bg-neutral-950/88 px-4 py-3 text-sm text-white shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${panelPosition ? '' : 'right-4 bottom-4'
+        className={`pointer-events-auto fixed z-[130] inline-flex h-11 items-center gap-2 rounded-full border border-white/[0.06] bg-neutral-950/90 pr-[18px] pl-3 font-medium text-[13px] text-zinc-100 shadow-[0_2px_6px_rgba(0,0,0,0.12),0_16px_40px_rgba(0,0,0,0.25)] backdrop-blur-2xl transition hover:bg-neutral-900/95 ${panelPosition ? '' : 'right-4 bottom-4'
           }`}
         data-testid="assistant-toggle"
         onClick={() => setCollapsed(false)}
@@ -2375,14 +2375,17 @@ export function AiAssistantPanel() {
         style={floatingPositionStyle}
         type="button"
       >
-        AI Assistant
+        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-cyan-300/[0.14] text-cyan-300">
+          <SparkleIcon size={14} />
+        </span>
+        Assistant
       </button>
     )
   }
 
   return (
     <div
-      className={`pointer-events-auto fixed z-[130] flex max-h-[calc(100dvh-120px)] w-[380px] flex-col gap-3 overflow-hidden rounded-[22px] border border-white/8 bg-neutral-950/88 p-3 text-white shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl ${panelPosition ? '' : 'right-4 bottom-4'
+      className={`pointer-events-auto fixed z-[130] flex max-h-[calc(100dvh-120px)] w-[380px] flex-col gap-3 overflow-hidden rounded-3xl border border-white/[0.06] bg-neutral-950/90 px-3 pt-2 pb-3 text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_2px_6px_rgba(0,0,0,0.12),0_24px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl ${panelPosition ? '' : 'right-4 bottom-4'
         }`}
       data-testid="assistant-panel"
       ref={assignFloatingRef}
@@ -2390,7 +2393,7 @@ export function AiAssistantPanel() {
     >
       <div
         aria-label="Drag assistant"
-        className={`flex items-center justify-center pb-1 text-white/40 transition ${isDraggingPanel ? 'cursor-grabbing' : 'cursor-grab'
+        className={`group flex h-3.5 items-center justify-center ${isDraggingPanel ? 'cursor-grabbing' : 'cursor-grab'
           } touch-none select-none`}
         data-testid="assistant-drag-handle"
         onPointerDown={handlePanelDragStart}
@@ -2398,26 +2401,32 @@ export function AiAssistantPanel() {
         tabIndex={0}
         title="Drag to move assistant"
       >
-        <span className="text-[10px] uppercase tracking-[0.18em] text-white/55">Drag</span>
+        <span className="h-1 w-8 rounded-full bg-white/[0.18] transition group-hover:bg-white/30" />
       </div>
 
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 font-semibold text-sm tracking-tight flex-wrap">
-            <span className="text-cyan-300">AI</span>
-            <span>Assistant</span>
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] border border-cyan-300/25 bg-cyan-300/[0.12] text-cyan-300">
+          <SparkleIcon size={16} />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="font-semibold text-sm tracking-tight">Assistant</span>
             {/* Live Model Badge / Switcher Button */}
             <button
               onClick={() => {
                 setIsModelMenuOpen((v) => !v)
                 if (!isModelMenuOpen) void loadAvailableModels()
               }}
-              className="inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] text-cyan-200 hover:bg-cyan-400/20 transition-colors"
+              className={`inline-flex h-[22px] min-w-0 items-center gap-1 rounded-full border px-2 text-[11px] transition-colors ${
+                isModelMenuOpen
+                  ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
+                  : 'border-white/[0.08] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
+              }`}
               title="Click to change AI Model (OpenRouter 445+ models)"
               type="button"
             >
-              <span className="truncate max-w-[130px]">
-                {activeModel === 'openrouter/free' ? '⭐ Free Router' : activeModel.split('/').pop()}
+              <span className="truncate max-w-[120px]">
+                {activeModel === 'openrouter/free' ? 'Free Router' : activeModel.split('/').pop()}
               </span>
               <svg
                 width="10"
@@ -2431,61 +2440,54 @@ export function AiAssistantPanel() {
               </svg>
             </button>
           </div>
-          <div className="mt-1 text-[11px] text-white/55">
-            {phase} · {levelId ?? 'no level'} · {selectedSummary}
-          </div>
-          {tool && (
-            <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-white/40">{tool}</div>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] ${
-              executionPolicy === 'autopilot'
-                ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
-                : 'border-white/10 bg-white/5 text-white/75'
-            }`}
-            data-testid="assistant-policy-toggle"
-            onClick={() =>
-              setExecutionPolicy((current) => (current === 'autopilot' ? 'review' : 'autopilot'))
-            }
-            title="Toggle between auto-executing non-destructive plans and manual review."
-            type="button"
+          <div
+            className="truncate text-[11px] text-white/45"
+            title={`${phase} · ${levelId ?? 'no level'} · ${selectedSummary}${tool ? ` · ${tool}` : ''}`}
           >
-            {executionPolicy}
-          </button>
+            {phase} · {levelId ?? 'no level'} · {selectedSummary}
+            {tool ? <span className="text-white/60"> · {tool}</span> : null}
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-0.5">
           <button
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/80 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="New chat"
+            className={HEADER_ICON_BUTTON_CLASS}
             data-testid="assistant-new-chat"
             disabled={status === 'planning' || status === 'executing'}
             onClick={() => resetAssistantSession({ preserveChatMode: true })}
             title="Start a fresh assistant chat without changing the current scene."
             type="button"
           >
-            New Chat
+            <PencilIcon />
           </button>
           <button
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/80"
+            aria-label="Dock left"
+            className={HEADER_ICON_BUTTON_CLASS}
             data-testid="assistant-dock-left"
             onClick={handleDockLeft}
+            title="Dock left"
             type="button"
           >
-            Dock left
+            <PanelLeftIcon />
           </button>
           <button
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/80"
+            aria-label="Hide assistant"
+            className={HEADER_ICON_BUTTON_CLASS}
             data-testid="assistant-hide"
             onClick={() => setCollapsed(true)}
+            title="Hide"
             type="button"
           >
-            Hide
+            <MinusIcon />
           </button>
         </div>
       </div>
 
+      <div className="-mx-3 h-px shrink-0 bg-white/[0.06]" />
+
       {/* Model Selection Dropdown inside Assistant Panel */}
       {isModelMenuOpen && (
-        <div className="rounded-2xl border border-cyan-500/30 bg-neutral-950/95 p-3 shadow-2xl space-y-2 backdrop-blur-md">
+        <div className="space-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3">
           <div className="flex items-center justify-between text-[11px] text-white/70">
             <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
               <span>Select Model</span>
@@ -2682,33 +2684,13 @@ export function AiAssistantPanel() {
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {([
-          { id: 'ask', label: 'Ask' },
-          { id: 'create', label: 'Create' },
-          { id: 'refine', label: 'Refine' },
-        ] as const).map((option) => (
-          <button
-            key={option.id}
-            className={`rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.18em] transition ${chatMode === option.id
-                ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
-                : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
-              }`}
-            data-testid={`assistant-chat-mode-${option.id}`}
-            disabled={composerLocked}
-            onClick={() => setChatMode(option.id)}
-            type="button"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      {(messages.length > 0 || pendingAssistantMessage) && (
-        <div className="flex min-h-[120px] flex-1 flex-col gap-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+      {messages.length > 0 || pendingAssistantMessage ? (
+        <div className="-mx-1 flex min-h-[120px] flex-1 flex-col gap-2.5 overflow-y-auto px-1 py-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]">
           {messages.map((message, idx) => (
             <div
-              className={`rounded-2xl px-3 py-2 text-[12px] leading-5 flex flex-col gap-2 ${message.role === 'user' ? 'self-end bg-cyan-300 text-black' : 'bg-black/25 text-white/85'
+              className={`flex max-w-[85%] flex-col gap-2 whitespace-pre-wrap break-words px-3 py-2 text-[13px] leading-[1.5] ${message.role === 'user'
+                ? 'self-end rounded-[18px] rounded-br-md bg-cyan-300 text-neutral-950'
+                : 'self-start rounded-[18px] rounded-bl-md bg-white/[0.06] text-white/[0.86]'
                 }`}
               data-testid={message.role === 'assistant' && idx === messages.length - 1 ? 'assistant-last-result' : undefined}
               key={message.id}
@@ -2722,13 +2704,14 @@ export function AiAssistantPanel() {
               )}
               {message.text}
               {message.role === 'assistant' && idx === messages.length - 1 && lastUndoSnapshot && (
-                <div className="pt-1 flex justify-end border-t border-white/5 mt-1">
+                <div className="flex justify-end border-t border-white/[0.06] pt-1.5">
                   <button
                     onClick={undoLastAssistantTurn}
-                    className="text-[10px] text-cyan-300/80 hover:text-cyan-200 underline decoration-dotted transition-colors"
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-cyan-300/80 transition-colors hover:bg-cyan-300/10 hover:text-cyan-200"
                     type="button"
                   >
-                    ↩ Undo this action
+                    <UndoIcon />
+                    Undo this action
                   </button>
                 </div>
               )}
@@ -2736,88 +2719,27 @@ export function AiAssistantPanel() {
           ))}
           {pendingAssistantMessage ? (
             <div
-              className="rounded-2xl bg-black/25 px-3 py-2 text-[12px] leading-5 text-white/70"
+              className="flex max-w-[85%] items-center gap-2 self-start rounded-[18px] rounded-bl-md bg-white/[0.04] px-3 py-2 text-[12px] text-white/55"
               data-testid="assistant-pending"
             >
+              <span aria-hidden="true" className="flex shrink-0 gap-1">
+                <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-cyan-300" />
+                <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-cyan-300 [animation-delay:150ms]" />
+                <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-cyan-300 [animation-delay:300ms]" />
+              </span>
               {pendingAssistantMessage}
             </div>
           ) : null}
         </div>
+      ) : taskPlan || turn ? null : (
+        <div className="flex flex-col items-center gap-1.5 px-2 pt-4 pb-2 text-center">
+          <div className="font-medium text-sm">What should we build?</div>
+          <div className="max-w-[260px] text-[12px] leading-[1.5] text-white/50">
+            Describe a part, a room or an edit. Safe, specific requests run right away.
+          </div>
+        </div>
       )}
 
-      <div className="relative">
-        {attachedImage && (
-          <div className="absolute bottom-full mb-2 left-0 z-10 flex min-w-[280px] items-center gap-2 rounded-xl border border-white/10 bg-neutral-900 p-2 shadow-xl">
-            <img src={attachedImage.dataUrl} alt="Preview" className="h-10 w-10 rounded object-cover" />
-            <div className="min-w-0 flex-1">
-              <div className="max-w-[150px] truncate text-[11px] text-white/70">
-                {attachedImage.file.name}
-              </div>
-              <label className="mt-1 flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-white/45">
-                Intent
-                <select
-                  className="rounded-lg border border-white/10 bg-black/25 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-white outline-none"
-                  data-testid="assistant-image-intent"
-                  onChange={(event) => {
-                    const nextKind = event.target.value as AssistantImageKind
-                    setAttachedImage((current) => (current ? { ...current, kind: nextKind } : current))
-                  }}
-                  value={attachedImage.kind}
-                >
-                  <option value="auto">Auto</option>
-                  <option value="workspace">Workspace</option>
-                  <option value="reference">Reference</option>
-                  <option value="floorplan">Floorplan</option>
-                  <option value="sketch">Sketch</option>
-                </select>
-              </label>
-            </div>
-            <button
-              type="button"
-              className="rounded-full bg-white/10 p-1 hover:bg-white/20"
-              onClick={() => setAttachedImage(null)}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-        <div className="relative rounded-2xl border border-white/10 bg-white/[0.045] transition focus-within:border-cyan-400/50 focus-within:bg-white/[0.08]">
-          {inlineGhostText ? (
-            <div
-              className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 py-3 text-sm leading-5"
-              data-testid="assistant-inline-autocomplete"
-            >
-              <span className="invisible">{input}</span>
-              <span className="text-white/25">{inlineGhostText}</span>
-            </div>
-          ) : null}
-          <textarea
-            className="relative z-10 w-full min-h-[88px] rounded-2xl bg-transparent px-3 py-3 text-sm text-white outline-none"
-            data-gramm="false"
-            data-testid="assistant-input"
-            disabled={composerLocked}
-            onChange={(event) => {
-              setInput(event.target.value)
-              setDismissedInlineCompletion(null)
-            }}
-            onKeyDown={handleComposerKeyDown}
-            onPaste={(event) => {
-              const file = event.clipboardData.files?.[0]
-              if (file?.type.startsWith('image/')) {
-                event.preventDefault()
-                void attachImageFile(file, 'paste')
-              }
-            }}
-            placeholder={composerPlaceholder}
-            ref={textareaRef}
-            spellCheck={false}
-            suppressHydrationWarning
-            value={input}
-          />
-        </div>
-      </div>
 
 
       {/* Build suggestions removed as per user request to reduce clutter */}
@@ -2980,41 +2902,250 @@ export function AiAssistantPanel() {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <label
-          className="inline-flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] px-3 transition hover:bg-white/10 opacity-70 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
-          title="Attach Image"
-        >
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            disabled={composerLocked}
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) {
-                void attachImageFile(file, 'upload')
+      <div className="relative shrink-0">
+        {attachedImage && (
+          <div className="absolute bottom-full left-0 z-10 mb-2 flex min-w-[280px] items-center gap-2 rounded-2xl border border-white/[0.08] bg-neutral-900/95 p-2 shadow-xl backdrop-blur-xl">
+            <img src={attachedImage.dataUrl} alt="Preview" className="h-10 w-10 rounded-lg object-cover" />
+            <div className="min-w-0 flex-1">
+              <div className="max-w-[150px] truncate text-[11px] text-white/70">
+                {attachedImage.file.name}
+              </div>
+              <label className="mt-1 flex items-center gap-2 text-[11px] text-white/45">
+                Intent
+                <select
+                  className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[11px] text-white outline-none"
+                  data-testid="assistant-image-intent"
+                  onChange={(event) => {
+                    const nextKind = event.target.value as AssistantImageKind
+                    setAttachedImage((current) => (current ? { ...current, kind: nextKind } : current))
+                  }}
+                  value={attachedImage.kind}
+                >
+                  <option value="auto">Auto</option>
+                  <option value="workspace">Workspace</option>
+                  <option value="reference">Reference</option>
+                  <option value="floorplan">Floorplan</option>
+                  <option value="sketch">Sketch</option>
+                </select>
+              </label>
+            </div>
+            <button
+              aria-label="Remove image"
+              type="button"
+              className="rounded-full bg-white/10 p-1 hover:bg-white/20"
+              onClick={() => setAttachedImage(null)}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        <div className="flex flex-col rounded-[18px] border border-white/[0.08] bg-white/[0.04] transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(103,232,249,0.08)]">
+          <div className="relative">
+            {inlineGhostText ? (
+              <div
+                className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3.5 pt-3 pb-1 text-sm leading-5"
+                data-testid="assistant-inline-autocomplete"
+              >
+                <span className="invisible">{input}</span>
+                <span className="text-white/25">{inlineGhostText}</span>
+              </div>
+            ) : null}
+            <textarea
+              aria-label="Message the assistant"
+              className="relative z-10 block max-h-40 min-h-[60px] w-full resize-none bg-transparent px-3.5 pt-3 pb-1 text-sm leading-5 text-white outline-none placeholder:text-white/35 disabled:opacity-60"
+              data-gramm="false"
+              data-testid="assistant-input"
+              disabled={composerLocked}
+              onChange={(event) => {
+                setInput(event.target.value)
+                setDismissedInlineCompletion(null)
+              }}
+              onKeyDown={handleComposerKeyDown}
+              onPaste={(event) => {
+                const file = event.clipboardData.files?.[0]
+                if (file?.type.startsWith('image/')) {
+                  event.preventDefault()
+                  void attachImageFile(file, 'paste')
+                }
+              }}
+              placeholder={composerPlaceholder}
+              ref={textareaRef}
+              spellCheck={false}
+              suppressHydrationWarning
+              value={input}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 px-2 pt-1.5 pb-2">
+            <label
+              aria-label="Attach image"
+              className={`inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] text-white/55 transition ${composerLocked
+                ? 'cursor-not-allowed opacity-40'
+                : 'cursor-pointer hover:bg-white/[0.08] hover:text-white'
+                }`}
+              title="Attach Image"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={composerLocked}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    void attachImageFile(file, 'upload')
+                  }
+                  // reset value so the same file can be selected again
+                  e.target.value = ''
+                }}
+              />
+              <PaperclipIcon />
+            </label>
+            <div className="flex shrink-0 rounded-full border border-white/[0.06] bg-white/[0.05] p-0.5">
+              {([
+                { id: 'ask', label: 'Ask' },
+                { id: 'create', label: 'Create' },
+                { id: 'refine', label: 'Refine' },
+              ] as const).map((option) => (
+                <button
+                  key={option.id}
+                  aria-pressed={chatMode === option.id}
+                  className={`h-6 rounded-full px-2.5 font-medium text-[11.5px] transition disabled:cursor-not-allowed ${chatMode === option.id
+                    ? 'bg-cyan-300/[0.16] text-cyan-200'
+                    : 'text-white/55 hover:text-white'
+                    }`}
+                  data-testid={`assistant-chat-mode-${option.id}`}
+                  disabled={composerLocked}
+                  onClick={() => setChatMode(option.id)}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <button
+              aria-pressed={executionPolicy === 'autopilot'}
+              className="group inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg px-1.5 text-[11.5px] text-white/60 capitalize transition hover:text-white"
+              data-testid="assistant-policy-toggle"
+              onClick={() =>
+                setExecutionPolicy((current) => (current === 'autopilot' ? 'review' : 'autopilot'))
               }
-              // reset value so the same file can be selected again
-              e.target.value = ''
-            }}
-          />
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
-          </svg>
-        </label>
-        <button
-          className="inline-flex flex-1 items-center justify-center rounded-2xl bg-cyan-300 px-3 py-3 font-medium text-[13px] text-black transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-          data-testid="assistant-send"
-          disabled={composerLocked}
-          onClick={() => void handleSend()}
-          type="button"
-        >
-          {getAssistantSendLabel(status)}
-        </button>
+              title="Toggle between auto-executing non-destructive plans and manual review."
+              type="button"
+            >
+              <span
+                aria-hidden="true"
+                className={`flex h-3.5 w-6 shrink-0 items-center rounded-full p-0.5 transition-colors ${executionPolicy === 'autopilot' ? 'justify-end bg-cyan-400' : 'justify-start bg-white/15'
+                  }`}
+              >
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${executionPolicy === 'autopilot' ? 'bg-neutral-950' : 'bg-white/70'}`}
+                />
+              </span>
+              {executionPolicy}
+            </button>
+            <div className="flex-1" />
+            <button
+              aria-label={getAssistantSendLabel(status)}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-300 text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
+              data-testid="assistant-send"
+              disabled={composerLocked}
+              onClick={() => void handleSend()}
+              title={getAssistantSendLabel(status)}
+              type="button"
+            >
+              {status === 'planning' || status === 'executing' ? <SpinnerIcon /> : <ArrowUpIcon />}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
+  )
+}
+
+const HEADER_ICON_BUTTON_CLASS =
+  'inline-flex h-[30px] w-[30px] items-center justify-center rounded-[9px] text-white/60 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40'
+
+type IconProps = { size?: number }
+
+const iconSvgProps = (size: number) => ({
+  'aria-hidden': true,
+  fill: 'none',
+  height: size,
+  stroke: 'currentColor',
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  strokeWidth: 2,
+  viewBox: '0 0 24 24',
+  width: size,
+})
+
+function SparkleIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)}>
+      <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
+      <path d="M19 16v4M17 18h4" />
+    </svg>
+  )
+}
+
+function PencilIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  )
+}
+
+function PanelLeftIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)}>
+      <rect height="18" rx="2" width="18" x="3" y="3" />
+      <path d="M9 3v18" />
+    </svg>
+  )
+}
+
+function MinusIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)}>
+      <path d="M5 12h14" />
+    </svg>
+  )
+}
+
+function PaperclipIcon({ size = 17 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)}>
+      <path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" />
+    </svg>
+  )
+}
+
+function ArrowUpIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)} strokeWidth={2.4}>
+      <path d="M12 19V5" />
+      <path d="M5 12l7-7 7 7" />
+    </svg>
+  )
+}
+
+function UndoIcon({ size = 12 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)}>
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h11a5 5 0 0 1 0 10h-3" />
+    </svg>
+  )
+}
+
+function SpinnerIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...iconSvgProps(size)} className="animate-spin">
+      <path d="M21 12a9 9 0 1 1-6.2-8.6" />
+    </svg>
   )
 }
