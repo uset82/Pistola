@@ -81,6 +81,7 @@ import {
 import { classifyRequestComplexity } from '../../lib/assistant-agent-router'
 import { runAgentTurn } from '../../lib/assistant-agent/run-agent-turn'
 import { AssistantTaskPlanCard } from './AssistantTaskPlanCard'
+import { ChatMessageContent } from './ChatMessageContent'
 import {
   FALLBACK_OPENROUTER_MODELS,
   fetchOpenRouterModelCatalog,
@@ -2688,10 +2689,11 @@ export function AiAssistantPanel() {
         <div className="-mx-1 flex min-h-[120px] flex-1 flex-col gap-2.5 overflow-y-auto px-1 py-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]">
           {messages.map((message, idx) => (
             <div
-              className={`flex max-w-[85%] flex-col gap-2 whitespace-pre-wrap break-words px-3 py-2 text-[13px] leading-[1.5] ${message.role === 'user'
-                ? 'self-end rounded-[18px] rounded-br-md bg-cyan-300 text-neutral-950'
-                : 'self-start rounded-[18px] rounded-bl-md bg-white/[0.06] text-white/[0.86]'
-                }`}
+              className={`flex flex-col gap-2 break-words px-3 py-2 text-[13px] leading-[1.5] ${
+                message.role === 'user'
+                  ? 'max-w-[85%] self-end rounded-[18px] rounded-br-md bg-cyan-300 text-neutral-950 shadow-sm'
+                  : 'max-w-[92%] self-start rounded-[18px] rounded-bl-md bg-white/[0.06] text-white/[0.86] shadow-sm'
+              }`}
               data-testid={message.role === 'assistant' && idx === messages.length - 1 ? 'assistant-last-result' : undefined}
               key={message.id}
             >
@@ -2702,7 +2704,7 @@ export function AiAssistantPanel() {
                   className="max-h-32 rounded-lg object-contain w-full bg-black/10"
                 />
               )}
-              {message.text}
+              <ChatMessageContent content={message.text} role={message.role} />
               {message.role === 'assistant' && idx === messages.length - 1 && lastUndoSnapshot && (
                 <div className="flex justify-end border-t border-white/[0.06] pt-1.5">
                   <button

@@ -133,6 +133,15 @@ try {
   await headline.waitFor({ state: 'visible', timeout: 30000 })
   record('landing matches How Pistola Works', true)
 
+  const github = page.getByRole('link', { name: /Collaborate on GitHub/i }).first()
+  await github.waitFor({ state: 'visible', timeout: 15000 })
+  const githubHref = await github.getAttribute('href')
+  record(
+    'collaborate link points at GitHub',
+    githubHref === 'https://github.com/uset82/Pistola',
+    githubHref ?? '',
+  )
+
   const privacy = page.getByRole('link', { name: 'Privacy' })
   const privacyHref = await privacy.getAttribute('href')
   record(
@@ -141,7 +150,7 @@ try {
     privacyHref ?? '',
   )
 
-  const openWorkspace = page.getByRole('link', { name: /Open the workspace/i }).first()
+  const openWorkspace = page.getByRole('link', { name: /^Open workspace$/i }).first()
   await openWorkspace.click()
   await page.waitForURL(/\/workspace/, { timeout: 15000 })
 
