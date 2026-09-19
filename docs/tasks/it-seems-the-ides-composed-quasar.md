@@ -2,7 +2,7 @@
 
 ## Context
 
-IDE agents (Claude Code, Codex, Cursor, Antigravity, WorkBuddy AI) run far stronger models than
+IDE agents (Claude Code, Codex, Cursor, Antigravity, WorkBuddy AI, Qoder) run far stronger models than
 Pistola's in-app Assistant, which plans through a free OpenRouter model. Today an IDE asked to
 build something in Pistola tends to hand the request to that chat (`pistola_chat`,
 `pistola_plan`, `pistola_agent`, `/api/assistant/plan`), so the weak model does the thinking.
@@ -22,8 +22,8 @@ the read-only "IDE plan" panel, and the browser-agent workflow. The user chose t
 Codex finishes**, so nothing here touches Codex's files until its acceptance gate is ticked.
 
 **What exploration found**
-- **Only Cursor is wired** (`.cursor/mcp.json`). Codex, Claude Code, Antigravity and WorkBuddy
-  have no MCP config.
+- **Only Cursor is wired** (`.cursor/mcp.json`). Codex, Claude Code, Antigravity, WorkBuddy and
+  Qoder have no MCP config.
 - **Claude Code never loads the project instructions.** `editor/CLAUDE.md` and
   `editor/.claude/CLAUDE.md` contain only the text "AGENTS.md", so `editor/AGENTS.md` is ignored.
 - **The MCP server offers AI and direct tools side by side.** Its 19 tools
@@ -101,7 +101,7 @@ Files: `packages/editor/src/lib/agent-api/index.ts`, `lib/assistant/execute.ts`,
 - [ ] Add the solid-spec grammar, the primitive ids, rotation units (radians), the extrude axis and
   the parent-relative nesting rule to `manual()`.
 - [ ] `taskPlan.create` refuses to replace an unfinished plan unless `replace: true`.
-- [ ] Add plan sources `claude-code`, `cursor`, `antigravity`, `workbuddy`.
+- [ ] Add plan sources `claude-code`, `cursor`, `antigravity`, `workbuddy`, `qoder`.
 - [ ] Node bounds support CAD bodies (from `metadata.bbox` plus position).
 - [ ] Checkpoint: `bun test` on agent-api, operator-plan and execute; `bun run check-types`.
 
@@ -180,6 +180,10 @@ Files: `tooling/pistola-mcp/src/index.ts`, new `drivers/browser.ts` and `drivers
 - [ ] **WorkBuddy AI:** `ide-setup` merges an absolute entry into `~/.workbuddy-ai/mcp.json` (with a
   backup) and installs the skill in `~/.workbuddy-ai/skills/pistola-direct-control/`. Verify whether
   a project-level `.workbuddy/mcp.json` is honoured.
+- [ ] **Qoder:** project `.mcp.json` (already the Qoder project scope) plus `.qoder/settings.json`
+  (`mcpServers.pistola`, `mcp.enabledProjectMcpServers`, `permissions.allow: mcp__pistola__*`) and
+  `.qoder/skills/pistola-direct-control/SKILL.md`. `ide-setup --install-user` merges
+  `~/.qoder/settings.json` and `~/.qoder/skills/pistola-direct-control/`.
 - [ ] `scripts/ide-setup.mjs`: generates the rule files from the canonical skill, merges user-level
   configs non-destructively, and has `--check`, which `scripts/validate-agent-foundation.ps1` calls.
 - [ ] Remove the chat routing from:
@@ -193,7 +197,7 @@ Files: `tooling/pistola-mcp/src/index.ts`, new `drivers/browser.ts` and `drivers
 - [ ] Checkpoint:
   - `validate-agent-foundation.ps1` and `node scripts/ide-setup.mjs --check` pass;
   - the MCP shows as connected in each IDE (`claude mcp list`, `codex mcp list`, and the MCP panels
-    in Cursor, Antigravity and WorkBuddy).
+    in Cursor, Antigravity, WorkBuddy and Qoder).
 
 ### Phase 5: Exact CSG
 Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kernel.ts`,
@@ -240,7 +244,7 @@ Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kern
   - every plan step `done` with evidence;
   - inspect finds ≥4 bodies;
   - a screenshot is saved.
-- [ ] Claude Code, Codex, Cursor, Antigravity and WorkBuddy each complete the same prompt to the
+- [ ] Claude Code, Codex, Cursor, Antigravity, WorkBuddy and Qoder each complete the same prompt to the
   same bar, and each one's MCP log shows only default tools.
 - [ ] The in-app Assistant still works for a person using it.
 - [ ] `bun run check-types`, `bun test`, `build:sites` and `smoke:sites` all pass;
@@ -273,7 +277,7 @@ Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kern
 - Old deployments won't have `invoke`/`taskPlan` until Phase 7; the agent stops rather than
   falling back to chat.
 - Whole-plan undo is lost on reload, and plan storage is per origin.
-- The Antigravity and WorkBuddy project-level config paths are unverified; the absolute-path
+- The Antigravity, WorkBuddy and Qoder project-level config paths are unverified; the absolute-path
   installer is the fallback.
 - zod v4 JSON Schema export of the recursive spec may be lossy; mitigated by the hand-written
   grammar in `manual()`.

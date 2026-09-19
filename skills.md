@@ -131,7 +131,7 @@ Expected outputs:
 
 Use when:
 
-- the task concerns how VS Code, Codex, Antigravity, or similar IDEs drive the modeling workflow
+- the task concerns how VS Code, Codex, Antigravity, Qoder, or similar IDEs drive the modeling workflow
 - the user flow between chat, preview, and iteration needs to be defined
 
 Expected outputs:

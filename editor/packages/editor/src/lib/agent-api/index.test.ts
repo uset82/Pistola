@@ -166,12 +166,12 @@ test('taskPlan.create keeps an unfinished plan unless replace is true', async ()
   const replaced = await api.taskPlan.create({
     id: 'replaced',
     title: 'Replaced',
-    source: 'claude-code',
+    source: 'qoder',
     replace: true,
     phases: [{ id: 'one', title: 'One', steps: [{ id: 'a', title: 'A' }] }],
   })
   assert.equal(replaced.id, 'replaced')
-  assert.equal(replaced.source, 'claude-code')
+  assert.equal(replaced.source, 'qoder')
 })
 
 test('validate reports the real action index and solid-spec path', async () => {

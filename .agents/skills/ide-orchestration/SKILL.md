@@ -1,6 +1,6 @@
 ---
 name: ide-orchestration
-description: Define the chat-to-scene workflow across IDEs such as VS Code, Codex, and Antigravity. Use when the task concerns prompt contracts, clarification behavior, preview loops, undo or refinement flows, or IDE-facing orchestration rather than raw scene geometry alone.
+description: Define the chat-to-scene workflow across IDEs such as VS Code, Codex, Antigravity, and Qoder. Use when the task concerns prompt contracts, clarification behavior, preview loops, undo or refinement flows, or IDE-facing orchestration rather than raw scene geometry alone.
 ---
 
 # IDE Orchestration
@@ -42,7 +42,7 @@ For "create/generate X" requests, use `$pistola-studio`, then drive the page wit
 
 ## IDE control
 
-Pistola is driven from Claude Code, Codex, Cursor, Antigravity, or WorkBuddy through the `pistola` MCP server (`command: node`, `editor/tooling/pistola-mcp/src/index.ts`):
+Pistola is driven from Claude Code, Codex, Cursor, Antigravity, WorkBuddy, or Qoder through the `pistola` MCP server (`command: node`, `editor/tooling/pistola-mcp/src/index.ts`):
 
 1. Open the target (`local`, `canner`, or `sites`).
 2. Create a `taskPlan` checklist before the first mutation.

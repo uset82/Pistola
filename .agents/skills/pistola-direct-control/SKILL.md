@@ -1,6 +1,6 @@
 ---
 name: pistola-direct-control
-description: Drive Pistola from an IDE (Claude Code, Codex, Cursor, Antigravity, WorkBuddy) with typed actions. Use whenever the user asks to build, edit, or inspect a 3D object or scene in Pistola. The IDE model plans; Pistola only executes.
+description: Drive Pistola from an IDE (Claude Code, Codex, Cursor, Antigravity, WorkBuddy, Qoder) with typed actions. Use whenever the user asks to build, edit, or inspect a 3D object or scene in Pistola. The IDE model plans; Pistola only executes.
 ---
 
 # Pistola Direct Control

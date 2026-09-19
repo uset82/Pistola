@@ -10,7 +10,7 @@
 
 ## Goal
 
-When a user asks Codex, VS Code, Antigravity, or another capable IDE agent to create or edit a model, the IDE agent must operate Pistola directly. The in-app Assistant remains available for people who choose it, but it is independent and optional.
+When a user asks Codex, VS Code, Antigravity, Qoder, or another capable IDE agent to create or edit a model, the IDE agent must operate Pistola directly. The in-app Assistant remains available for people who choose it, but it is independent and optional.
 
 Codex must publish a phase-and-step checklist before work begins, update it as verified work completes, and mirror the same read-only progress inside the Pistola workspace.
 

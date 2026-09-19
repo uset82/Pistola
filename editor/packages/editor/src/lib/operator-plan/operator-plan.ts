@@ -13,6 +13,7 @@ export const operatorPlanSources = [
   'cursor',
   'antigravity',
   'workbuddy',
+  'qoder',
 ] as const
 export const operatorPlanStepKinds = ['execution', 'validation', 'observation'] as const
 export const operatorPlanStepStatuses = [

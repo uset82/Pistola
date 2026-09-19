@@ -143,6 +143,29 @@ await mergeJson(path.join(repoRoot, '.workbuddy/mcp.json'), (current) => ({
   },
 }))
 
+await mergeJson(path.join(repoRoot, '.qoder/settings.json'), (current) => ({
+  ...current,
+  mcpServers: {
+    ...(current.mcpServers ?? {}),
+    pistola: {
+      command: 'node',
+      args: ['editor/tooling/pistola-mcp/src/index.ts'],
+      env: { PISTOLA_TARGET: 'local' },
+    },
+  },
+  mcp: {
+    ...(current.mcp ?? {}),
+    enabledProjectMcpServers: Array.from(
+      new Set([...(current.mcp?.enabledProjectMcpServers ?? []), 'pistola']),
+    ),
+  },
+  permissions: {
+    ...(current.permissions ?? {}),
+    allow: Array.from(new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*'])),
+  },
+}))
+await ensureFile(path.join(repoRoot, '.qoder/skills/pistola-direct-control/SKILL.md'), skill)
+
 const claudeRoot = `@agents.md @rules.md @editor/AGENTS.md\n`
 const claudeEditor = `@AGENTS.md\n`
 await ensureFile(path.join(repoRoot, 'CLAUDE.md'), claudeRoot)
@@ -177,6 +200,22 @@ if (installUser && !checkOnly) {
   }))
   await mkdir(path.join(os.homedir(), '.workbuddy-ai/skills/pistola-direct-control'), { recursive: true })
   await writeFile(path.join(os.homedir(), '.workbuddy-ai/skills/pistola-direct-control/SKILL.md'), skill)
+  await mergeJson(path.join(os.homedir(), '.qoder/settings.json'), (current) => ({
+    ...current,
+    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry },
+    mcp: {
+      ...(current.mcp ?? {}),
+      enabledProjectMcpServers: Array.from(
+        new Set([...(current.mcp?.enabledProjectMcpServers ?? []), 'pistola']),
+      ),
+    },
+    permissions: {
+      ...(current.permissions ?? {}),
+      allow: Array.from(new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*'])),
+    },
+  }))
+  await mkdir(path.join(os.homedir(), '.qoder/skills/pistola-direct-control'), { recursive: true })
+  await writeFile(path.join(os.homedir(), '.qoder/skills/pistola-direct-control/SKILL.md'), skill)
 }
 
 const skillBody = skill

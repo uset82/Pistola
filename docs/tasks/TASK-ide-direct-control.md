@@ -35,7 +35,7 @@ Files: `packages/editor/src/lib/agent-api/index.ts`, `lib/assistant/execute.ts`,
 - [x] Add the solid-spec grammar, the primitive ids, rotation units (radians), the extrude axis and
   the parent-relative nesting rule to `manual()`. — evidence: `manual()` includes `solidSpec` and `primitives.ids`
 - [x] `taskPlan.create` refuses to replace an unfinished plan unless `replace: true`. — evidence: `taskPlan.create keeps an unfinished plan unless replace is true`
-- [x] Add plan sources `claude-code`, `cursor`, `antigravity`, `workbuddy`. — evidence: `operator-plan.ts` `operatorPlanSources` plus create test with `source: 'claude-code'`
+- [x] Add plan sources `claude-code`, `cursor`, `antigravity`, `workbuddy`, `qoder`. — evidence: `operator-plan.ts` `operatorPlanSources` includes `qoder`
 - [x] Node bounds support CAD bodies (from `metadata.bbox` plus position). — evidence: `agent-tools.ts` `getNodeBounds` cad-body branch
 - [x] Checkpoint: `bun test` on agent-api, operator-plan and execute; `bun run check-types`. — evidence: 11 pass / 0 fail on those files; `bun run check-types` → 6 successful
 
@@ -119,6 +119,10 @@ Files: `tooling/pistola-mcp/src/index.ts`, new `drivers/browser.ts` and `drivers
 - [x] **WorkBuddy AI:** `ide-setup` merges an absolute entry into `~/.workbuddy-ai/mcp.json` (with a
   backup) and installs the skill in `~/.workbuddy-ai/skills/pistola-direct-control/`. Verify whether
   a project-level `.workbuddy/mcp.json` is honoured. — evidence: `.workbuddy/mcp.json` sets `honoured: true`; user-level merge is `--install-user`
+- [x] **Qoder:** project `.mcp.json` plus `.qoder/settings.json` (`mcpServers.pistola`,
+  `mcp.enabledProjectMcpServers`, `permissions.allow: mcp__pistola__*`) and
+  `.qoder/skills/pistola-direct-control/SKILL.md`. `ide-setup --install-user` merges
+  `~/.qoder/settings.json` and installs `~/.qoder/skills/pistola-direct-control/`. — evidence: `.qoder/settings.json` + skill exist; `node scripts/ide-setup.mjs --check` passed; `bun test ./packages/editor/src/lib/agent-api/index.test.ts` creates a plan with `source: 'qoder'`; `--install-user` merged `~/.qoder`
 - [x] `scripts/ide-setup.mjs`: generates the rule files from the canonical skill, merges user-level
   configs non-destructively, and has `--check`, which `scripts/validate-agent-foundation.ps1` calls. — evidence: `powershell -File ./scripts/validate-agent-foundation.ps1` → Pistola foundation validation passed
 - [x] Remove the chat routing from:
@@ -133,7 +137,7 @@ Files: `tooling/pistola-mcp/src/index.ts`, new `drivers/browser.ts` and `drivers
 - [ ] Checkpoint:
   - `validate-agent-foundation.ps1` and `node scripts/ide-setup.mjs --check` pass; — evidence: both passed
   - the MCP shows as connected in each IDE (`claude mcp list`, `codex mcp list`, and the MCP panels
-    in Cursor, Antigravity and WorkBuddy). BLOCKED: this session cannot open those IDE MCP panels; project configs are written
+    in Cursor, Antigravity, WorkBuddy and Qoder). BLOCKED: this session cannot open those IDE MCP panels; project configs are written
 
 ### Phase 5: Exact CSG
 Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kernel.ts`,
@@ -183,8 +187,8 @@ Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kern
   - inspect finds ≥4 bodies;
   - a screenshot is saved.
   — evidence: local and Sites passed (`sailboat-local.json`, `sailboat-sites.json`, both PNGs). Canner BLOCKED on stale live deploy
-- [ ] Claude Code, Codex, Cursor, Antigravity and WorkBuddy each complete the same prompt to the
-  same bar, and each one's MCP log shows only default tools. BLOCKED: project MCP configs are written; this session cannot run those five IDE MCP panels
+- [ ] Claude Code, Codex, Cursor, Antigravity, WorkBuddy and Qoder each complete the same prompt to the
+  same bar, and each one's MCP log shows only default tools. BLOCKED: project MCP configs are written; this session cannot run those six IDE MCP panels
 - [x] The in-app Assistant still works for a person using it. — evidence: `bun run smoke:sites` → `AI Assistant is mounted` and `AI Assistant can be collapsed before direct IDE work`
 - [ ] `bun run check-types`, `bun test`, `build:sites` and `smoke:sites` all pass;
   `validate-task-evidence.mjs` passes. — evidence: check-types, targeted tests, build:sites, and smoke:sites passed. Full `bun test` was not re-run for the entire monorepo in this session. `validate-task-evidence.mjs` is run after this file is saved

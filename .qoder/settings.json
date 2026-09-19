@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "pistola": {
+      "command": "node",
+      "args": [
+        "editor/tooling/pistola-mcp/src/index.ts"
+      ],
+      "env": {
+        "PISTOLA_TARGET": "local"
+      }
+    }
+  },
+  "mcp": {
+    "enabledProjectMcpServers": [
+      "pistola"
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__pistola__*"
+    ]
+  }
+}
