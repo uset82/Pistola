@@ -1,4 +1,3 @@
-import { useLayoutEffect } from 'react'
 import type * as THREE from 'three'
 
 export const sceneRegistry = {
@@ -35,27 +34,4 @@ export const sceneRegistry = {
       set.clear()
     }
   },
-}
-
-export function useRegistry(
-  id: string,
-  type: keyof typeof sceneRegistry.byType,
-  ref: React.RefObject<THREE.Object3D>,
-) {
-  useLayoutEffect(() => {
-    const obj = ref.current
-    if (!obj) return
-
-    // 1. Add to master map
-    sceneRegistry.nodes.set(id, obj)
-
-    // 2. Add to type-specific set
-    sceneRegistry.byType[type].add(id)
-
-    // 4. Cleanup when component unmounts
-    return () => {
-      sceneRegistry.nodes.delete(id)
-      sceneRegistry.byType[type].delete(id)
-    }
-  }, [id, type, ref])
 }
