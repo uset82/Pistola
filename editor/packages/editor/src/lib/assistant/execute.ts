@@ -13,6 +13,7 @@ import { useViewer } from '@pascal-app/viewer'
 import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
 import { evaluateCadSolidSpec } from '../cad/local-kernel'
+import { CadSolidSpecSchema } from '../cad/solid-spec'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { cadHelperUnavailableMessage } from '../../store/use-cad'
 import useCad from '../../store/use-cad'
@@ -620,8 +621,22 @@ const getValidationError = (action: AssistantAction) => {
         .rootNodeIds.some((rootId) => useScene.getState().nodes[rootId]?.type === 'site')
       return level || siteExists ? null : 'Create or select a site or level before starting a CAD sketch.'
     }
-    case 'execute_cad_brief':
+    case 'execute_cad_brief': {
+      const level = useViewer.getState().selection.levelId
+      const siteExists = useScene
+        .getState()
+        .rootNodeIds.some((rootId) => useScene.getState().nodes[rootId]?.type === 'site')
+      return level || siteExists || resolveCadSpaceParentId()
+        ? null
+        : 'Create or select a site or level before creating CAD geometry.'
+    }
     case 'build_cad_solid': {
+      const specResult = CadSolidSpecSchema.safeParse(action.spec)
+      if (!specResult.success) {
+        return specResult.error.issues
+          .map((issue) => `${issue.path.join('.') || 'spec'}: ${issue.message}`)
+          .join('; ')
+      }
       const level = useViewer.getState().selection.levelId
       const siteExists = useScene
         .getState()

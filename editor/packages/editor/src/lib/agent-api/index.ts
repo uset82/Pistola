@@ -25,6 +25,7 @@ import useMac from '../../store/use-mac'
 import { isDestructiveAssistantActionType, type AssistantAction } from '../assistant/types'
 import {
   createOperatorPlan,
+  getOperatorPlanProgress,
   type OperatorPlanEvidence,
   type OperatorPlanInput,
   type OperatorPlanStepUpdate,
@@ -32,12 +33,45 @@ import {
 } from '../operator-plan'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 
+export const PISTOLA_API_VERSION = 1
+
 const AGENT_WORKFLOW = {
   alwaysPassExplicitIds: true,
   useForwardRefs: '$ref_<name> for new nodes in the same batch',
   maxActionsPerBatch: 25,
   coordinates: 'meters, Y up, floor y = 0, item position is bottom-center',
 }
+
+const SOLID_SPEC_GRAMMAR = {
+  primitives: ['box', 'cylinder', 'sphere', 'extrude', 'revolve'],
+  booleans: ['union', 'difference', 'intersection'],
+  arrays: ['mirror', 'linearArray', 'polarArray'],
+  rotation: 'radians, applied X then Y then Z after scale and before translate',
+  extrudeAxis: 'polygon is on XY; height extrudes +Z in spec space, then rotate/translate',
+  nesting: 'parentId is a scene node id; the solid is parent-relative, not world-absolute',
+}
+
+const INVOKE_ALLOWLIST = new Set([
+  'manual',
+  'inspect',
+  'getNodes',
+  'measure',
+  'searchCatalog',
+  'listRecipes',
+  'workspace',
+  'validate',
+  'run',
+  'waitForIdle',
+  'undo',
+  'redo',
+  'taskPlan.create',
+  'taskPlan.get',
+  'taskPlan.updateStep',
+  'taskPlan.runStep',
+  'taskPlan.complete',
+  'taskPlan.undo',
+  'taskPlan.clear',
+])
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -61,7 +95,22 @@ export const createPistolaAgentApi = () => {
   const runtime = createAssistantRuntime()
 
   const manual = async () => ({
+    apiVersion: PISTOLA_API_VERSION,
     workflow: AGENT_WORKFLOW,
+    solidSpec: SOLID_SPEC_GRAMMAR,
+    primitives: {
+      ids: [
+        'primitive-box',
+        'primitive-sphere',
+        'primitive-cylinder',
+        'primitive-cone',
+        'primitive-torus',
+        'primitive-capsule',
+        'primitive-wedge',
+      ],
+      color: 'optional hex on place_item and update_item_properties',
+      nesting: 'parentId child positions are parent-relative, not world-absolute',
+    },
     operatorPlan: {
       version: 1,
       owner: 'ide',
@@ -87,12 +136,17 @@ export const createPistolaAgentApi = () => {
     return {
       valid: result.valid,
       requiresReview: result.requiresReview,
-      errors: result.errors.map((message, index) => ({
-        index,
-        type: result.actions[index]?.type ?? 'unknown',
-        message,
-        hint: result.sequenceIssues[index]?.message,
-      })),
+      errors: result.errors.map((message) => {
+        const match = message.match(/^Action (\d+):/)
+        const index = match ? Number(match[1]) - 1 : -1
+        const sequenceHint = result.sequenceIssues.find((issue) => issue.index === index)?.message
+        return {
+          index: index >= 0 ? index : null,
+          type: index >= 0 ? result.actions[index]?.type ?? 'unknown' : 'unknown',
+          message,
+          hint: sequenceHint,
+        }
+      }),
       sequenceIssues: result.sequenceIssues,
       actionCount: result.actions.length,
       destructiveActionCount: result.destructiveActionCount,
@@ -185,8 +239,13 @@ export const createPistolaAgentApi = () => {
 
   const taskPlan = {
     version: 1 as const,
-    create: async (input: OperatorPlanInput) => {
+    create: async (input: OperatorPlanInput & { replace?: boolean }) => {
       const previous = useOperatorPlanStore.getState().plan
+      if (previous && getOperatorPlanProgress(previous).status !== 'done' && !input.replace) {
+        throw new Error(
+          'An unfinished operator plan is already active. Pass replace: true to replace it.',
+        )
+      }
       if (previous) operatorPlanSnapshots.delete(previous.id)
       const plan = createOperatorPlan(input)
       useOperatorPlanStore.getState().setPlan(plan)
@@ -323,7 +382,8 @@ export const createPistolaAgentApi = () => {
     },
   }
 
-  return {
+  const api = {
+    apiVersion: PISTOLA_API_VERSION,
     manual,
     inspect,
     getNodes: async (ids: string[]) => getNodes({ nodeIds: ids }),
@@ -343,7 +403,28 @@ export const createPistolaAgentApi = () => {
     selection: () => useViewer.getState().selection,
     executeTool: executeAgentTool,
     taskPlan,
+    invoke: async (method: string, args?: unknown) => {
+      if (!INVOKE_ALLOWLIST.has(method)) {
+        throw new Error(`Unknown pistola method "${method}".`)
+      }
+      const payload = args === undefined ? [] : Array.isArray(args) ? args : [args]
+      if (method.startsWith('taskPlan.')) {
+        const name = method.slice('taskPlan.'.length) as keyof typeof taskPlan
+        const fn = taskPlan[name]
+        if (typeof fn !== 'function') {
+          throw new Error(`Unknown pistola method "${method}".`)
+        }
+        return (fn as (...values: unknown[]) => unknown)(...payload)
+      }
+      const fn = (api as Record<string, unknown>)[method]
+      if (typeof fn !== 'function') {
+        throw new Error(`Unknown pistola method "${method}".`)
+      }
+      return (fn as (...values: unknown[]) => unknown)(...payload)
+    },
   }
+
+  return api
 }
 
 export type PistolaAgentApi = ReturnType<typeof createPistolaAgentApi>

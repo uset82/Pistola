@@ -135,6 +135,58 @@ test('taskPlan rejects an over-limit batch without mutating the scene', async ()
   assert.equal(retry.plan.phases[0]?.steps[0]?.evidence?.actionCount, 1)
 })
 
+test('invoke routes allowlisted methods and rejects unknown ones', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  assert.equal(api.apiVersion, 1)
+  const manual = await api.invoke('manual')
+  assert.equal((manual as { apiVersion: number }).apiVersion, 1)
+  assert.ok((manual as { solidSpec: { primitives: string[] } }).solidSpec.primitives.includes('box'))
+  await assert.rejects(() => api.invoke('pistola_chat'), /Unknown pistola method/)
+})
+
+test('taskPlan.create keeps an unfinished plan unless replace is true', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  await api.taskPlan.create({
+    id: 'keep-me',
+    title: 'Keep me',
+    source: 'cursor',
+    phases: [{ id: 'one', title: 'One', steps: [{ id: 'a', title: 'A' }] }],
+  })
+  await assert.rejects(
+    () =>
+      api.taskPlan.create({
+        id: 'replace-me',
+        title: 'Replace me',
+        phases: [{ id: 'one', title: 'One', steps: [{ id: 'a', title: 'A' }] }],
+      }),
+    /replace: true/,
+  )
+  const replaced = await api.taskPlan.create({
+    id: 'replaced',
+    title: 'Replaced',
+    source: 'claude-code',
+    replace: true,
+    phases: [{ id: 'one', title: 'One', steps: [{ id: 'a', title: 'A' }] }],
+  })
+  assert.equal(replaced.id, 'replaced')
+  assert.equal(replaced.source, 'claude-code')
+})
+
+test('validate reports the real action index and solid-spec path', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  const result = await api.validate([
+    { type: 'set_phase', phase: 'structure' },
+    { type: 'build_cad_solid', spec: { op: 'box' } },
+  ])
+  assert.equal(result.valid, false)
+  assert.equal(result.errors[0]?.index, 1)
+  assert.equal(result.errors[0]?.type, 'build_cad_solid')
+  assert.match(result.errors[0]?.message ?? '', /size|spec/)
+})
+
 test('taskPlan requires explicit confirmation before destructive execution', async () => {
   reset()
   const api = createPistolaAgentApi()

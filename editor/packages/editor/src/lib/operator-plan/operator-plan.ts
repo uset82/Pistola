@@ -4,7 +4,16 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { z } from 'zod'
 
-export const operatorPlanSources = ['codex', 'ide', 'mcp', 'webmcp'] as const
+export const operatorPlanSources = [
+  'codex',
+  'ide',
+  'mcp',
+  'webmcp',
+  'claude-code',
+  'cursor',
+  'antigravity',
+  'workbuddy',
+] as const
 export const operatorPlanStepKinds = ['execution', 'validation', 'observation'] as const
 export const operatorPlanStepStatuses = [
   'pending',

@@ -3,6 +3,7 @@
 import {
   type AnyNode,
   type AnyNodeId,
+  type CadBodyNode,
   type ItemNode,
   type WallNode,
   getScaledDimensions,
@@ -163,6 +164,48 @@ export function getNodeBounds(node: AnyNode): NodeBounds | null {
       max: [maxX + thickness / 2, height, maxZ + thickness / 2],
       size: [maxX - minX + thickness, height, maxZ - minZ + thickness],
       center: [(minX + maxX) / 2, height / 2, (minZ + maxZ) / 2],
+    }
+  }
+
+  if (node.type === 'cad-body') {
+    const body = node as CadBodyNode
+    const position = body.position ?? [0, 0, 0]
+    const metadata = (body.metadata ?? {}) as {
+      bbox?: { min?: [number, number, number]; max?: [number, number, number] }
+    }
+    const bbox = metadata.bbox
+    if (
+      Array.isArray(bbox?.min) &&
+      bbox.min.length === 3 &&
+      Array.isArray(bbox?.max) &&
+      bbox.max.length === 3
+    ) {
+      const min: [number, number, number] = [
+        bbox.min[0] + position[0],
+        bbox.min[1] + position[1],
+        bbox.min[2] + position[2],
+      ]
+      const max: [number, number, number] = [
+        bbox.max[0] + position[0],
+        bbox.max[1] + position[1],
+        bbox.max[2] + position[2],
+      ]
+      return {
+        min,
+        max,
+        size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
+        center: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2],
+      }
+    }
+
+    if (body.preview?.primitive === 'box') {
+      const [width, height, depth] = body.preview.dimensions
+      return {
+        min: [position[0] - width / 2, position[1], position[2] - depth / 2],
+        max: [position[0] + width / 2, position[1] + height, position[2] + depth / 2],
+        size: [width, height, depth],
+        center: [position[0], position[1] + height / 2, position[2]],
+      }
     }
   }
 
