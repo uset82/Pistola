@@ -47,6 +47,13 @@ import {
 import { getExample, searchExamples } from '../agent-examples'
 import { renderViews as renderSceneViews } from '../render'
 import {
+  CANONICAL_CONTACT_SHEET_LAYOUT,
+  CANONICAL_VIEW_CAMERAS,
+  PISTOLA_CANONICAL_FRAME,
+  renderSceneContactSheet,
+} from '../render-views'
+import { useReferencePackStore, validateReferencePack } from '../reference-pack'
+import {
   guideActionsFromReference,
   hullActionFromTrace,
   loadReferenceGrid,
@@ -67,20 +74,28 @@ const AGENT_WORKFLOW = {
 }
 
 const SOLID_SPEC_GRAMMAR = {
-  primitives: ['box', 'cylinder', 'sphere', 'extrude', 'revolve'],
+  primitives: ['box', 'cylinder', 'sphere', 'torus', 'capsule', 'ellipsoid', 'extrude', 'revolve', 'loft'],
   booleans: ['union', 'difference', 'intersection'],
   arrays: ['mirror', 'linearArray', 'polarArray'],
+  hull: 'op hull requires profileXY, profileZY, and profileXZ (sideProfile/topProfile stay as aliases)',
   rotation: 'radians, applied X then Y then Z after scale and before translate',
   extrudeAxis: 'polygon is XZ (x, z); height extrudes +Y (up). Bottom-center origin.',
+  loft: 'sections are 2D polygons lofted along axis (default +Y). heights or span set station spacing.',
   intersectProfiles:
     'profileXY / profileZY / profileXZ (2 or 3). sideProfile aliases profileXY, topProfile aliases profileXZ.',
+  materials: 'optional roughness / metalness / opacity 0..1 on build_cad_solid and update_cad_solid',
+  budget: 'kernel rejects meshes over 50k triangles',
   nesting: 'parentId is a scene node id; the solid is parent-relative, not world-absolute',
   origins: {
     box: 'bottom-center',
     cylinder: 'bottom-center',
     sphere: 'bottom-center',
+    torus: 'bottom-center, ring in XZ',
+    capsule: 'bottom-center, cylinder height h plus two hemispheres',
+    ellipsoid: 'bottom-center, radii [rx, ry, rz]',
     extrude: 'polygon on XZ, bottom at y=0',
     revolve: 'profile x = radius, y = height, closed ring',
+    loft: 'first section at the start of the axis, bottom-center of that section',
   },
 }
 
@@ -103,6 +118,11 @@ const INVOKE_ALLOWLIST = new Set([
   'examples.search',
   'examples.get',
   'renderViews',
+  'renderEightViews',
+  'referencePack.validate',
+  'referencePack.set',
+  'referencePack.get',
+  'referencePack.clear',
   'reference.add',
   'reference.get',
   'reference.clear',
@@ -187,10 +207,34 @@ export const createPistolaAgentApi = () => {
       method: 'renderViews',
       output: 'A deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) with a fixed critique checklist. At most 2 rounds; keep the best.',
     },
+    eightViewReview: {
+      method: 'renderEightViews',
+      output:
+        'A deterministic 4×2 SVG contact sheet: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom.',
+      policy:
+        'Use after each assembly milestone without moving the active viewport. Address structural errors first, then the largest visible placement or proportion mismatch.',
+      layout: CANONICAL_CONTACT_SHEET_LAYOUT,
+      frame: PISTOLA_CANONICAL_FRAME,
+    },
+    referencePack: {
+      version: 1,
+      source:
+        'IDE-native image generation or a user upload. Pistola accepts metadata only; image pixels remain in the IDE or asset store.',
+      conceptGate:
+        'Generate 2–3 concepts, obtain the user-selected approval, then set one exactly-eight-view reference pack.',
+      requiredViews: CANONICAL_VIEW_CAMERAS.map((camera) => ({
+        id: camera.id,
+        label: camera.label,
+        projection: camera.projection,
+      })),
+      requiredScale: 'One named positive real-world measurement in meters.',
+      methods: ['validate', 'set', 'get', 'clear'],
+    },
     referenceMode: {
       method: 'reference.add',
       input: '{ path|dataUrl, layout: "front|side|top", knownDimension, blueprint }',
-      rule: 'A reference is always paired with a text blueprint. Tracing is optional. Default pipeline stays plan → build → check → fix → render.',
+      rule:
+        'An optional, clean three-view tracing supplement after the approved eight-view pack. It is always paired with a text blueprint and never replaces the canonical review loop.',
       methods: ['add', 'get', 'clear', 'fit', 'hull', 'guides'],
     },
     capabilities: getAllCapabilities().map((capability) => ({
@@ -325,19 +369,60 @@ export const createPistolaAgentApi = () => {
     return { mime: 'image/png', dataUrl: canvas.toDataURL('image/png') }
   }
 
+  const referencePack = {
+    validate: async (input: unknown) => validateReferencePack(input),
+    set: async (input: unknown) => {
+      const validation = validateReferencePack(input)
+      if (!validation.valid) return { ...validation, stored: false as const }
+      useReferencePackStore.getState().setPack(validation.data)
+      return { ...validation, stored: true as const }
+    },
+    get: async () => useReferencePackStore.getState().pack,
+    clear: async () => {
+      const cleared = useReferencePackStore.getState().pack !== null
+      useReferencePackStore.getState().clearPack()
+      return { cleared }
+    },
+  }
+
+  /**
+   * A renderer-agnostic review surface: it projects real world-space AABBs and
+   * never changes the user's camera, selection, or editor state.
+   */
+  const renderEightViews = async () => {
+    const parts = collectStructureParts()
+    const sheet = renderSceneContactSheet(
+      parts.map((part) => ({
+        id: part.id,
+        name: part.name,
+        bounds: { min: part.box.min, max: part.box.max },
+      })),
+    )
+    return {
+      mime: 'image/svg+xml' as const,
+      svg: sheet.svg,
+      width: sheet.width,
+      height: sheet.height,
+      columns: sheet.columns,
+      rows: sheet.rows,
+      partCount: parts.length,
+      views: sheet.views,
+      partColors: sheet.partColors,
+      structure: checkStructure(),
+    }
+  }
+
   const serializeRecord = (record: ReferenceRecord) => ({
     id: record.id,
     layout: record.layout,
     knownDimension: record.knownDimension,
     blueprint: record.blueprint,
-    dataUrl: record.dataUrl,
+    hasLocalImage: Boolean(record.dataUrl),
     trace: record.trace,
     frames: record.frames,
     goldMasks: {
-      front: Array.from(record.goldMasks.front),
-      side: Array.from(record.goldMasks.side),
-      top: Array.from(record.goldMasks.top),
       size: record.goldMasks.size,
+      views: ['front', 'side', 'top'] as const,
     },
     consistent: record.trace.consistent,
     overall_m: record.trace.overall_m,
@@ -683,6 +768,8 @@ export const createPistolaAgentApi = () => {
     run,
     checkStructure: async () => checkStructure(),
     renderViews: async (input?: { planned?: [number, number, number] }) => renderSceneViews(input),
+    renderEightViews,
+    referencePack,
     reference,
     examples: {
       search: async (query?: string | { query?: string; kind?: string }) => {
@@ -735,6 +822,14 @@ export const createPistolaAgentApi = () => {
       if (method.startsWith('examples.')) {
         const name = method.slice('examples.'.length) as keyof typeof api.examples
         const fn = api.examples[name]
+        if (typeof fn !== 'function') {
+          throw new Error(`Unknown pistola method "${method}".`)
+        }
+        return (fn as (...values: unknown[]) => unknown)(...payload)
+      }
+      if (method.startsWith('referencePack.')) {
+        const name = method.slice('referencePack.'.length) as keyof typeof referencePack
+        const fn = referencePack[name]
         if (typeof fn !== 'function') {
           throw new Error(`Unknown pistola method "${method}".`)
         }

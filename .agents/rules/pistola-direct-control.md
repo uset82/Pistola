@@ -9,7 +9,7 @@ The IDE model is the planner. Pistola is a deterministic executor. Do not hand t
 
 ## Route order
 
-1. MCP default tools (`pistola_status`, `pistola_reference_add`, `pistola_reference_fit`, `pistola_reference_hull`, `pistola_task_*`, `pistola_run`, `pistola_check`, `pistola_render_views`, `pistola_blueprint_check`, `pistola_examples`, `pistola_inspect`, `pistola_export_scene`, `pistola_screenshot`).
+1. MCP default tools (`pistola_status`, `pistola_reference_{validate,set,get,clear}`, `pistola_reference_sheet_{add,fit,hull,get,clear}`, `pistola_task_*`, `pistola_run`, `pistola_check`, `pistola_render_eight_views`, `pistola_render_views`, `pistola_blueprint_check`, `pistola_examples`, `pistola_inspect`, `pistola_export_scene`, `pistola_screenshot`).
 2. The IDE browser calling `window.pistola.invoke(method, args)` after `data-pistola-agent="ready"`.
 3. Stop. Tell the user the host has no direct control.
 
@@ -30,18 +30,22 @@ Play these as sections in one thread. Codex may spawn matching sub-agents; other
 plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report
 
 1. `pistola_open` / wait for `dataset.pistolaAgent === "ready"`.
-2. Optional reference mode, only for a clean black-on-white FRONT|SIDE|TOP sheet: `pistola_reference_add({ path|dataUrl, layout: 'front|side|top', knownDimension, blueprint })`. A reference is always paired with a text blueprint. Use the gold masks as the render IoU target. Optional: `pistola_reference_hull` and `create_guide`. `pistola_reference_fit` proposes translate/scale patches and never applies them. Skip photos and perspective sketches. See `references/ortho-sheet-prompt.md` and `docs/reference-sheets.md`.
-3. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`). If a blueprint exists, run `plan.check` / `pistola_blueprint_check` first, then `taskPlan.create({blueprint})` (one step per part, parents first).
-4. Search examples with `examples.search` / `pistola_examples` (`action: search|get`). Instantiate with `{id, params, at}`. Otherwise skip.
-5. For each part: `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `exportScene` / `pistola_check`. `run` and `runStep` already embed `{structure}`.
-6. At each assembly milestone, call `pistola_render_views` and inspect the 2×2 FRONT/SIDE/TOP/ISO sheet. It is CPU-rasterized and has no camera side effects. If a reference is active it reports IoU against the traced masks. Fix structural errors first, then the largest visible placement/proportion error.
-7. At most **2 retries per step** from the issue list (`fix.patch` when present). Then fall back to a simpler technique. Do not retry the same failing action. Opt-in `strict: true` reverts a regression; `taskPlan.restoreBest` / `pistola_task_restore_best` reloads the best snapshot.
-8. Answer the visual critique with `{score, ≤3 fixes (partId + numeric change)}`. At most two rounds; keep the best; stop when there is no gain.
-9. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
-10. Complete the plan only after every step has evidence.
+2. For a new visual object, make **2–3 concepts in the IDE** and get the user's selection. Then create or collect exactly eight separately stored views: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom. Call `pistola_reference_validate`, then `pistola_reference_set`; use opaque asset references and one known meter scale. Image bytes stay in the IDE or asset store.
+3. Optionally add a clean black-on-white FRONT|SIDE|TOP tracing sheet after that approval: `pistola_reference_sheet_add({ path|dataUrl, layout: 'front|side|top', knownDimension, blueprint })`. It is always paired with a text blueprint. Use its local gold masks only as a 2×2 IoU diagnostic. Optional hull and `create_guide` actions, plus `pistola_reference_sheet_fit`, only propose changes; they never apply them. Skip photos and perspective sketches. See `references/ortho-sheet-prompt.md` and `docs/reference-sheets.md`.
+4. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`). If a blueprint exists, run `plan.check` / `pistola_blueprint_check` first, then `taskPlan.create({blueprint})` (one step per part, parents first).
+5. Search examples with `examples.search` / `pistola_examples` (`action: search|get`). Instantiate with `{id, params, at}`. Otherwise skip.
+6. For each part: `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `exportScene` / `pistola_check`. `run` and `runStep` already embed `{structure}`.
+7. At each assembly milestone, call `pistola_render_eight_views` and inspect the labeled Top, Left 45°, Front, Right 45°, Left, Right, Back, and Bottom sheet. It has no camera side effects. Fix structural errors first, then the largest visible placement/proportion error.
+8. Use the 2×2 `pistola_render_views` diagnostic only when its numeric critique or an optional tracing-sheet IoU comparison is useful; it complements, but does not replace, the required eight-view review.
+9. At most **2 retries per step** from the issue list (`fix.patch` when present). Then fall back to a simpler technique. Do not retry the same failing action. Opt-in `strict: true` reverts a regression; `taskPlan.restoreBest` / `pistola_task_restore_best` reloads the best snapshot.
+10. Answer the visual critique with `{score, ≤3 fixes (partId + numeric change)}`. At most two rounds; keep the best; stop when there is no gain.
+11. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
+12. Complete the plan only after every step has evidence.
 
 Prefer world-space parts. Nested `parentId` children inherit parent scale; compensate or do not parent.
 
 ## Parent-relative nesting
 
 `parentId` child positions are local to the parent, not world coordinates. Primitive ids are `primitive-box`, `primitive-sphere`, `primitive-cylinder`, `primitive-cone`, `primitive-torus`, `primitive-capsule`, `primitive-wedge`. Optional `color` is a hex string on `place_item` and `update_item_properties`.
+
+Local `build_cad_solid` ops include `loft`, `hull` (three profiles), `torus`, `capsule`, and `ellipsoid`. Optional `roughness` / `metalness` / `opacity` are per body. The kernel rejects meshes over 50k triangles. `place_cad_body_in_architecture` instances draw the source mesh, not a box. Items parented to a `cad-body` or `cad-instance` keep their local position (no slab lift).

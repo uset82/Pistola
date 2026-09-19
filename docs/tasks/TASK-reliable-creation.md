@@ -230,9 +230,9 @@ does not claim the gated image fitter below.
 
 ### Phase 6 (gated): Reference mode and a minimal fitter
 Start only if the Phase 5 benchmark shows outline and proportion errors dominate.
-- [x] `pistola_reference_add({path|dataUrl, layout: 'front|side|top' sheet, knownDimension})`. A reference
+- [x] `pistola_reference_sheet_add({path|dataUrl, layout: 'front|side|top' sheet, knownDimension})`. A reference
   is always paired with a text blueprint.
-  — evidence: `bun test ./packages/editor/src/lib/reference/reference.test.ts` → `reference.add requires a blueprint, traces the sheet, and does not apply hull or guides`; MCP `pistola_reference_add`
+  — evidence: `bun test ./packages/editor/src/lib/reference/reference.test.ts` → `reference.add requires a blueprint, traces the sheet, and does not apply hull or guides`; MCP `pistola_reference_sheet_add`
 - [x] A prompt pack for IDEs that generate images (one image holding all three views, black on white,
   orthographic), plus a user guide for making sheets on free sites (`docs/`).
   — evidence: `.agents/skills/pistola-direct-control/references/ortho-sheet-prompt.md`; `docs/reference-sheets.md`
@@ -267,7 +267,7 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 6 optional `pistola_reference_add` 3-view sheet + `pistola_render_views` 2×2 + ≤2 critique rounds); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (user-approved eight-view gate + `pistola_render_eight_views`; optional Phase 6 `pistola_reference_sheet_add` 3-view sheet + 2×2 IoU diagnostic); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.

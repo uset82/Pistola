@@ -1,8 +1,10 @@
 # Front / side / top reference sheets
 
 Pistola does not generate images. IDEs that can (or a user on a free site) can supply one
-black-on-white orthographic sheet. Tracing is optional. The default pipeline stays
-plan → examples → build → check → fix → render → critique → keep best.
+black-on-white orthographic sheet as an **optional tracing aid**. It comes after—not instead
+of—the user-approved eight-view pack: Top, Left 45°, Front, Right 45°, Left, Right, Back,
+Bottom. The default pipeline stays plan → examples → build → check → fix → render → critique
+→ keep best.
 
 ## What to make
 
@@ -23,7 +25,7 @@ Rules:
 Call:
 
 ```
-pistola_reference_add({
+pistola_reference_sheet_add({
   dataUrl,                 // or path
   layout: 'front|side|top',
   knownDimension: 0.4,     // meters, or { axis: 'width'|'height'|'depth', meters }
@@ -34,7 +36,7 @@ pistola_reference_add({
 Pistola traces the sheet (Moore contour + Douglas-Peucker), checks the three shared
 dimensions within ±5%, stores gold masks for `pistola_render_views` IoU, and returns
 optional `build_cad_solid` hull and `create_guide` actions. It does not apply them.
-`pistola_reference_fit` may propose translate/scale patches; it also does not apply them.
+`pistola_reference_sheet_fit` may propose translate/scale patches; it also does not apply them.
 
 ## Free-site recipe
 
@@ -42,7 +44,7 @@ optional `build_cad_solid` hull and `create_guide` actions. It does not apply th
 2. Set the background to white.
 3. Draw three filled black outlines in a row: front, side, top.
 4. Export PNG.
-5. Upload that PNG in the IDE, or pass its data URL to `pistola_reference_add`.
+5. Upload that PNG in the IDE, or pass its data URL to `pistola_reference_sheet_add`.
 
 Photos and sketched perspective views are the wrong input. Use a clean sheet or skip
 reference mode.

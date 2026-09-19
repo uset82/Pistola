@@ -104,13 +104,15 @@ test('reference.add requires a blueprint, traces the sheet, and does not apply h
     consistent: boolean
     overall_m: number[]
     hull: { type: string; spec: { op: string } }
-    guides: Array<{ type: string; view: string }>
+    guides: Array<{ type: string; url: string; view: string }>
   }
   assert.equal(added.consistent, true)
   assert.ok(Math.abs((added.overall_m[0] ?? 0) - 2) < 0.05)
   assert.equal(added.hull.type, 'build_cad_solid')
   assert.equal(added.hull.spec.op, 'intersect_profiles')
   assert.equal(added.guides.length, 3)
+  assert.equal(added.guides[0]?.url.startsWith('pistola-reference:'), true)
+  assert.equal('dataUrl' in added, false)
   const spec = validateCadSolidSpec(added.hull.spec)
   assert.equal(spec.success, true)
   assert.equal(
@@ -124,11 +126,11 @@ test('create_guide places a vertical front plane and the fitter proposes unappli
   const api = createPistolaAgentApi()
   const levelId = Object.values(useScene.getState().nodes).find((node) => node.type === 'level')?.id
   assert.ok(levelId)
-  await api.invoke('reference.add', {
+  const added = (await api.invoke('reference.add', {
     dataUrl: sheetDataUrl(),
     knownDimension: { axis: 'width', meters: 2 },
     blueprint: blockBlueprint,
-  })
+  })) as { guides: Array<{ type: 'create_guide'; url: string; view: 'front' | 'side' | 'top' }> }
   const created = await api.run([
     {
       type: 'place_item',
@@ -140,9 +142,7 @@ test('create_guide places a vertical front plane and the fitter proposes unappli
       scale: [2, 1.5, 1],
     },
     {
-      type: 'create_guide',
-      view: 'front',
-      url: sheetDataUrl(),
+      ...added.guides.find((guide) => guide.view === 'front')!,
       position: [0, 0.75, -0.65],
       levelId,
     },

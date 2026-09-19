@@ -35,6 +35,8 @@ import {
 import { clampToWall as clampWindowToWall, hasWallChildOverlap as windowOverlap } from '../../components/tools/window/window-math'
 import { duplicateTransformTarget } from '../transform-actions'
 import { getTransformCapabilities, getTransformTargetNode } from '../transform-target'
+import { useReferenceStore } from '../reference/store'
+import { referenceGuideIdFromUri } from '../reference/types'
 import useEditor from '../../store/use-editor'
 import { findCatalogItem } from './catalog'
 import type { AssistantAction } from './types'
@@ -587,9 +589,18 @@ export const createRoof = (action: Extract<AssistantAction, { type: 'create_roof
 export const createGuide = (action: Extract<AssistantAction, { type: 'create_guide' }>) => {
   const level = resolveLevel(action.levelId)
   if (!level || level.type !== 'level') throw new Error('A level must be selected before creating a guide.')
+  const referenceId = referenceGuideIdFromUri(action.url)
+  const activeReference = useReferenceStore.getState().active
+  let url = action.url
+  if (referenceId) {
+    if (activeReference?.id !== referenceId || !activeReference.dataUrl) {
+      throw new Error('The referenced guide image is no longer available in this editor session.')
+    }
+    url = activeReference.dataUrl
+  }
   const node = GuideNode.parse({
     name: action.name ?? getDefaultName('Guide', 'guide'),
-    url: action.url,
+    url,
     position: action.position ?? [0, 0, 0],
     rotation: action.rotation ?? [0, 0, 0],
     scale: action.scale ?? 1,

@@ -5,6 +5,14 @@ import type { TracedProfile } from '../cad/silhouette-tracer'
 export const REFERENCE_SHEET_LAYOUTS = ['front|side|top', 'sheet', 'front-side-top'] as const
 export type ReferenceSheetLayout = (typeof REFERENCE_SHEET_LAYOUTS)[number]
 
+/** A session-local source token for guide proposals; never an image payload. */
+export const REFERENCE_GUIDE_URI_PREFIX = 'pistola-reference:'
+
+export const referenceGuideUri = (referenceId: string) => `${REFERENCE_GUIDE_URI_PREFIX}${referenceId}`
+
+export const referenceGuideIdFromUri = (value: string) =>
+  value.startsWith(REFERENCE_GUIDE_URI_PREFIX) ? value.slice(REFERENCE_GUIDE_URI_PREFIX.length) : null
+
 export type KnownDimension = {
   axis: 'width' | 'height' | 'depth' | 'x' | 'y' | 'z'
   meters: number

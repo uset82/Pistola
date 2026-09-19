@@ -17,8 +17,8 @@ Overall real-world size: <WIDTH_M> m wide, <HEIGHT_M> m tall, <DEPTH_M> m deep.
 
 ## After the image exists
 
-1. Keep the bytes in the IDE/asset store.
-2. Pair the sheet with a text blueprint.
-3. `pistola_reference_add({ dataUrl or path, layout: 'front|side|top', knownDimension, blueprint })`.
-4. Use the returned gold masks as the IoU target. Optional: hull blockout and `create_guide`.
-5. Continue the default plan → build → check → fix → render loop.
+1. First obtain user approval for the canonical eight-view pack and store it through `pistola_reference_set`.
+2. Keep this optional sheet's bytes local to the IDE/runtime and pair it with a text blueprint.
+3. `pistola_reference_sheet_add({ dataUrl or path, layout: 'front|side|top', knownDimension, blueprint })`.
+4. Use the local gold masks as a 2×2 IoU diagnostic. Optional: hull blockout and `create_guide` proposals.
+5. Continue the default plan → build → check → fix → eight-view render loop.

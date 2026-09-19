@@ -41,7 +41,9 @@ Session: `pistola_status`, `pistola_open`, `pistola_manual`
 
 Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`, `pistola_check`, `pistola_blueprint_check`, `pistola_examples`
 
-Reference mode (3-view sheet): `pistola_reference_add({path|dataUrl, layout: 'front|side|top', knownDimension, blueprint})`, `pistola_reference_fit`, `pistola_reference_hull`. A reference is always paired with a text blueprint. Tracing is optional; the default pipeline stays plan → build → check → fix → render.
+Reference pack: `pistola_reference_validate`, `pistola_reference_set`, `pistola_reference_get`, `pistola_reference_clear`. The selected concept must be user-approved and the pack must contain exactly eight labeled, opaque image references; image pixels remain owned by the IDE or asset store.
+
+Optional three-view tracing: `pistola_reference_sheet_add({path|dataUrl, layout: 'front|side|top', knownDimension, blueprint})`, `pistola_reference_sheet_fit`, `pistola_reference_sheet_hull`, `pistola_reference_sheet_get`, `pistola_reference_sheet_clear`. It supplements—not replaces—the approved eight-view review. A sheet is always paired with a text blueprint and only proposes hull, guide, or fitter changes.
 
 Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to false), deprecated `pistola_execute` (same check)
 

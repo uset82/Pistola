@@ -240,9 +240,59 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'pistola_reference_add',
+    name: 'pistola_reference_validate',
     description:
-      'Add a FRONT|SIDE|TOP orthographic sheet plus a text blueprint (window.pistola.invoke reference.add). Traces silhouettes in meters, stores gold masks for render IoU, and returns optional hull and create_guide actions. Does not apply geometry.',
+      'Validate a provider-neutral approved eight-view reference pack without storing it. Pass opaque asset references only; image bytes remain in the IDE or asset store.',
+    inputSchema: objectSchema({ pack: { type: 'object' } }, ['pack']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.validate', args.pack)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_set',
+    description:
+      'Validate and store the user-approved eight-view reference metadata for this Pistola session. Use only after the user selects one of the 2–3 IDE concepts.',
+    inputSchema: objectSchema({ pack: { type: 'object' } }, ['pack']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.set', args.pack)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_get',
+    description: 'Read active approved eight-view reference metadata, or null when reference mode is not active.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.get')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_clear',
+    description: 'Clear active eight-view reference metadata without deleting host-owned image assets.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.clear')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_sheet_add',
+    description:
+      'Optionally trace a clean FRONT|SIDE|TOP orthographic sheet plus a text blueprint. Stores local gold masks for 2×2 IoU and returns optional hull and guide proposals; it does not apply geometry or replace the approved eight-view review.',
     inputSchema: objectSchema(
       {
         path: { type: 'string' },
@@ -272,9 +322,9 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'pistola_reference_fit',
+    name: 'pistola_reference_sheet_fit',
     description:
-      'Coordinate-descent fitter: translate/scale up to 10 parts to raise IoU against the active reference. Returns patches plus before/after IoU; never applies them.',
+      'Coordinate-descent fitter for the active three-view sheet: proposes translate/scale patches for up to 10 parts to raise IoU. It never applies them.',
     inputSchema: objectSchema(),
     handler: async () => {
       try {
@@ -285,9 +335,9 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'pistola_reference_hull',
+    name: 'pistola_reference_sheet_hull',
     description:
-      'Return an optional 3-view intersect_profiles hull blockout from the active reference. Does not apply it.',
+      'Return an optional 3-view intersect_profiles hull blockout from the active reference sheet. It does not apply geometry.',
     inputSchema: objectSchema(),
     handler: async () => {
       try {
@@ -298,8 +348,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'pistola_reference_get',
-    description: 'Read the active 3-view reference sheet, traces, and gold masks, or null when reference mode is off.',
+    name: 'pistola_reference_sheet_get',
+    description: 'Read the active optional three-view reference-sheet metadata, or null when it is not active.',
     inputSchema: objectSchema(),
     handler: async () => {
       try {
@@ -310,8 +360,8 @@ const tools: McpTool[] = [
     },
   },
   {
-    name: 'pistola_reference_clear',
-    description: 'Clear the active 3-view reference sheet without deleting the host image.',
+    name: 'pistola_reference_sheet_clear',
+    description: 'Clear the active three-view reference sheet without deleting its host-owned image.',
     inputSchema: objectSchema(),
     handler: async () => {
       try {
@@ -338,6 +388,32 @@ const tools: McpTool[] = [
         if (!base64) throw new Error('The Pistola page did not return a PNG visual review.')
         const { dataUrl: _ignored, mime, ...metadata } = rendered
         return imageResult(base64, typeof mime === 'string' ? mime : 'image/png', metadata)
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_render_eight_views',
+    description:
+      'Render a side-effect-free 4×2 SVG contact sheet of the live scene: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom. Includes the current structural report.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        const rendered = unwrap(await invoke('renderEightViews')) as {
+          mime?: unknown
+          svg?: unknown
+          [key: string]: unknown
+        }
+        if (typeof rendered.svg !== 'string') {
+          throw new Error('The Pistola page did not return an eight-view SVG review.')
+        }
+        const { svg, mime, ...metadata } = rendered
+        return imageResult(
+          Buffer.from(svg, 'utf8').toString('base64'),
+          typeof mime === 'string' ? mime : 'image/svg+xml',
+          metadata,
+        )
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }

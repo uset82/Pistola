@@ -1,5 +1,5 @@
 import type { AssistantAction } from '../assistant/types'
-import type { ReferenceRecord, ReferenceViewName } from './types'
+import { referenceGuideUri, type ReferenceRecord, type ReferenceViewName } from './types'
 
 export const guideActionsFromReference = (
   record: ReferenceRecord,
@@ -7,7 +7,7 @@ export const guideActionsFromReference = (
 ): Array<Extract<AssistantAction, { type: 'create_guide' }>> => {
   const [width, height, depth] = record.trace.overall_m
   const margin = 0.15
-  const url = record.dataUrl || ''
+  const url = referenceGuideUri(record.id)
   const scaleFor = (meters: number) => Math.max(0.05, meters / 10)
   const positions: Record<ReferenceViewName, [number, number, number]> = {
     front: [0, height / 2, -(depth / 2) - margin],
