@@ -30,7 +30,7 @@ The blueprint is the contract between the picture and the build. Every part must
    Use `--dilate 2` when thin parts detach, and `--epsilon 3` for fewer points (about 12 to 40 points per outline is a good target). Keep `meters_per_pixel` consistent across views; if the views disagree by more than 5%, fix the sheet instead of averaging.
 4. **Split into parts.** Work from the concept and the color sheet. A part is something with its own shape or color: hull, cabin, roof, mast, sail, wheel. Use 4 to 15 parts for a toy object. Merge anything under about 2 cm.
 5. **Pick a shape strategy per part** using [references/techniques.md](references/techniques.md).
-6. **Write the blueprint** following [references/blueprint.schema.json](references/blueprint.schema.json). See [references/sample-blueprint.json](references/sample-blueprint.json) for a complete toy boat.
+6. **Write blueprint v2** following [references/blueprint.schema.json](references/blueprint.schema.json). See [references/sample-blueprint.json](references/sample-blueprint.json) for a complete toy boat. Required contract fields: `frame`, `overall_m`, `anchor` (`floor|wall|none`), `parts` (`id, name, role, technique, dims_m, position_m, rotation_deg, color, parent, mirrorOf?, count?`), `relations` (`touches|on_top_of|inside|centered_on|mirror_of|gap_ok`), and `acceptance` ratios. Call `plan.check` / `pistola_blueprint_check` before the first `place_item`. `taskPlan.create({blueprint})` expands to one execution step per part (parents first), then check and render.
 
 ## Conventions (match the Pistola renderer)
 
@@ -39,5 +39,6 @@ The blueprint is the contract between the picture and the build. Every part must
 - `rotation_deg` is in degrees in the blueprint; the feature guide converts it to radians.
 - Colors are hex values sampled with `palette`, then rounded to a small scheme of 3 to 5 colors.
 - `parent` is the id of the part it sits on. The root part has `parent: null`.
+- `technique` is the v2 name for v1 `shape`.
 
 Return only the blueprint JSON plus a short list of assumptions.

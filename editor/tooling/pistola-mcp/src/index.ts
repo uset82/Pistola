@@ -194,6 +194,19 @@ const tools: McpTool[] = [
     },
   },
   {
+    name: 'pistola_blueprint_check',
+    description:
+      'Validate a blueprint v2 before building (window.pistola.invoke plan.check). Returns structured issues (PART_MISSING, RELATION_VIOLATED, ACCEPTANCE_FAILED).',
+    inputSchema: objectSchema({ blueprint: { type: 'object' } }, ['blueprint']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('plan.check', args.blueprint)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
     name: 'pistola_check',
     description:
       'Run the structural checker on the live scene. Returns {ok, errorCount, warningCount, issues[]}. Also embedded on pistola_run and pistola_task_run_step.',
@@ -305,7 +318,8 @@ const tools: McpTool[] = [
   },
   {
     name: 'pistola_task_create',
-    description: 'Create a checkbox operator plan before any scene mutation.',
+    description:
+      'Create a checkbox operator plan before any scene mutation. Pass {blueprint} to run plan.check and generate one step per part.',
     inputSchema: objectSchema({ plan: { type: 'object' } }, ['plan']),
     handler: async (args) => {
       try {

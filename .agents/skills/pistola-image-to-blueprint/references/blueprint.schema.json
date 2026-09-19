@@ -3,9 +3,37 @@
   "$id": "pistola/blueprint.schema.json",
   "title": "Pistola object blueprint",
   "type": "object",
-  "required": ["slug", "title", "style", "scale", "parts"],
+  "required": ["slug", "title", "parts"],
   "additionalProperties": false,
   "properties": {
+    "version": { "const": 2 },
+    "frame": {
+      "type": "object",
+      "properties": {
+        "up": { "const": "+Y" },
+        "front": { "const": "+Z" },
+        "right": { "const": "+X" },
+        "units": { "const": "meters" },
+        "origin": { "const": "bottom-center" }
+      }
+    },
+    "overall_m": { "$ref": "#/$defs/vec3" },
+    "anchor": { "enum": ["floor", "wall", "none"] },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["a", "rel", "b"],
+        "properties": {
+          "a": { "type": "string" },
+          "aFace": { "enum": ["nx", "px", "ny", "py", "nz", "pz"] },
+          "rel": { "enum": ["touches", "on_top_of", "inside", "centered_on", "mirror_of", "gap_ok"] },
+          "b": { "type": "string" },
+          "bFace": { "enum": ["nx", "px", "ny", "py", "nz", "pz"] },
+          "tol_m": { "type": "number" }
+        }
+      }
+    },
     "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
     "title": { "type": "string", "minLength": 1 },
     "style": { "enum": ["toy", "low-poly", "realistic", "architectural"] },
@@ -63,15 +91,20 @@
     },
     "part": {
       "type": "object",
-      "required": ["id", "name", "shape", "dims_m", "position_m", "parent"],
+      "required": ["id", "name", "dims_m", "position_m", "parent"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
         "name": { "type": "string", "minLength": 1 },
         "role": { "type": "string", "description": "What the part is for: body, cabin, mast, wheel, trim..." },
+        "technique": {
+          "enum": ["primitive", "profile-extrude", "silhouette-intersection", "revolve", "cad-brief", "mac", "architecture"]
+        },
         "shape": {
           "enum": ["primitive", "profile-extrude", "silhouette-intersection", "revolve", "cad-brief", "mac", "architecture"]
         },
+        "mirrorOf": { "type": "string" },
+        "count": { "type": "integer", "minimum": 1 },
         "primitive": { "enum": ["box", "sphere", "cylinder", "cone", "torus", "capsule", "wedge"] },
         "profile": {
           "type": "object",
@@ -109,11 +142,44 @@
         "source_view": { "enum": ["front", "side", "top", "concept"] },
         "notes": { "type": "string" }
       },
+      "anyOf": [{ "required": ["technique"] }, { "required": ["shape"] }],
       "allOf": [
-        { "if": { "properties": { "shape": { "const": "primitive" } } }, "then": { "required": ["primitive"] } },
-        { "if": { "properties": { "shape": { "const": "profile-extrude" } } }, "then": { "required": ["profile"] } },
-        { "if": { "properties": { "shape": { "const": "silhouette-intersection" } } }, "then": { "required": ["intersect"] } },
-        { "if": { "properties": { "shape": { "const": "revolve" } } }, "then": { "required": ["revolve"] } }
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["shape"], "properties": { "shape": { "const": "primitive" } } },
+              { "required": ["technique"], "properties": { "technique": { "const": "primitive" } } }
+            ]
+          },
+          "then": { "required": ["primitive"] }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["shape"], "properties": { "shape": { "const": "profile-extrude" } } },
+              { "required": ["technique"], "properties": { "technique": { "const": "profile-extrude" } } }
+            ]
+          },
+          "then": { "required": ["profile"] }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["shape"], "properties": { "shape": { "const": "silhouette-intersection" } } },
+              { "required": ["technique"], "properties": { "technique": { "const": "silhouette-intersection" } } }
+            ]
+          },
+          "then": { "required": ["intersect"] }
+        },
+        {
+          "if": {
+            "anyOf": [
+              { "required": ["shape"], "properties": { "shape": { "const": "revolve" } } },
+              { "required": ["technique"], "properties": { "technique": { "const": "revolve" } } }
+            ]
+          },
+          "then": { "required": ["revolve"] }
+        }
       ]
     }
   }

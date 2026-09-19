@@ -69,10 +69,11 @@ export type OperatorPlan = {
 
 export type OperatorPlanInput = {
   id?: string
-  title: string
+  title?: string
   prompt?: string
   source?: OperatorPlanSource
-  phases: Array<{
+  /** Required unless `taskPlan.create({blueprint})` generates parent-first steps. */
+  phases?: Array<{
     id: string
     title: string
     steps: Array<{
@@ -140,7 +141,7 @@ const storedPlanSchema: z.ZodType<OperatorPlan> = z.object({
 const inputSchema = z
   .object({
     id: z.string().trim().min(1).optional(),
-    title: z.string().trim().min(1),
+    title: z.string().trim().min(1).default('Untitled plan'),
     prompt: z.string().trim().min(1).optional(),
     source: z.enum(operatorPlanSources).default('codex'),
     phases: z

@@ -10,7 +10,7 @@ The IDE model is the planner. Pistola is a deterministic executor. Do not hand t
 
 ## Route order
 
-1. MCP default tools (`pistola_status`, `pistola_task_*`, `pistola_run`, `pistola_check`, `pistola_inspect`, `pistola_export_scene`, `pistola_screenshot`).
+1. MCP default tools (`pistola_status`, `pistola_reference_*`, `pistola_task_*`, `pistola_run`, `pistola_check`, `pistola_render_views`, `pistola_blueprint_check`, `pistola_inspect`, `pistola_export_scene`, `pistola_screenshot`).
 2. The IDE browser calling `window.pistola.invoke(method, args)` after `data-pistola-agent="ready"`.
 3. Stop. Tell the user the host has no direct control.
 
@@ -31,13 +31,15 @@ Play these as sections in one thread. Codex may spawn matching sub-agents; other
 plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report
 
 1. `pistola_open` / wait for `dataset.pistolaAgent === "ready"`.
-2. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`). If a blueprint exists, one step per part, parents first.
-3. Search examples when the host has `examples.search`. Otherwise skip.
-4. For each part: `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `exportScene` / `pistola_check` / `screenshot`. `run` and `runStep` already embed `{structure}`.
-5. At most **2 retries per step** from the issue list (`fix.patch` when present). Then fall back to a simpler technique. Do not retry the same failing action. Opt-in `strict: true` reverts a regression; `taskPlan.restoreBest` / `pistola_task_restore_best` reloads the best snapshot.
-6. If a render/critique tool exists, at most two rounds. Keep the best snapshot. Report remaining gaps honestly.
-7. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
-8. Complete the plan only after every step has evidence.
+2. For a new visual object, make **2–3 concept variants in the IDE** and get the user's selection. Then make or collect the exact eight views: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom. Call `pistola_reference_validate`, then `pistola_reference_set`; image bytes stay in the IDE/asset store, while Pistola receives opaque asset references and one known meter scale.
+3. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`). If a blueprint exists, run `plan.check` / `pistola_blueprint_check` first, then `taskPlan.create({blueprint})` (one step per part, parents first).
+4. Search examples when the host has `examples.search`. Otherwise skip.
+5. For each part: `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `exportScene` / `pistola_check`. `run` and `runStep` already embed `{structure}`.
+6. At each assembly milestone, call `pistola_render_views` and inspect all eight labels before marking the plan's render/review step complete. It has no camera side effects. Fix structural errors first, then the largest visible placement/proportion error.
+7. At most **2 retries per step** from the issue list (`fix.patch` when present). Then fall back to a simpler technique. Do not retry the same failing action. Opt-in `strict: true` reverts a regression; `taskPlan.restoreBest` / `pistola_task_restore_best` reloads the best snapshot.
+8. If a render/critique tool exists, at most two rounds. Keep the best snapshot. Report remaining gaps honestly.
+9. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
+10. Complete the plan only after every step has evidence.
 
 Prefer world-space parts. Nested `parentId` children inherit parent scale; compensate or do not parent.
 

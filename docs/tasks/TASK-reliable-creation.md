@@ -132,24 +132,30 @@ Files: new `lib/structure/{scene-geometry,contact-graph,checks,report}.ts`, new
 ### Phase 3: Plan contract (blueprint v2)
 Files: new `lib/blueprint/{schema,check}.ts`, `lib/operator-plan/operator-plan.ts`,
 `.agents/skills/pistola-image-to-blueprint` (blueprint schema v2).
-- [ ] Blueprint fields:
+- [x] Blueprint fields:
   - `frame`, `overall_m`, `anchor: floor|wall|none`;
   - parts `{id, name, role, technique, dims_m, position_m, rotation_deg, color, parent, mirrorOf?, count?}`;
   - relations `{a, aFace, rel: touches|on_top_of|inside|centered_on|mirror_of|gap_ok, b, bFace, tol_m?}`;
   - acceptance ratios.
-- [ ] `plan.check` runs before any geometry:
+  — evidence: `editor/packages/editor/src/lib/blueprint/schema.ts` `BlueprintV2Schema`; skill `references/blueprint.schema.json` (v1 `shape` / `scale.value_m` stay aliases)
+- [x] `plan.check` runs before any geometry:
   - references resolve;
   - parents are acyclic;
   - relations are consistent with the declared boxes;
   - the parts add up to `overall_m`.
-- [ ] `taskPlan.create({blueprint})` generates one step per part (parent first), plus check and render
+  — evidence: `bun test ./packages/editor/src/lib/blueprint/check.test.ts` → `plan.check catches a sailboat mast that is not on the hull`; `plan.check flags a cyclic parent and an overall that the parts cannot make`; MCP `pistola_blueprint_check` (not `pistola_plan*`)
+- [x] `taskPlan.create({blueprint})` generates one step per part (parent first), plus check and render
   steps.
-- [ ] Scene-vs-plan checks: `PART_MISSING`, `DIM_MISMATCH` (over 10% is an error, over 5% a warning),
+  — evidence: same suite → `taskPlan.create({blueprint}) builds one step per part plus check and render` (`hull`, `mast`, `check`, `render`); rejects a failing blueprint before create
+- [x] Scene-vs-plan checks: `PART_MISSING`, `DIM_MISMATCH` (over 10% is an error, over 5% a warning),
   `POSITION_MISMATCH`, `RELATION_VIOLATED`, `ACCEPTANCE_FAILED`.
-- [ ] Relation snapper: deterministic translation patches that satisfy touches/on_top_of. It proposes
+  — evidence: same suite → `scene-vs-plan reports PART_MISSING, DIM_MISMATCH and POSITION_MISMATCH`; codes in `check.ts`
+- [x] Relation snapper: deterministic translation patches that satisfy touches/on_top_of. It proposes
   them; it never applies them silently.
-- [ ] Checkpoint: a sailboat plan with a wrong mast height is caught before the build, and the snapper
+  — evidence: `the snapper proposes a move_target that sits the mast on the hull and does not apply it` (`applied: false`, delta `[0, -1.6, 0]`); applying the delta makes `plan.check` pass without mutating the scene
+- [x] Checkpoint: a sailboat plan with a wrong mast height is caught before the build, and the snapper
   fixes it; benchmark run.
+  — evidence: 7 pass in `check.test.ts`; `node editor/scripts/creation-benchmark/run.mjs --mode replay --out docs/tasks/evidence/creation-quality/phase-3` → `summary.iou: 1`
 
 ### Phase 4: Retrieval (examples and subassemblies)
 Files: new `lib/agent-examples/*`, `lib/agent-api/index.ts`, MCP `pistola_examples`, `.agents/library`.
@@ -227,7 +233,7 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop section (Phase 2: `pistola_check`, ≤2 retries, `restoreBest`); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop section (Phase 3: `plan.check` / `pistola_blueprint_check`, `taskPlan.create({blueprint})`); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
@@ -236,9 +242,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   - replay and score every phase;
   - full agent runs at baseline and after Phases 2, 4 and 5 (to limit IDE usage);
   - save `phase-N/scores.json` plus side-by-side renders.
-  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; Phase 2 → `phase-2/scores.json` `iou: 1`; `--mode agent --cli codex` skipped (no Phase 0/2 IDE quota)
+  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; Phase 2 → `phase-2/scores.json` `iou: 1`; Phase 3 → `phase-3/scores.json` `iou: 1`; `--mode agent --cli codex` skipped (no Phase 0/2 IDE quota)
 - [x] `validate-task-evidence.mjs` passes; 0 forbidden AI-route requests.
-  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 2 tick)
+  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 3 tick)
 
 ### Acceptance (held-out set, ≥2 headless IDEs, 3 seeds)
 - [ ] Final runnable rate ≥ 95%.

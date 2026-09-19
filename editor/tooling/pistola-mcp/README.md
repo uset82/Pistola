@@ -39,7 +39,7 @@ Other env vars:
 
 Session: `pistola_status`, `pistola_open`, `pistola_manual`
 
-Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`, `pistola_check`
+Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`, `pistola_check`, `pistola_blueprint_check`
 
 Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to false), deprecated `pistola_execute` (same check)
 

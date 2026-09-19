@@ -1,0 +1,477 @@
+{
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "$ref_sailboat_hull",
+        "type": "item",
+        "name": "Sailboat Hull",
+        "role": null,
+        "assetId": "primitive-box",
+        "color": "#8b5a2b",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.45,
+          3.2
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          1.4,
+          0.45,
+          3.2
+        ],
+        "box": {
+          "min": [
+            -0.7,
+            0,
+            -1.6
+          ],
+          "max": [
+            0.7,
+            0.45,
+            1.6
+          ],
+          "size": [
+            1.4,
+            0.45,
+            3.2
+          ],
+          "center": [
+            0,
+            0.225,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "Sailboat Keel",
+        "role": null,
+        "assetId": "primitive-box",
+        "color": "#4a3728",
+        "parentId": "$ref_sailboat_hull",
+        "position": [
+          0,
+          -0.1575,
+          0
+        ],
+        "scale": [
+          0.16799999999999998,
+          0.315,
+          4.4799999999999995
+        ],
+        "localPosition": [
+          0,
+          -0.35,
+          0
+        ],
+        "localScale": [
+          0.12,
+          0.7,
+          1.4
+        ],
+        "box": {
+          "min": [
+            -0.08399999999999999,
+            -0.1575,
+            -2.2399999999999998
+          ],
+          "max": [
+            0.08399999999999999,
+            0.1575,
+            2.2399999999999998
+          ],
+          "size": [
+            0.16799999999999998,
+            0.315,
+            4.4799999999999995
+          ],
+          "center": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "Sailboat Mast",
+        "role": null,
+        "assetId": "primitive-cylinder",
+        "color": "#d6c6a8",
+        "parentId": "$ref_sailboat_hull",
+        "position": [
+          0,
+          0.2025,
+          0.6400000000000001
+        ],
+        "scale": [
+          0.13999999999999999,
+          1.08,
+          0.32000000000000006
+        ],
+        "localPosition": [
+          0,
+          0.45,
+          0.2
+        ],
+        "localScale": [
+          0.1,
+          2.4,
+          0.1
+        ],
+        "box": {
+          "min": [
+            -0.06999999999999999,
+            0.2025,
+            0.4800000000000001
+          ],
+          "max": [
+            0.06999999999999999,
+            1.2825000000000002,
+            0.8000000000000002
+          ],
+          "size": [
+            0.13999999999999999,
+            1.08,
+            0.32000000000000006
+          ],
+          "center": [
+            0,
+            0.7425,
+            0.6400000000000001
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "Sailboat Sail",
+        "role": null,
+        "assetId": "primitive-wedge",
+        "color": "#f4f1ea",
+        "parentId": "$ref_sailboat_hull",
+        "position": [
+          0.21,
+          0.405,
+          1.2800000000000002
+        ],
+        "scale": [
+          0.11199999999999999,
+          0.81,
+          4.4799999999999995
+        ],
+        "localPosition": [
+          0.15,
+          0.9,
+          0.4
+        ],
+        "localScale": [
+          0.08,
+          1.8,
+          1.4
+        ],
+        "box": {
+          "min": [
+            0.154,
+            0.405,
+            -0.9599999999999995
+          ],
+          "max": [
+            0.266,
+            1.215,
+            3.52
+          ],
+          "size": [
+            0.11199999999999999,
+            0.81,
+            4.4799999999999995
+          ],
+          "center": [
+            0.21,
+            0.81,
+            1.2800000000000002
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "$ref_sailboat_hull",
+        "type": "item",
+        "name": "Sailboat Hull",
+        "role": null,
+        "assetId": "primitive-box",
+        "color": "#8b5a2b",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.45,
+          3.2
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          1.4,
+          0.45,
+          3.2
+        ],
+        "box": {
+          "min": [
+            -0.7,
+            0,
+            -1.6
+          ],
+          "max": [
+            0.7,
+            0.45,
+            1.6
+          ],
+          "size": [
+            1.4,
+            0.45,
+            3.2
+          ],
+          "center": [
+            0,
+            0.225,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "Sailboat Keel",
+        "role": null,
+        "assetId": "primitive-box",
+        "color": "#4a3728",
+        "parentId": "$ref_sailboat_hull",
+        "position": [
+          0,
+          -0.1575,
+          0
+        ],
+        "scale": [
+          0.16799999999999998,
+          0.315,
+          4.4799999999999995
+        ],
+        "localPosition": [
+          0,
+          -0.35,
+          0
+        ],
+        "localScale": [
+          0.12,
+          0.7,
+          1.4
+        ],
+        "box": {
+          "min": [
+            -0.08399999999999999,
+            -0.1575,
+            -2.2399999999999998
+          ],
+          "max": [
+            0.08399999999999999,
+            0.1575,
+            2.2399999999999998
+          ],
+          "size": [
+            0.16799999999999998,
+            0.315,
+            4.4799999999999995
+          ],
+          "center": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "Sailboat Mast",
+        "role": null,
+        "assetId": "primitive-cylinder",
+        "color": "#d6c6a8",
+        "parentId": "$ref_sailboat_hull",
+        "position": [
+          0,
+          0.2025,
+          0.6400000000000001
+        ],
+        "scale": [
+          0.13999999999999999,
+          1.08,
+          0.32000000000000006
+        ],
+        "localPosition": [
+          0,
+          0.45,
+          0.2
+        ],
+        "localScale": [
+          0.1,
+          2.4,
+          0.1
+        ],
+        "box": {
+          "min": [
+            -0.06999999999999999,
+            0.2025,
+            0.4800000000000001
+          ],
+          "max": [
+            0.06999999999999999,
+            1.2825000000000002,
+            0.8000000000000002
+          ],
+          "size": [
+            0.13999999999999999,
+            1.08,
+            0.32000000000000006
+          ],
+          "center": [
+            0,
+            0.7425,
+            0.6400000000000001
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "Sailboat Sail",
+        "role": null,
+        "assetId": "primitive-wedge",
+        "color": "#f4f1ea",
+        "parentId": "$ref_sailboat_hull",
+        "position": [
+          0.21,
+          0.405,
+          1.2800000000000002
+        ],
+        "scale": [
+          0.11199999999999999,
+          0.81,
+          4.4799999999999995
+        ],
+        "localPosition": [
+          0.15,
+          0.9,
+          0.4
+        ],
+        "localScale": [
+          0.08,
+          1.8,
+          1.4
+        ],
+        "box": {
+          "min": [
+            0.154,
+            0.405,
+            -0.9599999999999995
+          ],
+          "max": [
+            0.266,
+            1.215,
+            3.52
+          ],
+          "size": [
+            0.11199999999999999,
+            0.81,
+            4.4799999999999995
+          ],
+          "center": [
+            0.21,
+            0.81,
+            1.2800000000000002
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "sailboat-today-e2e",
+    "set": "dev",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        0.4461538461538461,
+        0.7999999999999998
+      ],
+      "mean": 0.4153846153846153
+    },
+    "perPartDimensionError": [
+      {
+        "name": "hull",
+        "error": null
+      },
+      {
+        "name": "keel",
+        "error": null
+      },
+      {
+        "name": "mast",
+        "error": null
+      },
+      {
+        "name": "sail",
+        "error": null
+      }
+    ],
+    "partCoverage": {
+      "required": 4,
+      "found": 4,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 0.49538473524243615,
+      "views": {
+        "front": 0.274025974025974,
+        "side": 0.5915227629513344,
+        "top": 0.62060546875
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 0,
+    "actualOverall_m": [
+      1.4,
+      1.4400000000000002,
+      5.76
+    ],
+    "partCount": 4
+  }
+}

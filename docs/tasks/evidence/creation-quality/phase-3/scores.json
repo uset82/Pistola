@@ -1,0 +1,1287 @@
+{
+  "generatedAt": "2026-09-19T20:38:19.015Z",
+  "mode": "replay",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "summary": {
+    "count": 12,
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingRate": 0,
+    "zeroFloatingShare": 1,
+    "overallDimensionError": 0.028761574074074082,
+    "partCoverage": 1,
+    "iou": 1,
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 1
+  },
+  "todayTools": {
+    "note": "Recorded IDE e2e sailboat (parented keel/mast/sail) scored against the check-clean gold sailboat.",
+    "score": {
+      "slug": "sailboat-today-e2e",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0.4461538461538461,
+          0.7999999999999998
+        ],
+        "mean": 0.4153846153846153
+      },
+      "perPartDimensionError": [
+        {
+          "name": "hull",
+          "error": null
+        },
+        {
+          "name": "keel",
+          "error": null
+        },
+        {
+          "name": "mast",
+          "error": null
+        },
+        {
+          "name": "sail",
+          "error": null
+        }
+      ],
+      "partCoverage": {
+        "required": 4,
+        "found": 4,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 0.49538473524243615,
+        "views": {
+          "front": 0.274025974025974,
+          "side": 0.5915227629513344,
+          "top": 0.62060546875
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 0,
+      "actualOverall_m": [
+        1.4,
+        1.4400000000000002,
+        5.76
+      ],
+      "partCount": 4
+    }
+  },
+  "runs": [
+    {
+      "slug": "chair",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          1.2335811384723962e-16,
+          0.041666666666666706
+        ],
+        "mean": 0.013888888888888944
+      },
+      "perPartDimensionError": [
+        {
+          "name": "seat",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "back",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-fl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-fr",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-bl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-br",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 6,
+        "found": 6,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.48,
+        0.8999999999999999,
+        0.45999999999999996
+      ],
+      "partCount": 6
+    },
+    {
+      "slug": "table-lamp",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "perPartDimensionError": [
+        {
+          "name": "base",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "stem",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "shade",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 3,
+        "found": 3,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.24,
+        0.52,
+        0.24
+      ],
+      "partCount": 3
+    },
+    {
+      "slug": "sailboat",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "perPartDimensionError": [
+        {
+          "name": "hull",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "keel",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "mast",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "sail",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 4,
+        "found": 4,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        1.4,
+        2.6,
+        3.2
+      ],
+      "partCount": 4
+    },
+    {
+      "slug": "toy-car",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          1.6326809185664065e-16,
+          0
+        ],
+        "mean": 5.442269728554689e-17
+      },
+      "perPartDimensionError": [
+        {
+          "name": "body",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "cabin",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "wheel-fl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "wheel-fr",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "wheel-rl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "wheel-rr",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 6,
+        "found": 6,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        1.4,
+        0.6799999999999999,
+        0.74
+      ],
+      "partCount": 6
+    },
+    {
+      "slug": "wall-bracket",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "perPartDimensionError": [
+        {
+          "name": "plate",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "arm",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "shelf",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 3,
+        "found": 3,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.22,
+        0.18,
+        0.2
+      ],
+      "partCount": 3
+    },
+    {
+      "slug": "dog",
+      "set": "dev",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0.015151515151515164,
+          0,
+          0
+        ],
+        "mean": 0.005050505050505054
+      },
+      "perPartDimensionError": [
+        {
+          "name": "body",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "head",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-fl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-fr",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-rl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-rr",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "tail",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "ear-l",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "ear-r",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 9,
+        "found": 9,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.67,
+        0.5,
+        0.22
+      ],
+      "partCount": 9
+    },
+    {
+      "slug": "bench",
+      "set": "heldOut",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "perPartDimensionError": [
+        {
+          "name": "seat",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-fl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-fr",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-bl",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-br",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 5,
+        "found": 5,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        1.2,
+        0.45,
+        0.38
+      ],
+      "partCount": 5
+    },
+    {
+      "slug": "mug",
+      "set": "heldOut",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0.1666666666666666,
+          0,
+          0
+        ],
+        "mean": 0.05555555555555553
+      },
+      "perPartDimensionError": [
+        {
+          "name": "body",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "handle",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 2,
+        "found": 2,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.1,
+        0.1,
+        0.08
+      ],
+      "partCount": 2
+    },
+    {
+      "slug": "desk-fan",
+      "set": "heldOut",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0.0937499999999999,
+          0
+        ],
+        "mean": 0.03124999999999997
+      },
+      "perPartDimensionError": [
+        {
+          "name": "base",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "column",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "motor",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "blade-h",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "blade-v",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 5,
+        "found": 5,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.2,
+        0.29000000000000004,
+        0.2
+      ],
+      "partCount": 5
+    },
+    {
+      "slug": "wheelbarrow",
+      "set": "heldOut",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0.11818181818181828,
+          1.3216940769347102e-16,
+          0
+        ],
+        "mean": 0.039393939393939474
+      },
+      "perPartDimensionError": [
+        {
+          "name": "tub",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "wheel",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-l",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "leg-r",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "handle-l",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "handle-r",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 6,
+        "found": 6,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.97,
+        0.42000000000000004,
+        0.42
+      ],
+      "partCount": 6
+    },
+    {
+      "slug": "rocket",
+      "set": "heldOut",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0.3,
+          0,
+          0.3
+        ],
+        "mean": 0.19999999999999998
+      },
+      "perPartDimensionError": [
+        {
+          "name": "body",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "nose",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "fin-n",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "fin-s",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "fin-e",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "fin-w",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 6,
+        "found": 6,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.52,
+        1.3,
+        0.52
+      ],
+      "partCount": 6
+    },
+    {
+      "slug": "bookshelf",
+      "set": "heldOut",
+      "runnableFirstTry": 1,
+      "runnableFinal": 1,
+      "retriesPerPart": 0,
+      "floatingParts": [],
+      "ungroundedParts": [],
+      "belowFloorParts": [],
+      "overallDimensionError": {
+        "perAxis": [
+          0,
+          0,
+          0
+        ],
+        "mean": 0
+      },
+      "perPartDimensionError": [
+        {
+          "name": "side-l",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "side-r",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "back",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "shelf-0",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "shelf-1",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "shelf-2",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        },
+        {
+          "name": "shelf-3",
+          "error": {
+            "perAxis": [
+              0,
+              0,
+              0
+            ],
+            "mean": 0
+          }
+        }
+      ],
+      "partCoverage": {
+        "required": 7,
+        "found": 7,
+        "missing": [],
+        "ratio": 1
+      },
+      "iou": {
+        "mean": 1,
+        "views": {
+          "front": 1,
+          "side": 1,
+          "top": 1
+        }
+      },
+      "rubric": null,
+      "toolCalls": 0,
+      "timeMs": 1,
+      "actualOverall_m": [
+        0.8,
+        1.2,
+        0.28
+      ],
+      "partCount": 7
+    }
+  ]
+}

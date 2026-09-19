@@ -36,6 +36,14 @@ import {
 } from '../operator-plan'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { checkStructure, type StructureReport } from '../structure'
+import {
+  checkBlueprint,
+  checkSceneAgainstPlan,
+  normalizeBlueprint,
+  proposeRelationSnaps,
+  stepsFromBlueprint,
+  type BlueprintV2,
+} from '../blueprint'
 
 export const PISTOLA_API_VERSION = 1
 
@@ -77,6 +85,9 @@ const INVOKE_ALLOWLIST = new Set([
   'validate',
   'run',
   'checkStructure',
+  'plan.check',
+  'plan.checkScene',
+  'plan.snap',
   'waitForIdle',
   'undo',
   'redo',
@@ -94,6 +105,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const operatorPlanSnapshots = new Map<string, SceneGraph>()
 const operatorPlanBest = new Map<string, { graph: SceneGraph; errorCount: number }>()
+const operatorPlanBlueprints = new Map<string, BlueprintV2>()
 
 type ExecutionResult = AssistantExecutionResult & { structure: StructureReport }
 
@@ -144,7 +156,7 @@ export const createPistolaAgentApi = () => {
       version: 1,
       owner: 'ide',
       methods: ['create', 'get', 'updateStep', 'runStep', 'restoreBest', 'complete', 'undo', 'clear'],
-      rule: 'Create a checklist before mutation. Complete execution steps only through runStep. run and runStep embed a structure report. At most 2 typed retries, then a simpler technique.',
+      rule: 'Create a checklist before mutation. Pass {blueprint} to generate one step per part. Complete execution steps only through runStep. run and runStep embed a structure report. At most 2 typed retries, then a simpler technique.',
     },
     capabilities: getAllCapabilities().map((capability) => ({
       type: capability.type,
@@ -280,7 +292,7 @@ export const createPistolaAgentApi = () => {
 
   const taskPlan = {
     version: 1 as const,
-    create: async (input: OperatorPlanInput & { replace?: boolean }) => {
+    create: async (input: OperatorPlanInput & { replace?: boolean; blueprint?: unknown }) => {
       const previous = useOperatorPlanStore.getState().plan
       if (previous && getOperatorPlanProgress(previous).status !== 'done' && !input.replace) {
         throw new Error(
@@ -290,8 +302,31 @@ export const createPistolaAgentApi = () => {
       if (previous) {
         operatorPlanSnapshots.delete(previous.id)
         operatorPlanBest.delete(previous.id)
+        operatorPlanBlueprints.delete(previous.id)
       }
-      const plan = createOperatorPlan(input)
+      let nextInput: OperatorPlanInput = input
+      if (input.blueprint) {
+        const checked = checkBlueprint(input.blueprint)
+        if (!checked.ok) {
+          const codes = checked.issues.map((issue) => issue.code).join(', ')
+          throw new Error(`Blueprint failed plan.check (${codes}).`)
+        }
+        const generated = stepsFromBlueprint(checked.blueprint)
+        nextInput = {
+          ...input,
+          title: input.title || generated.title,
+          phases: generated.phases,
+        }
+      }
+      if (!nextInput.phases?.length) {
+        throw new Error('taskPlan.create requires phases, or a {blueprint} that generates them.')
+      }
+      const plan = createOperatorPlan({
+        ...nextInput,
+        title: nextInput.title || 'Untitled plan',
+        phases: nextInput.phases,
+      })
+      if (input.blueprint) operatorPlanBlueprints.set(plan.id, normalizeBlueprint(input.blueprint))
       useOperatorPlanStore.getState().setPlan(plan)
       return plan
     },
@@ -452,6 +487,7 @@ export const createPistolaAgentApi = () => {
       applySceneGraphToEditor(snapshot)
       operatorPlanSnapshots.delete(planId)
       operatorPlanBest.delete(planId)
+      operatorPlanBlueprints.delete(planId)
       useOperatorPlanStore.getState().clear(planId)
       return { undone: true as const }
     },
@@ -460,6 +496,7 @@ export const createPistolaAgentApi = () => {
       if (current && (!planId || current.id === planId)) {
         operatorPlanSnapshots.delete(current.id)
         operatorPlanBest.delete(current.id)
+        operatorPlanBlueprints.delete(current.id)
       }
       useOperatorPlanStore.getState().clear(planId)
       return { cleared: true as const }
@@ -511,6 +548,19 @@ export const createPistolaAgentApi = () => {
     validate,
     run,
     checkStructure: async () => checkStructure(),
+    plan: {
+      check: async (blueprint: unknown) => checkBlueprint(blueprint),
+      checkScene: async (blueprint?: unknown) => {
+        const current = useOperatorPlanStore.getState().plan
+        const stored = current ? operatorPlanBlueprints.get(current.id) : undefined
+        return checkSceneAgainstPlan(blueprint ?? stored ?? {})
+      },
+      snap: async (blueprint?: unknown) => {
+        const current = useOperatorPlanStore.getState().plan
+        const stored = current ? operatorPlanBlueprints.get(current.id) : undefined
+        return proposeRelationSnaps(blueprint ?? stored ?? {})
+      },
+    },
     runRecipe,
     waitForIdle,
     undo,
@@ -527,6 +577,14 @@ export const createPistolaAgentApi = () => {
       if (method.startsWith('taskPlan.')) {
         const name = method.slice('taskPlan.'.length) as keyof typeof taskPlan
         const fn = taskPlan[name]
+        if (typeof fn !== 'function') {
+          throw new Error(`Unknown pistola method "${method}".`)
+        }
+        return (fn as (...values: unknown[]) => unknown)(...payload)
+      }
+      if (method.startsWith('plan.')) {
+        const name = method.slice('plan.'.length) as keyof typeof api.plan
+        const fn = api.plan[name]
         if (typeof fn !== 'function') {
           throw new Error(`Unknown pistola method "${method}".`)
         }
