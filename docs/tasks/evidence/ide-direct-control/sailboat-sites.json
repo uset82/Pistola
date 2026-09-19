@@ -1,0 +1,434 @@
+{
+  "pageUrl": "http://127.0.0.1:3011/workspace",
+  "status": {
+    "ok": true,
+    "target": {
+      "name": "custom",
+      "url": "http://127.0.0.1:3011/workspace"
+    },
+    "transport": "browser",
+    "apiVersion": 1,
+    "signInRequired": false,
+    "forbiddenRequestCount": 0,
+    "forbiddenHits": [],
+    "assistantTools": false
+  },
+  "plan": {
+    "id": "sailboat-sites",
+    "title": "Toy sailboat",
+    "source": "ide",
+    "status": "done",
+    "phases": [
+      {
+        "id": "model",
+        "title": "Model",
+        "steps": [
+          {
+            "id": "inspect",
+            "title": "Inspect scene",
+            "kind": "observation",
+            "status": "done",
+            "evidence": {
+              "kind": "observation",
+              "summary": "Using level level_628metzwjf4k061t."
+            },
+            "completedAt": 1789839769246
+          },
+          {
+            "id": "build",
+            "title": "Build hull keel mast sail",
+            "kind": "execution",
+            "status": "done",
+            "evidence": {
+              "kind": "execution",
+              "summary": "4 actions completed.",
+              "actionCount": 4,
+              "createdNodeIds": [
+                "item_p9yvlykq15bhuht0",
+                "item_c9c7djjzj1p0uo57",
+                "item_6bqhkurdplycu07z",
+                "item_kvemprr2im4a0fv5"
+              ],
+              "warnings": []
+            },
+            "startedAt": 1789839769256,
+            "completedAt": 1789839769336
+          },
+          {
+            "id": "verify",
+            "title": "Verify four bodies",
+            "kind": "validation",
+            "status": "done",
+            "evidence": {
+              "kind": "observation",
+              "summary": "Inspect found 8 bodies."
+            },
+            "completedAt": 1789839769413
+          }
+        ]
+      }
+    ],
+    "createdAt": 1789839769227,
+    "updatedAt": 1789839769413,
+    "undoAvailable": false
+  },
+  "built": {
+    "ok": true,
+    "plan": {
+      "id": "sailboat-sites",
+      "title": "Toy sailboat",
+      "source": "ide",
+      "status": "running",
+      "phases": [
+        {
+          "id": "model",
+          "title": "Model",
+          "steps": [
+            {
+              "id": "inspect",
+              "title": "Inspect scene",
+              "kind": "observation",
+              "status": "done",
+              "evidence": {
+                "kind": "observation",
+                "summary": "Using level level_628metzwjf4k061t."
+              },
+              "completedAt": 1789839769246
+            },
+            {
+              "id": "build",
+              "title": "Build hull keel mast sail",
+              "kind": "execution",
+              "status": "done",
+              "evidence": {
+                "kind": "execution",
+                "summary": "4 actions completed.",
+                "actionCount": 4,
+                "createdNodeIds": [
+                  "item_p9yvlykq15bhuht0",
+                  "item_c9c7djjzj1p0uo57",
+                  "item_6bqhkurdplycu07z",
+                  "item_kvemprr2im4a0fv5"
+                ],
+                "warnings": []
+              },
+              "startedAt": 1789839769256,
+              "completedAt": 1789839769336
+            },
+            {
+              "id": "verify",
+              "title": "Verify four bodies",
+              "kind": "validation",
+              "status": "pending"
+            }
+          ]
+        }
+      ],
+      "createdAt": 1789839769227,
+      "updatedAt": 1789839769336,
+      "undoAvailable": true
+    },
+    "validation": {
+      "valid": true,
+      "requiresReview": true,
+      "errors": [],
+      "sequenceIssues": [],
+      "actionCount": 4,
+      "destructiveActionCount": 0
+    },
+    "result": {
+      "ok": true,
+      "errors": [],
+      "warnings": [],
+      "failureKind": null,
+      "failedActionIndex": null,
+      "resolvedForwardRefs": {
+        "$ref_sailboat_hull": "item_p9yvlykq15bhuht0"
+      },
+      "completedActionCount": 4,
+      "requiresReview": true,
+      "destructiveActionCount": 0,
+      "snapshotRestored": false,
+      "createdNodeIds": [
+        "item_p9yvlykq15bhuht0",
+        "item_c9c7djjzj1p0uo57",
+        "item_6bqhkurdplycu07z",
+        "item_kvemprr2im4a0fv5"
+      ],
+      "bodyIds": [],
+      "sketchIds": []
+    }
+  },
+  "inspect": {
+    "total": 8,
+    "offset": 0,
+    "limit": 50,
+    "hasMore": false,
+    "nodes": [
+      {
+        "id": "item_23iuzi435mxpglq4",
+        "type": "item",
+        "name": "Sailboat Hull",
+        "parentId": "level_628metzwjf4k061t",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.45,
+          3.2
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-box",
+          "name": "Box",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_2a3kuy5h5jrvlzs7",
+        "type": "item",
+        "name": "Sailboat Keel",
+        "parentId": "item_23iuzi435mxpglq4",
+        "position": [
+          0,
+          -0.35,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.12,
+          0.7,
+          1.4
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-box",
+          "name": "Box",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_vlj1flbzl2m26lid",
+        "type": "item",
+        "name": "Sailboat Mast",
+        "parentId": "item_23iuzi435mxpglq4",
+        "position": [
+          0,
+          0.45,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          2.4,
+          0.1
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-cylinder",
+          "name": "Cylinder",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_g64eojrspc4qzfas",
+        "type": "item",
+        "name": "Sailboat Sail",
+        "parentId": "item_23iuzi435mxpglq4",
+        "position": [
+          0.15,
+          0.9,
+          0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          1.8,
+          1.4
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-wedge",
+          "name": "Wedge",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_p9yvlykq15bhuht0",
+        "type": "item",
+        "name": "Sailboat Hull",
+        "parentId": "level_628metzwjf4k061t",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.45,
+          3.2
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-box",
+          "name": "Box",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_c9c7djjzj1p0uo57",
+        "type": "item",
+        "name": "Sailboat Keel",
+        "parentId": "item_p9yvlykq15bhuht0",
+        "position": [
+          0,
+          -0.35,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.12,
+          0.7,
+          1.4
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-box",
+          "name": "Box",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_6bqhkurdplycu07z",
+        "type": "item",
+        "name": "Sailboat Mast",
+        "parentId": "item_p9yvlykq15bhuht0",
+        "position": [
+          0,
+          0.45,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          2.4,
+          0.1
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-cylinder",
+          "name": "Cylinder",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "id": "item_kvemprr2im4a0fv5",
+        "type": "item",
+        "name": "Sailboat Sail",
+        "parentId": "item_p9yvlykq15bhuht0",
+        "position": [
+          0.15,
+          0.9,
+          0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          1.8,
+          1.4
+        ],
+        "side": null,
+        "asset": {
+          "id": "primitive-wedge",
+          "name": "Wedge",
+          "category": "primitives",
+          "attachTo": null,
+          "dimensions": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  }
+}
