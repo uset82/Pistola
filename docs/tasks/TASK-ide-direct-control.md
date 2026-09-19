@@ -138,6 +138,11 @@ Files: `tooling/pistola-mcp/src/index.ts`, new `drivers/browser.ts` and `drivers
   - `validate-agent-foundation.ps1` and `node scripts/ide-setup.mjs --check` pass; — evidence: both passed
   - the MCP shows as connected in each IDE (`claude mcp list`, `codex mcp list`, and the MCP panels
     in Cursor, Antigravity, WorkBuddy and Qoder). BLOCKED: this session cannot open those IDE MCP panels; project configs are written
+    — evidence (Claude Code session, 2026-09-19 20:5x):
+    - `codex mcp list` → `pistola  node  editor/tooling/pistola-mcp/src/index.ts … enabled` (stdio, `tool_timeout_sec: 300`).
+    - `claude mcp list` → `pistola: node editor/tooling/pistola-mcp/src/index.ts - ⏸ Pending approval`. A checked-in `.claude/settings.json` cannot approve its own server; the user approves once in an interactive `claude` session.
+    - `node scripts/ide-direct-control-e2e.mjs --target local --list-tools` → 23 deterministic tools; `pistola_assistant_chat` / `pistola_assistant_plan` appear only with `--assistant-tools`.
+    - Still unverified: Cursor, Antigravity, WorkBuddy and Qoder panels.
 
 ### Phase 5: Exact CSG
 Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kernel.ts`,
@@ -174,6 +179,7 @@ Files: new `packages/editor/src/lib/cad/manifold-kernel.ts`, `lib/cad/local-kern
 ### Phase 7: Hosted targets and release
 - [ ] Deploy to Canner, then confirm `pistola_status` on `PISTOLA_TARGET=canner` shows the new
   `apiVersion`, the signed-in profile works and the e2e script passes. BLOCKED: `canner deploy --follow --slug pistolacodex` failed (`lockfile had changes` / install exit 1). Live Canner still lacks `invoke`; e2e stopped and did not fall back to chat.
+  — lockfile cause fixed: `tooling/pistola-mcp/package.json` had dropped its dependencies without a lockfile update. `bun install --frozen-lockfile --dry-run` → exit 1 ("lockfile had changes") before; after `bun install --lockfile-only` → exit 0. Still BLOCKED until Canner is redeployed from a commit that includes the refreshed `editor/bun.lock`.
 - [ ] Rebuild Sites (`build:sites`, `smoke:sites`, package) and publish a new Sites version (owner
   account `uset82@gmail.com`), then run the e2e script with `--target sites`. — evidence: local rebuilt export e2e passed (`sailboat-sites.json`). BLOCKED: Cursor cannot publish chatgpt.site; needs `@Sites` save from the owning Codex workspace
 - [x] If an old deployment lacks `invoke`/`taskPlan`, the agent stops and reports. It never falls
