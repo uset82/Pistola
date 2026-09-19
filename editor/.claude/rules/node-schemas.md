@@ -1,1 +1,1 @@
-../../.cursor/rules/node-schemas.mdc
+@../.cursor/rules/node-schemas.mdc

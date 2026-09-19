@@ -38,19 +38,13 @@ Use [references/prompt-contract-template.md](references/prompt-contract-template
 
 ## Building objects from Codex
 
-For "create/generate X" requests, use `$pistola-studio`, the concept-first loop with the `.codex/agents/` sub-agents. For the ranked list of execution surfaces Codex can use (in-page API, chat `/run`, local MCP, WebMCP, plain chat), see `.agents/skills/pistola-features/references/execution-surfaces.md`.
+For "create/generate X" requests, use `$pistola-studio`, then drive the page with `$pistola-direct-control`. The ranked execution surfaces are MCP `pistola_*` tools, then `window.pistola.invoke`. Chat `/run` is a person-facing recovery path, not an IDE route. See `.agents/skills/pistola-features/references/execution-surfaces.md`.
 
-## IDE control (MCP + workspace bridge)
+## IDE control
 
-Pistola can be driven from Cursor, VS Code, or Codex through the `pistola` MCP server:
+Pistola is driven from Claude Code, Codex, Cursor, Antigravity, or WorkBuddy through the `pistola` MCP server (`command: node`, `editor/tooling/pistola-mcp/src/index.ts`):
 
-1. Start the editor (`http://127.0.0.1:3002`) and keep a live workspace tab open.
-2. Register MCP via [`.cursor/mcp.json`](../../../.cursor/mcp.json) → `editor/tooling/pistola-mcp`.
-3. During local development, sign the browser tab in for token-based MCP access. For a DB-free local browser workspace, leave the token unset and set `PISTOLA_ALLOW_UNAUTHENTICATED_API=1` in the editor app environment (never production).
-4. Tools:
-   - `pistola_status` / `pistola_get_workspace`
-   - `pistola_configure_model` (OpenRouter free by default)
-   - `pistola_plan` / `pistola_execute` / `pistola_chat`
-   - `pistola_generate_mac` / `pistola_generate_cad`
-
-Scene mutations require the live tab: MCP enqueues commands on `/api/workspace/*`; `WorkspaceBridge` executes them with `executeAssistantPlan`. Headless MAC generation can still produce artifacts without a tab when `importIntoScene=false`.
+1. Open the target (`local`, `canner`, or `sites`).
+2. Create a `taskPlan` checklist before the first mutation.
+3. Use only default tools: inspect, validate, run, task, screenshot. Never `pistola_chat`, `pistola_plan`, or `/api/assistant/*`.
+4. If `window.pistola.invoke` is missing, stop. Do not fall back to the in-app model.

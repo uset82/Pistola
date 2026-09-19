@@ -1,1 +1,1 @@
-../../.cursor/rules/events.mdc
+@../.cursor/rules/events.mdc

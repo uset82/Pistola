@@ -1,1 +1,1 @@
-../../.cursor/rules/viewer-isolation.mdc
+@../.cursor/rules/viewer-isolation.mdc

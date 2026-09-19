@@ -108,6 +108,16 @@ foreach ($skill in $requiredSkills) {
     }
 }
 
+$ideSetup = Join-Path $Root "scripts/ide-setup.mjs"
+if (Test-Path -LiteralPath $ideSetup -PathType Leaf) {
+    & node $ideSetup --check
+    if ($LASTEXITCODE -ne 0) {
+        Add-Error "node scripts/ide-setup.mjs --check failed."
+    }
+} else {
+    Add-Error "Missing scripts/ide-setup.mjs"
+}
+
 if ($errors.Count -gt 0) {
     Write-Host "Pistola foundation validation failed:" -ForegroundColor Red
     foreach ($error in $errors) {

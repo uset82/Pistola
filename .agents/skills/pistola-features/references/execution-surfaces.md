@@ -6,10 +6,10 @@ Use the first surface that is available. Detect it once per session and tell the
 |---|---|---|---|---|
 | 1 | `window.pistola` (in-page operator API) | Browser eval: `typeof window.pistola?.taskPlan?.runStep === 'function'` | You | Local editor, pistola.canner.app, and published Sites exports |
 | 2 | WebMCP tools `apply_pistola_scene_actions` / `get_pistola_scene_context` | Your tool list shows them, or `'modelContext' in navigator` | You | ChatGPT Sites export, in browsers with WebMCP |
-| 3 | Local MCP `pistola` (`pistola_execute`, `pistola_get_workspace`, `pistola_inspect_scene`, `pistola_camera`) | The MCP tool list contains `pistola_execute` | You | A local dev editor at `http://127.0.0.1:3002` with a workspace tab open |
-| 4 | Chat command `/run <json>` | `/manual` in the assistant panel replies with the command list | You | Manual recovery only; do not use as the Codex/IDE route |
+| 3 | Local MCP `pistola` (`pistola_run`, `pistola_task_*`, `pistola_inspect`) | The MCP tool list contains `pistola_run` and `pistola_task_create` | You | Local, Canner, and Sites via the Playwright browser driver |
+| 4 | Chat command `/run <json>` | `/manual` in the assistant panel replies with the command list | A person in the app | Manual recovery only; do not use as an IDE route |
 
-All listed surfaces run actions exactly as written, but IDE agents use surfaces 1 to 3. Never automatically fall back to a natural-language Assistant prompt, `pistola_chat`, `pistola_plan`, `/api/assistant/plan`, or `/api/assistant/agent/step`. If surfaces 1 to 3 are unavailable, stop and tell the user that the host does not expose direct control.
+IDE agents use surfaces 1 to 3. Never automatically fall back to a natural-language Assistant prompt, `pistola_chat`, `pistola_plan`, `/api/assistant/plan`, or `/api/assistant/agent/step`. If surfaces 1 to 3 are unavailable, stop and tell the user that the host does not expose direct control.
 
 ## 1. `window.pistola`
 
@@ -74,9 +74,9 @@ For work on this repository with a local editor:
 
    ```toml
    [mcp_servers.pistola]
-   command = "bun"
-   args = ["run", "editor/tooling/pistola-mcp/src/index.ts"]
-   env = { PISTOLA_BASE_URL = "http://127.0.0.1:3002" }
+   command = "node"
+   args = ["editor/tooling/pistola-mcp/src/index.ts"]
+   env = { PISTOLA_TARGET = "local" }
    ```
 
    The path is relative to the repository root, so start Codex from the root. Otherwise use an absolute path.

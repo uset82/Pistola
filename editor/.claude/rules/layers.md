@@ -1,1 +1,1 @@
-../../.cursor/rules/layers.mdc
+@../.cursor/rules/layers.mdc

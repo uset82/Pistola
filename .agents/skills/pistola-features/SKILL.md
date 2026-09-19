@@ -11,7 +11,7 @@ Pistola executes typed **actions**, the same JSON the in-app assistant produces.
 
 Check once per session and note the result:
 
-- **Execution surface:** see [references/execution-surfaces.md](references/execution-surfaces.md). It lists the options from best to worst: `window.pistola`, the chat `/run` command, the local MCP server, then plain chat prompts as a last resort.
+- **Execution surface:** see [references/execution-surfaces.md](references/execution-surfaces.md). IDE agents use MCP `pistola_*` or `window.pistola.invoke` only. Chat `/run` is for a person in the app, never an automatic IDE fallback.
 - **CAD runtime:** open `<origin>/api/cad/health` and `<origin>/api/mac/health`. A `runtime` of `mock` means hosted FreeCAD/MAC helpers are unavailable. Use `build_cad_solid` for visible solids there. Do not call `generate_mac_part` on a mock host.
 - **Schemas:** once `window.pistola` exists, `await window.pistola.manual()` is the source of truth for every action's fields. Until then, use [references/actions-cookbook.md](references/actions-cookbook.md).
 
@@ -20,9 +20,9 @@ Check once per session and note the result:
 | Blueprint `shape` | Best feature | Current limits | Fallback |
 |---|---|---|---|
 | `architecture` | `create_wall`, `create_slab`, `create_roof`, `place_door`, `place_window`, `create_zone` | none | none |
-| `primitive` | `place_item` with `assetId: primitive-<kind>` | No per-item color yet (default blue). Nest with `parentId` on another item; skip floor collision for stacked primitives with explicit y > 0, or set `allowOverlap: true`. | none |
+| `primitive` | `place_item` with `assetId: primitive-<kind>` and optional `color` | Child `parentId` positions are parent-relative. Set `allowOverlap: true` on stacked parts. | none |
 | `profile-extrude` | `build_cad_solid` `{ op: "extrude", polygon, height }` | Local kernel runs in the browser on every host | `execute_cad_brief` closed polyline, then primitive fallback |
-| `silhouette-intersection` | `build_cad_solid` `{ op: "intersection", children: [sideExtrude, topExtrude] }` | Approximate boolean volumes; good enough for toy silhouettes | `profile-extrude` of the side view at full width |
+| `silhouette-intersection` | `build_cad_solid` `{ op: "intersection", children: [sideExtrude, topExtrude] }` | Real CSG via `three-bvh-csg` | `profile-extrude` of the side view at full width |
 | `revolve` | `build_cad_solid` `{ op: "revolve", profile, angle }` | Local kernel, not the hosted FreeCAD mock | Cylinder, cone, or capsule primitives |
 | `mac` | `generate_mac_part` | Needs a real MAC runtime (local `PISTOLA_MAC_ROOT`). Hosted throws and asks for `build_cad_solid`. | Decompose into `build_cad_solid` ops |
 

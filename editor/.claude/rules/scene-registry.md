@@ -1,1 +1,1 @@
-../../.cursor/rules/scene-registry.mdc
+@../.cursor/rules/scene-registry.mdc

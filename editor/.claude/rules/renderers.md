@@ -1,1 +1,1 @@
-../../.cursor/rules/renderers.mdc
+@../.cursor/rules/renderers.mdc

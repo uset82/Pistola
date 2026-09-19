@@ -1,1 +1,1 @@
-../../.cursor/rules/tools.mdc
+@../.cursor/rules/tools.mdc

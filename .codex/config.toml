@@ -1,1 +1,11 @@
 project_doc_fallback_filenames = ["agents.md"]
+
+[mcp_servers.pistola]
+command = "node"
+args = ["editor/tooling/pistola-mcp/src/index.ts"]
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+env_vars = ["PISTOLA_TARGET", "PISTOLA_TRANSPORT", "PISTOLA_BROWSER_CDP_URL", "PISTOLA_SITES_URL", "PISTOLA_CANNER_URL"]
+
+[mcp_servers.pistola.env]
+PISTOLA_TARGET = "local"

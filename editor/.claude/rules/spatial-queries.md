@@ -1,1 +1,1 @@
-../../.cursor/rules/spatial-queries.mdc
+@../.cursor/rules/spatial-queries.mdc

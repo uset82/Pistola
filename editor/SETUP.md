@@ -151,7 +151,7 @@ Cursor / VS Code / Codex can drive Pistola through `tooling/pistola-mcp` (see re
 
 1. Start the editor and keep a live workspace tab open.
 2. Sign in through `/login`; development-only token-based MCP calls still need that signed-in browser tab for scene mutations. Alternatively, for a local auth-free workspace leave `PISTOLA_LOCAL_API_TOKEN` unset and set `PISTOLA_ALLOW_UNAUTHENTICATED_API=1` in `apps/editor/.env.local` (development only).
-3. Use MCP tools such as `pistola_chat`, `pistola_generate_mac`, and `pistola_configure_model`.
+3. Use MCP tools such as `pistola_task_create`, `pistola_run`, `pistola_inspect`, and `pistola_screenshot`. Never `pistola_chat` or `pistola_plan`.
 
 Scene mutations require the open tab (`WorkspaceBridge` + `/api/workspace/*`).
 

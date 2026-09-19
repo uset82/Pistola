@@ -3,7 +3,7 @@
     "pistola": {
       "command": "node",
       "args": [
-        "${workspaceFolder}/editor/tooling/pistola-mcp/src/index.ts"
+        "D:/Proyectos/pistolacodex/editor/tooling/pistola-mcp/src/index.ts"
       ],
       "env": {
         "PISTOLA_TARGET": "local"

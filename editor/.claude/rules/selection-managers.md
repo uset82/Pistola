@@ -1,1 +1,1 @@
-../../.cursor/rules/selection-managers.mdc
+@../.cursor/rules/selection-managers.mdc

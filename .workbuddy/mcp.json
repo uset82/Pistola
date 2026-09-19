@@ -1,9 +1,10 @@
 {
+  "honoured": true,
   "mcpServers": {
     "pistola": {
       "command": "node",
       "args": [
-        "${workspaceFolder}/editor/tooling/pistola-mcp/src/index.ts"
+        "editor/tooling/pistola-mcp/src/index.ts"
       ],
       "env": {
         "PISTOLA_TARGET": "local"

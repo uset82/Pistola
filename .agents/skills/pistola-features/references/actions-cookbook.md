@@ -76,7 +76,7 @@ Patterns that validate and render today. Field lists are abbreviated; `window.pi
 | Message | Cause | Fix |
 |---|---|---|
 | `Asset "Box" cannot be placed at the requested floor position` | The floor grid ignores height, so the part overlaps another part's footprint | Add `allowOverlap: true` to non-root parts, or move the object to empty floor |
-| `This plan changes the scene and must be reviewed before execution` | Mutating plan sent without review confirmation | Use `window.pistola.run` or `/run`, which confirm explicit plans. In chat, approve the review card or switch the panel to AUTOPILOT |
+| `This plan changes the scene and must be reviewed before execution` | Mutating plan sent without review confirmation | Use `window.pistola.invoke('run', [actions, { confirmDestructive: true }])` or MCP `pistola_run`. Do not send the prompt through in-app chat. |
 | `Action N: ... implicit target` / sequence drift | Action without an explicit id after a create or select | Pass `nodeId`, `levelId` or `wallId` explicitly |
 | `$ref_x used before it is defined` | Wrong order, or a ref from another batch | Define it earlier in the same batch, or use the real id |
 | `Failed to fetch` | The page cannot reach its API: the static Sites host, CORS, or an offline API | Use a local surface (`window.pistola`, `/run`) that needs no API |

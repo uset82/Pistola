@@ -22,7 +22,7 @@ The library lets the next session start where this one ended. Keep it small, tru
      "title": "Toy sailboat",
      "approved": "2026-09-19",
      "keywords": ["barco", "boat", "velero", "toy"],
-     "host": { "surface": "window.pistola | /run | mcp | chat", "cad_runtime": "mock | python" },
+     "host": { "surface": "window.pistola.invoke | mcp pistola_run", "cad_runtime": "mock | python" },
      "blueprint": { ...pistola-image-to-blueprint JSON... },
      "batches": [ [ ...actions with $ref ids and a "LEVEL" placeholder... ] ],
      "critic_rounds": 2,

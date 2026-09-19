@@ -1,1 +1,1 @@
-../../.cursor/rules/systems.mdc
+@../.cursor/rules/systems.mdc
