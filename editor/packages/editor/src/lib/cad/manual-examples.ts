@@ -77,6 +77,49 @@ export const MANUAL_OP_EXAMPLES: Record<string, CadSolidSpec> = {
     axis: 'y',
     child: { op: 'box', size: [0.15, 0.1, 0.15], translate: [0.35, 0, 0] },
   },
+  loft: {
+    op: 'loft',
+    axis: 'y',
+    heights: [0, 0.4],
+    sections: [
+      [
+        [-0.3, -0.2],
+        [0.3, -0.2],
+        [0.3, 0.2],
+        [-0.3, 0.2],
+      ],
+      [
+        [-0.15, -0.1],
+        [0.15, -0.1],
+        [0.15, 0.1],
+        [-0.15, 0.1],
+      ],
+    ],
+  },
+  hull: {
+    op: 'hull',
+    profileXY: [
+      [-0.8, 0],
+      [0.8, 0],
+      [0.8, 0.3],
+      [-0.8, 0.3],
+    ],
+    profileZY: [
+      [-0.25, 0],
+      [0.25, 0],
+      [0.25, 0.3],
+      [-0.25, 0.3],
+    ],
+    profileXZ: [
+      [-0.8, -0.25],
+      [0.8, -0.25],
+      [0.8, 0.25],
+      [-0.8, 0.25],
+    ],
+  },
+  torus: { op: 'torus', R: 0.35, r: 0.08 },
+  capsule: { op: 'capsule', r: 0.12, h: 0.3 },
+  ellipsoid: { op: 'ellipsoid', radii: [0.25, 0.18, 0.15] },
 }
 
 export const ASYMMETRIC_L_SPEC: CadSolidSpec = {

@@ -5,6 +5,7 @@ import { spatialGridManager } from '../../hooks/spatial-grid/spatial-grid-manage
 import { resolveLevelId } from '../../hooks/spatial-grid/spatial-grid-sync'
 import { type AnyNodeId, getScaledDimensions, type ItemNode, type WallNode } from '../../schema'
 import useScene from '../../store/use-scene'
+import { shouldLiftItemToSlab } from './item-parenting'
 
 // ============================================================================
 // ITEM SYSTEM
@@ -37,7 +38,7 @@ export const ItemSystem = () => {
       } else if (!item.asset.attachTo) {
         // If parented to another item (surface placement), R3F handles positioning via the hierarchy
         const parentNode = item.parentId ? nodes[item.parentId as AnyNodeId] : undefined
-        if (parentNode?.type !== 'item') {
+        if (shouldLiftItemToSlab(parentNode)) {
           // Floor item: elevate by slab height (using full footprint overlap)
           const levelId = resolveLevelId(item, nodes)
           const slabElevation = spatialGridManager.getSlabElevationForItem(

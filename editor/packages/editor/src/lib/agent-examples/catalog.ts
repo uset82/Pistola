@@ -43,7 +43,7 @@ const primitiveTechnique = (
   }),
 })
 
-const OPEN_CAD_OPS = new Set(['cylinder', 'sphere', 'union', 'difference', 'intersection', 'intersect_profiles'])
+const OPEN_CAD_OPS = new Set(['cylinder', 'sphere', 'union', 'difference', 'intersection', 'intersect_profiles', 'hull'])
 
 const cadTechniqueExamples: AgentExample[] = Object.entries(MANUAL_OP_EXAMPLES)
   .filter(([op]) => !OPEN_CAD_OPS.has(op))
@@ -101,6 +101,7 @@ const techniqueExamples: AgentExample[] = [
   booleanPair('difference', [1, 0.3, 1], [0, 0.3, 0], [0.3, 0.08, 0.3]),
   booleanPair('intersection', [0.8, 0.4, 0.8], [0.25, 0, 0], [0.5, 0.4, 0.5]),
   booleanPair('intersect_profiles', [1.6, 0.3, 0.5], [0, 0.3, 0], [0.5, 0.08, 0.5]),
+  booleanPair('hull', [1.6, 0.3, 0.5], [0, 0.3, 0], [0.5, 0.08, 0.5]),
 ]
 
 const subassemblies: AgentExample[] = [

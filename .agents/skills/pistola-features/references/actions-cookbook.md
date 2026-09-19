@@ -45,6 +45,21 @@ Patterns that validate and render today. Field lists are abbreviated; `window.pi
 - Wall points are plan coordinates `[x, z]` in meters.
 - `localX` is measured along the wall from its start; `localY` is the sill height.
 
+## Local CAD solids (`build_cad_solid`)
+
+```json
+{ "type": "build_cad_solid", "name": "Hull", "spec": {
+  "op": "hull",
+  "profileXY": [[-1, 0], [1, 0], [1, 0.4], [-1, 0.4]],
+  "profileZY": [[-0.3, 0], [0.3, 0], [0.3, 0.4], [-0.3, 0.4]],
+  "profileXZ": [[-1, -0.3], [1, -0.3], [1, 0.3], [-1, 0.3]]
+}, "roughness": 0.4, "metalness": 0.1 }
+```
+
+- Other kernel ops: `box`, `cylinder`, `sphere`, `torus`, `capsule`, `ellipsoid`, `extrude`, `revolve`, `loft`, booleans, `mirror`, arrays.
+- `loft` takes `sections` (2D polygons) along `axis` (`y` default) with optional `heights` or `span`.
+- `place_cad_body_in_architecture` instances the real mesh into a level. Do not parent items to a CAD body if you want slab lift; those children keep local Y.
+
 ## CAD profile extrusion (`execute_cad_brief`)
 
 ```json

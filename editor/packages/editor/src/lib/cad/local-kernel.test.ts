@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { countOpenEdges, evaluateCadSolidSpec, validateCadSolidSpec } from './local-kernel'
+import {
+  countOpenEdges,
+  evaluateCadSolidSpec,
+  KERNEL_TRIANGLE_BUDGET,
+  triangleCount,
+  validateCadSolidSpec,
+} from './local-kernel'
+import { runKernelJob } from './kernel-jobs'
 import { ASYMMETRIC_L_SPEC, MANUAL_OP_EXAMPLES } from './manual-examples'
 import { projectBoxToView } from './views'
 
@@ -205,4 +212,129 @@ test('asymmetric L-shape locks the view axes', () => {
   const side = projectBoxToView(mesh.bbox[0], mesh.bbox[1], 'side')
   assert.ok(front.size[0] > side.size[0] + 0.2, `front u ${front.size[0]} should beat side u ${side.size[0]}`)
   assert.ok(Math.abs(front.size[1] - side.size[1]) < 0.05)
+})
+
+test('loft, hull, torus, capsule, and ellipsoid produce closed solids', () => {
+  const loft = evaluateCadSolidSpec({
+    op: 'loft',
+    axis: 'y',
+    heights: [0, 1],
+    sections: [
+      [
+        [-0.5, -0.5],
+        [0.5, -0.5],
+        [0.5, 0.5],
+        [-0.5, 0.5],
+      ],
+      [
+        [-0.5, -0.5],
+        [0.5, -0.5],
+        [0.5, 0.5],
+        [-0.5, 0.5],
+      ],
+    ],
+  })
+  assert.ok(Math.abs(loft.volume - 1) / 1 < 0.12, `loft volume ${loft.volume}`)
+  assert.equal(countOpenEdges(loft), 0)
+
+  const hull = evaluateCadSolidSpec({
+    op: 'hull',
+    profileXY: [
+      [0, 0],
+      [2, 0],
+      [2, 1],
+      [0, 1],
+    ],
+    profileZY: [
+      [4, 0],
+      [7, 0],
+      [7, 1],
+      [4, 1],
+    ],
+    profileXZ: [
+      [0, 4],
+      [2, 4],
+      [2, 7],
+      [0, 7],
+    ],
+  })
+  assert.ok(hull.volume > 1)
+  assert.equal(validateCadSolidSpec({ op: 'hull', profileXY: [[0, 0], [1, 0], [1, 1]], profileXZ: [[0, 0], [1, 0], [1, 1]] }).success, false)
+
+  const torus = evaluateCadSolidSpec({ op: 'torus', R: 0.4, r: 0.1 })
+  const torusVolume = 2 * Math.PI ** 2 * 0.4 * 0.1 ** 2
+  assert.ok(Math.abs(torus.volume - torusVolume) / torusVolume < 0.15, `torus ${torus.volume} vs ${torusVolume}`)
+  assert.equal(countOpenEdges(torus), 0)
+  assert.ok(Math.abs(torus.bbox[0][1]) < 0.02, 'torus sits on y=0')
+
+  const capsule = evaluateCadSolidSpec({ op: 'capsule', r: 0.2, h: 0.6 })
+  const capsuleVolume = Math.PI * 0.2 ** 2 * 0.6 + (4 / 3) * Math.PI * 0.2 ** 3
+  assert.ok(Math.abs(capsule.volume - capsuleVolume) / capsuleVolume < 0.12, `capsule ${capsule.volume} vs ${capsuleVolume}`)
+  assert.equal(countOpenEdges(capsule), 0)
+
+  const ellipsoid = evaluateCadSolidSpec({ op: 'ellipsoid', radii: [0.4, 0.3, 0.2] })
+  const ellipsoidVolume = (4 / 3) * Math.PI * 0.4 * 0.3 * 0.2
+  assert.ok(Math.abs(ellipsoid.volume - ellipsoidVolume) / ellipsoidVolume < 0.12, `ellipsoid ${ellipsoid.volume} vs ${ellipsoidVolume}`)
+})
+
+test('angle-based normals keep box creases and smooth a cylinder wall', () => {
+  const box = evaluateCadSolidSpec({ op: 'box', size: [1, 1, 1] })
+  assert.equal(box.normals.length, box.positions.length)
+  const top = []
+  for (let i = 0; i < box.indices.length; i += 3) {
+    const ia = box.indices[i] ?? 0
+    const y0 = box.positions[ia * 3 + 1] ?? 0
+    const y1 = box.positions[(box.indices[i + 1] ?? 0) * 3 + 1] ?? 0
+    const y2 = box.positions[(box.indices[i + 2] ?? 0) * 3 + 1] ?? 0
+    if (Math.abs(y0 - 1) < 1e-6 && Math.abs(y1 - 1) < 1e-6 && Math.abs(y2 - 1) < 1e-6) {
+      top.push(ia)
+    }
+  }
+  assert.ok(top.length > 0)
+  const topNormalY = box.normals[(top[0] ?? 0) * 3 + 1] ?? 0
+  assert.ok(topNormalY > 0.95)
+
+  const corner = []
+  for (let i = 0; i < box.positions.length; i += 3) {
+    const x = box.positions[i] ?? 0
+    const y = box.positions[i + 1] ?? 0
+    const z = box.positions[i + 2] ?? 0
+    if (Math.abs(x + 0.5) < 1e-5 && Math.abs(y - 1) < 1e-5 && Math.abs(z + 0.5) < 1e-5) {
+      corner.push([box.normals[i] ?? 0, box.normals[i + 1] ?? 0, box.normals[i + 2] ?? 0])
+    }
+  }
+  assert.ok(corner.length >= 2)
+  const a = corner[0] ?? [0, 1, 0]
+  const b = corner.find((normal) => Math.abs(normal[0] * a[0] + normal[1] * a[1] + normal[2] * a[2]) < 0.2)
+  assert.ok(b, 'box corner should keep a sharp crease')
+
+  const cylinder = evaluateCadSolidSpec({ op: 'cylinder', r: 1, h: 2 })
+  const normals = cylinder.normals ?? []
+  let radialDot = 0
+  let radialCount = 0
+  for (let i = 0; i < cylinder.positions.length; i += 3) {
+    const px = cylinder.positions[i] ?? 0
+    const pz = cylinder.positions[i + 2] ?? 0
+    const pr = Math.hypot(px, pz)
+    if (pr < 0.85) continue
+    const nx = normals[i] ?? 0
+    const ny = normals[i + 1] ?? 0
+    const nz = normals[i + 2] ?? 0
+    if (Math.abs(ny) > 0.35) continue
+    radialDot += (nx * px + nz * pz) / pr
+    radialCount += 1
+  }
+  assert.ok(radialCount > 8)
+  assert.ok(Math.abs(radialDot / radialCount) > 0.9)
+})
+
+test('complexity budget rejects oversized meshes and kernel jobs evaluate on a worker-ready path', async () => {
+  assert.equal(KERNEL_TRIANGLE_BUDGET, 50_000)
+  assert.throws(
+    () => evaluateCadSolidSpec({ op: 'box', size: [1, 1, 1] }, { budget: 1 }),
+    /complexity budget/,
+  )
+  const mesh = await runKernelJob({ kind: 'evaluate', spec: { op: 'box', size: [1, 1, 1] } })
+  assert.ok(triangleCount(mesh) > 1)
+  assert.ok(mesh.normals.length === mesh.positions.length)
 })

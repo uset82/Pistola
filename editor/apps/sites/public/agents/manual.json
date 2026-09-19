@@ -337,6 +337,127 @@
           0
         ]
       }
+    },
+    "loft": {
+      "op": "loft",
+      "axis": "y",
+      "heights": [
+        0,
+        0.4
+      ],
+      "sections": [
+        [
+          [
+            -0.3,
+            -0.2
+          ],
+          [
+            0.3,
+            -0.2
+          ],
+          [
+            0.3,
+            0.2
+          ],
+          [
+            -0.3,
+            0.2
+          ]
+        ],
+        [
+          [
+            -0.15,
+            -0.1
+          ],
+          [
+            0.15,
+            -0.1
+          ],
+          [
+            0.15,
+            0.1
+          ],
+          [
+            -0.15,
+            0.1
+          ]
+        ]
+      ]
+    },
+    "hull": {
+      "op": "hull",
+      "profileXY": [
+        [
+          -0.8,
+          0
+        ],
+        [
+          0.8,
+          0
+        ],
+        [
+          0.8,
+          0.3
+        ],
+        [
+          -0.8,
+          0.3
+        ]
+      ],
+      "profileZY": [
+        [
+          -0.25,
+          0
+        ],
+        [
+          0.25,
+          0
+        ],
+        [
+          0.25,
+          0.3
+        ],
+        [
+          -0.25,
+          0.3
+        ]
+      ],
+      "profileXZ": [
+        [
+          -0.8,
+          -0.25
+        ],
+        [
+          0.8,
+          -0.25
+        ],
+        [
+          0.8,
+          0.25
+        ],
+        [
+          -0.8,
+          0.25
+        ]
+      ]
+    },
+    "torus": {
+      "op": "torus",
+      "R": 0.35,
+      "r": 0.08
+    },
+    "capsule": {
+      "op": "capsule",
+      "r": 0.12,
+      "h": 0.3
+    },
+    "ellipsoid": {
+      "op": "ellipsoid",
+      "radii": [
+        0.25,
+        0.18,
+        0.15
+      ]
     }
   },
   "capabilities": [
@@ -747,6 +868,17 @@
       "destructive": false
     },
     {
+      "type": "create_guide",
+      "domain": "structure",
+      "describe": "Place a vertical (front/side) or floor (top) reference guide plane behind the build",
+      "examples": [
+        "show front reference behind the hull",
+        "create side guide plane"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
       "type": "place_door",
       "domain": "structure",
       "describe": "Insert a door opening into an existing wall",
@@ -1105,7 +1237,7 @@
     {
       "type": "build_cad_solid",
       "domain": "cad",
-      "describe": "Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)",
+      "describe": "Build a real local CAD solid from a declarative spec (primitives, loft, hull, extrude, revolve, booleans)",
       "examples": [
         "build a holed bracket",
         "intersect two silhouettes into a hull"

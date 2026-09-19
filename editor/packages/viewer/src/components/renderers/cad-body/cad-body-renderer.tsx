@@ -15,7 +15,12 @@ import {
 } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { useNodeEvents } from '../../../hooks/use-node-events'
-import { getCadBodyPlaceholderDimensions, shouldUseCadBodyAssetPreview } from './cad-body-preview'
+import {
+  cadBodyPbr,
+  cadMeshGeometryFromPreview,
+  getCadBodyPlaceholderDimensions,
+  shouldUseCadBodyAssetPreview,
+} from './cad-body-preview'
 
 const getBodyColor = (node: CadBodyNode) => {
   if (node.regenStatus === 'error') return '#f87171'
@@ -37,13 +42,18 @@ const CadBodyMeshPreview = ({
   handlers: ReturnType<typeof useNodeEvents>
 }) => {
   const geometry = useMemo(() => {
-    if (node.preview.primitive !== 'mesh' || node.preview.positions.length < 9) return null
+    const mesh = cadMeshGeometryFromPreview(node.preview)
+    if (!mesh) return null
     const next = new BufferGeometry()
-    next.setAttribute('position', new BufferAttribute(new Float32Array(node.preview.positions), 3))
-    if (node.preview.indices.length > 0) {
-      next.setIndex(node.preview.indices)
+    next.setAttribute('position', new BufferAttribute(new Float32Array(mesh.positions), 3))
+    if (mesh.indices.length > 0) {
+      next.setIndex(mesh.indices)
     }
-    next.computeVertexNormals()
+    if (mesh.normals) {
+      next.setAttribute('normal', new BufferAttribute(new Float32Array(mesh.normals), 3))
+    } else {
+      next.computeVertexNormals()
+    }
     return next
   }, [node.preview])
 
@@ -183,15 +193,18 @@ export const CadBodyRenderer = ({ node }: { node: CadBodyNode }) => {
   const bodyColor = getBodyColor(node)
   const isError = node.regenStatus === 'error'
 
+  const pbr = cadBodyPbr(node)
   const material = useMemo(
     () =>
       new MeshStandardNodeMaterial({
         color: bodyColor,
         emissive: isError ? '#7f1d1d' : '#000000',
-        roughness: 0.45,
-        metalness: 0.15,
+        roughness: pbr.roughness,
+        metalness: pbr.metalness,
+        opacity: pbr.opacity,
+        transparent: pbr.transparent,
       }),
-    [bodyColor, isError],
+    [bodyColor, isError, pbr.metalness, pbr.opacity, pbr.roughness, pbr.transparent],
   )
 
   useEffect(() => {

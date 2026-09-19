@@ -29,6 +29,44 @@ type CadBodyPreviewGeometry = {
   height?: number
   points?: [number, number][]
   positions?: number[]
+  indices?: number[]
+  normals?: number[]
+  roughness?: number
+  metalness?: number
+  opacity?: number
+}
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
+
+export const cadBodyHasRenderableMesh = (preview?: CadBodyPreviewGeometry | null) =>
+  preview?.primitive === 'mesh' && (preview.positions?.length ?? 0) >= 9 && (preview.indices?.length ?? 0) >= 3
+
+export const cadMeshGeometryFromPreview = (preview?: CadBodyPreviewGeometry | null) => {
+  if (!cadBodyHasRenderableMesh(preview) || !preview?.positions) return null
+  const normals =
+    preview.normals && preview.normals.length === preview.positions.length ? preview.normals : undefined
+  return {
+    positions: preview.positions,
+    indices: preview.indices ?? [],
+    normals,
+  }
+}
+
+export const cadBodyPbr = (node: {
+  roughness?: number
+  metalness?: number
+  opacity?: number
+  preview?: { roughness?: number; metalness?: number; opacity?: number }
+}) => {
+  const roughness = clamp01(node.roughness ?? node.preview?.roughness ?? 0.45)
+  const metalness = clamp01(node.metalness ?? node.preview?.metalness ?? 0.15)
+  const opacity = clamp01(node.opacity ?? node.preview?.opacity ?? 1)
+  return {
+    roughness,
+    metalness,
+    opacity,
+    transparent: opacity < 1 - 1e-6,
+  }
 }
 
 const meshBounds = (positions: number[]): [number, number, number] => {

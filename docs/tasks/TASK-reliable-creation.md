@@ -261,16 +261,20 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   — evidence: 4 pass in `reference.test.ts`; `node editor/scripts/creation-benchmark/run.mjs --mode replay --out docs/tasks/evidence/creation-quality/phase-6` → `summary.iou: 1`
 
 ### Phase 7 (gated on remaining failures): Richness and composition
-- [ ] Loft (cross-sections along an axis), 3-view hull, and torus/capsule/ellipsoid in the kernel.
-- [ ] Angle-based smooth normals; per-body `roughness` / `metalness` / `opacity`.
-- [ ] A complexity budget, with kernel work in a Worker.
-- [ ] CAD bodies render in the architecture world as real meshes, and items parented to bodies are no
+- [x] Loft (cross-sections along an axis), 3-view hull, and torus/capsule/ellipsoid in the kernel.
+  — evidence: `local-kernel.test.ts` → `loft, hull, torus, capsule, and ellipsoid produce closed solids`; `MANUAL_OP_EXAMPLES` adds those ops
+- [x] Angle-based smooth normals; per-body `roughness` / `metalness` / `opacity`.
+  — evidence: same suite → `angle-based normals keep box creases and smooth a cylinder wall`; `CadBodyNode` + mesh preview PBR fields; `cad-body-preview.test.ts` per-body PBR
+- [x] A complexity budget, with kernel work in a Worker.
+  — evidence: same suite → `complexity budget rejects oversized meshes and kernel jobs evaluate on a worker-ready path`; `kernel-jobs.ts` `runKernelJob`; `KERNEL_TRIANGLE_BUDGET` 50k
+- [x] CAD bodies render in the architecture world as real meshes, and items parented to bodies are no
   longer moved.
+  — evidence: `cad-body-preview.test.ts` → architecture instances reuse the source CAD mesh; `item-parenting.test.ts` → cad-body/cad-instance skip slab lift; `CadInstanceRenderer` draws the source mesh
 
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (user-approved eight-view gate + `pistola_render_eight_views`; optional Phase 6 `pistola_reference_sheet_add` 3-view sheet + 2×2 IoU diagnostic); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 6 optional 3-view sheet + Phase 7 loft/hull/materials + architecture meshes); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
@@ -279,9 +283,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   - replay and score every phase;
   - full agent runs at baseline and after Phases 2, 4 and 5 (to limit IDE usage);
   - save `phase-N/scores.json` plus side-by-side renders.
-  — evidence: replay `iou: 1` in `phase-3`, `phase-4`, `phase-5`, `phase-6`; `--mode agent --cli codex` skipped (no IDE quota)
+  — evidence: replay `iou: 1` in `phase-3`, `phase-4`, `phase-5`, `phase-6`, `phase-7`; `--mode agent --cli codex` skipped (no IDE quota)
 - [x] `validate-task-evidence.mjs` passes; 0 forbidden AI-route requests.
-  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 6 tick)
+  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 7 tick)
 
 ### Acceptance (held-out set, ≥2 headless IDEs, 3 seeds)
 - [ ] Final runnable rate ≥ 95%.

@@ -41,6 +41,7 @@ Create objects with $pistola-studio. Prefer build_cad_solid on hosted mocks.
 - create_slab: Create a horizontal floor slab bounded by a polygon
 - create_ceiling: Create a ceiling surface at a given height above the level floor
 - create_roof: Create a gable or flat roof covering the specified bounding rectangle
+- create_guide: Place a vertical (front/side) or floor (top) reference guide plane behind the build
 - place_door: Insert a door opening into an existing wall
 - place_window: Insert a window opening into an existing wall
 - update_door_properties: Update door dimensions, frame, handle, or swing configuration
@@ -74,7 +75,7 @@ Create objects with $pistola-studio. Prefer build_cad_solid on hosted mocks.
 - execute_cad_brief: Execute a structured CAD brief containing sketches and operation graphs
 - run_cad_prompt: Run a natural language prompt against the CAD reasoning pipeline
 - generate_mac_part: Invoke Multi-Agent-CAD (MAC) generation for complex mechanical solid geometry
-- build_cad_solid: Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)
+- build_cad_solid: Build a real local CAD solid from a declarative spec (primitives, loft, hull, extrude, revolve, booleans)
 - update_cad_solid: Update an existing CAD solid in place without changing its id
 - create_default_cad_sketch: Create a new default 2D CAD sketch centered on the workplane
 - extrude_cad_sketch: Extrude a closed 2D sketch profile into a 3D solid body

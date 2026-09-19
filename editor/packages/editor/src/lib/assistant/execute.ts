@@ -12,7 +12,7 @@ import {
 import { useViewer } from '@pascal-app/viewer'
 import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
-import { CadSpecError, evaluateCadSolidSpecCached } from '../cad/local-kernel'
+import { CadSpecError, evaluateCadSolidSpecCached, type KernelMesh } from '../cad/local-kernel'
 import { CadSolidSpecSchema } from '../cad/solid-spec'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { cadHelperUnavailableMessage } from '../../store/use-cad'
@@ -274,6 +274,22 @@ const getCadBodyOperations = (bodyId: string | undefined) => {
   if (!body) return null
   return body.operationHistory.length > 0 ? body.operationHistory : body.operations
 }
+
+const cadSolidPreview = (
+  spec: unknown,
+  mesh: KernelMesh,
+  extras: { color?: string; roughness?: number; metalness?: number; opacity?: number },
+) => ({
+  primitive: 'mesh' as const,
+  spec: (spec && typeof spec === 'object' ? spec : {}) as Record<string, unknown>,
+  positions: mesh.positions,
+  indices: mesh.indices,
+  normals: mesh.normals,
+  color: extras.color ?? '#60a5fa',
+  roughness: extras.roughness,
+  metalness: extras.metalness,
+  opacity: extras.opacity,
+})
 
 const createAttachmentBodies = (
   parentId: string,
@@ -1243,13 +1259,10 @@ const executeAction = async (
         position: action.position ?? [0, 0, 0],
         rotation: action.rotation ?? [0, 0, 0],
         regenStatus: 'idle',
-        preview: {
-          primitive: 'mesh',
-          spec: action.spec,
-          positions: mesh.positions,
-          indices: mesh.indices,
-          color: action.color ?? '#60a5fa',
-        },
+        roughness: action.roughness,
+        metalness: action.metalness,
+        opacity: action.opacity,
+        preview: cadSolidPreview(action.spec, mesh, action),
         operations: [],
         operationHistory: [],
         sourceSketchIds: [],
@@ -1282,6 +1295,18 @@ const executeAction = async (
       const mesh = evaluateCadSolidSpecCached(currentSpec)
       const color =
         action.color ?? (preview && 'color' in preview ? preview.color : '#60a5fa')
+      const roughness =
+        action.roughness ??
+        node.roughness ??
+        (preview && preview.primitive === 'mesh' ? preview.roughness : undefined)
+      const metalness =
+        action.metalness ??
+        node.metalness ??
+        (preview && preview.primitive === 'mesh' ? preview.metalness : undefined)
+      const opacity =
+        action.opacity ??
+        node.opacity ??
+        (preview && preview.primitive === 'mesh' ? preview.opacity : undefined)
       const nextPosition = action.position ?? node.position
       const nextRotation = action.rotation ?? node.rotation
       useScene.setState((state) => ({
@@ -1291,18 +1316,15 @@ const executeAction = async (
             ...node,
             position: nextPosition,
             rotation: nextRotation,
+            roughness,
+            metalness,
+            opacity,
             transform: {
               ...node.transform,
               position: nextPosition,
               rotation: nextRotation,
             },
-            preview: {
-              primitive: 'mesh',
-              spec: currentSpec,
-              positions: mesh.positions,
-              indices: mesh.indices,
-              color,
-            },
+            preview: cadSolidPreview(currentSpec, mesh, { color, roughness, metalness, opacity }),
             metadata: {
               ...(typeof node.metadata === 'object' && node.metadata ? node.metadata : {}),
               cadEngine: 'local-kernel',

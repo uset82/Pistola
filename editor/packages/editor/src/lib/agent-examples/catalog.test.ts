@@ -28,6 +28,8 @@ test('examples.search ranks wheel-axle and examples.get returns editable $ref ac
   const levelId = Object.values(useScene.getState().nodes).find((node) => node.type === 'level')?.id
   assert.equal(actions[0]?.levelId, levelId)
   assert.ok(searchExamples('revolve').some((hit) => hit.id === 'technique-revolve'))
+  assert.ok(searchExamples('loft').some((hit) => hit.id === 'technique-loft'))
+  assert.ok(searchExamples('hull').some((hit) => hit.id === 'technique-hull'))
 })
 
 test('every technique, subassembly and library example builds with 0 checker errors', async () => {

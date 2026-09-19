@@ -28,7 +28,11 @@ export const CadBodyPreview = z.discriminatedUnion('primitive', [
     spec: z.record(z.string(), z.unknown()).default({}),
     positions: z.array(z.number()).default([]),
     indices: z.array(z.number()).default([]),
+    normals: z.array(z.number()).optional(),
     color: z.string().default('#60a5fa'),
+    roughness: z.number().min(0).max(1).optional(),
+    metalness: z.number().min(0).max(1).optional(),
+    opacity: z.number().min(0).max(1).optional(),
   }),
 ])
 
@@ -258,6 +262,9 @@ export const CadBodyNodeSchema = BaseNode.extend({
   regenError: z.string().nullable().default(null),
   operations: z.array(CadBodyOperation).default([]),
   operationHistory: z.array(CadBodyOperation).default([]),
+  roughness: z.number().min(0).max(1).optional(),
+  metalness: z.number().min(0).max(1).optional(),
+  opacity: z.number().min(0).max(1).optional(),
   preview: CadBodyPreview.default({
     primitive: 'box',
     dimensions: [2, 1.2, 1.5],

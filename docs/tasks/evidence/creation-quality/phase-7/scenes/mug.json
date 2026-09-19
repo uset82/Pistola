@@ -1,0 +1,309 @@
+{
+  "prompt": {
+    "slug": "mug",
+    "prompt": "A cylindrical mug with a small rectangular handle on the right.",
+    "overall_m": [
+      0.12,
+      0.1,
+      0.08
+    ],
+    "anchor": "floor",
+    "parts": [
+      "body",
+      "handle"
+    ],
+    "relations": [
+      {
+        "a": "body",
+        "rel": "on_floor"
+      },
+      {
+        "a": "handle",
+        "rel": "touches",
+        "b": "body"
+      }
+    ],
+    "set": "heldOut"
+  },
+  "gold": {
+    "slug": "mug",
+    "partCount": 2
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "body",
+        "role": "body",
+        "assetId": "primitive-cylinder",
+        "color": "#f97316",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.1,
+          0.08
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.08,
+          0.1,
+          0.08
+        ],
+        "box": {
+          "min": [
+            -0.04,
+            0,
+            -0.04
+          ],
+          "max": [
+            0.04,
+            0.1,
+            0.04
+          ],
+          "size": [
+            0.08,
+            0.1,
+            0.08
+          ],
+          "center": [
+            0,
+            0.05,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "handle",
+        "role": "handle",
+        "assetId": "primitive-box",
+        "color": "#c2410c",
+        "parentId": null,
+        "position": [
+          0.05,
+          0.03,
+          0
+        ],
+        "scale": [
+          0.02,
+          0.05,
+          0.02
+        ],
+        "localPosition": [
+          0.05,
+          0.03,
+          0
+        ],
+        "localScale": [
+          0.02,
+          0.05,
+          0.02
+        ],
+        "box": {
+          "min": [
+            0.04,
+            0.03,
+            -0.01
+          ],
+          "max": [
+            0.060000000000000005,
+            0.08,
+            0.01
+          ],
+          "size": [
+            0.02,
+            0.05,
+            0.02
+          ],
+          "center": [
+            0.05,
+            0.055,
+            0
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "body",
+        "role": "body",
+        "assetId": "primitive-cylinder",
+        "color": "#f97316",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.1,
+          0.08
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.08,
+          0.1,
+          0.08
+        ],
+        "box": {
+          "min": [
+            -0.04,
+            0,
+            -0.04
+          ],
+          "max": [
+            0.04,
+            0.1,
+            0.04
+          ],
+          "size": [
+            0.08,
+            0.1,
+            0.08
+          ],
+          "center": [
+            0,
+            0.05,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "handle",
+        "role": "handle",
+        "assetId": "primitive-box",
+        "color": "#c2410c",
+        "parentId": null,
+        "position": [
+          0.05,
+          0.03,
+          0
+        ],
+        "scale": [
+          0.02,
+          0.05,
+          0.02
+        ],
+        "localPosition": [
+          0.05,
+          0.03,
+          0
+        ],
+        "localScale": [
+          0.02,
+          0.05,
+          0.02
+        ],
+        "box": {
+          "min": [
+            0.04,
+            0.03,
+            -0.01
+          ],
+          "max": [
+            0.060000000000000005,
+            0.08,
+            0.01
+          ],
+          "size": [
+            0.02,
+            0.05,
+            0.02
+          ],
+          "center": [
+            0.05,
+            0.055,
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "mug",
+    "set": "heldOut",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0.1666666666666666,
+        0,
+        0
+      ],
+      "mean": 0.05555555555555553
+    },
+    "perPartDimensionError": [
+      {
+        "name": "body",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "handle",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 2,
+      "found": 2,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 0,
+    "actualOverall_m": [
+      0.1,
+      0.1,
+      0.08
+    ],
+    "partCount": 2
+  }
+}

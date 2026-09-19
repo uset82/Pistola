@@ -5,9 +5,15 @@ import { CadSolidSpecSchema, type CadSolidSpec } from './solid-spec'
 export type KernelMesh = {
   positions: number[]
   indices: number[]
+  normals?: number[]
   volume: number
   bbox: [[number, number, number], [number, number, number]]
 }
+
+export const KERNEL_TRIANGLE_BUDGET = 50_000
+export const DEFAULT_CREASE_DEG = 30
+
+export const triangleCount = (mesh: Pick<KernelMesh, 'indices'>) => Math.floor(mesh.indices.length / 3)
 
 export class CadSpecError extends Error {
   path: string
@@ -88,6 +94,78 @@ const applyTransforms = (mesh: KernelMesh, spec: CadSolidSpec): KernelMesh => {
   return finishMesh(positions, mesh.indices)
 }
 
+const length3 = (value: Vec3) => Math.hypot(value[0], value[1], value[2])
+
+const normalize3 = (value: Vec3): Vec3 => {
+  const len = length3(value)
+  return len < 1e-12 ? [0, 1, 0] : scale(value, 1 / len)
+}
+
+const quantizeKey = (point: Vec3, eps = 1e-6) => {
+  const quantize = (value: number) => Math.round(value / eps)
+  return `${quantize(point[0])},${quantize(point[1])},${quantize(point[2])}`
+}
+
+export const computeAngleNormals = (
+  positions: number[],
+  indices: number[],
+  creaseDeg = DEFAULT_CREASE_DEG,
+): number[] => {
+  const creaseCos = Math.cos((creaseDeg * Math.PI) / 180)
+  const vertexCount = Math.floor(positions.length / 3)
+  const triCount = Math.floor(indices.length / 3)
+  const faceNormals: Vec3[] = []
+  const vertexFace = new Array<number>(vertexCount).fill(-1)
+  const facesAtPosition = new Map<string, number[]>()
+
+  for (let t = 0; t < triCount; t += 1) {
+    const ia = num(indices[t * 3])
+    const ib = num(indices[t * 3 + 1])
+    const ic = num(indices[t * 3 + 2])
+    const a = vertexAt(positions, ia)
+    const b = vertexAt(positions, ib)
+    const c = vertexAt(positions, ic)
+    const normal = normalize3(cross(sub(b, a), sub(c, a)))
+    faceNormals.push(normal)
+    for (const index of [ia, ib, ic]) {
+      vertexFace[index] = t
+      const key = quantizeKey(vertexAt(positions, index))
+      const list = facesAtPosition.get(key) ?? []
+      list.push(t)
+      facesAtPosition.set(key, list)
+    }
+  }
+
+  const normals = new Array<number>(vertexCount * 3).fill(0)
+  for (let i = 0; i < vertexCount; i += 1) {
+    const ownFace = vertexFace[i] ?? -1
+    const ownNormal = ownFace >= 0 ? (faceNormals[ownFace] ?? [0, 1, 0]) : [0, 1, 0]
+    const faces = facesAtPosition.get(quantizeKey(vertexAt(positions, i))) ?? []
+    let accumulated: Vec3 = [0, 0, 0]
+    for (const face of faces) {
+      const candidate = faceNormals[face] ?? [0, 1, 0]
+      if (dot(ownNormal, candidate) >= creaseCos - 1e-8) {
+        accumulated = add(accumulated, candidate)
+      }
+    }
+    const normal = normalize3(accumulated)
+    normals[i * 3] = normal[0]
+    normals[i * 3 + 1] = normal[1]
+    normals[i * 3 + 2] = normal[2]
+  }
+  return normals
+}
+
+const enforceBudget = (mesh: KernelMesh, budget: number) => {
+  const triangles = triangleCount(mesh)
+  if (triangles > budget) {
+    throw new CadSpecError(
+      'spec',
+      `mesh exceeds complexity budget (${triangles} > ${budget} triangles)`,
+    )
+  }
+}
+
 const finishMesh = (positions: number[], indices: number[]): KernelMesh => {
   let min: Vec3 = [Infinity, Infinity, Infinity]
   let max: Vec3 = [-Infinity, -Infinity, -Infinity]
@@ -106,6 +184,7 @@ const finishMesh = (positions: number[], indices: number[]): KernelMesh => {
   return {
     positions,
     indices,
+    normals: computeAngleNormals(positions, indices),
     volume: signedVolume(positions, indices),
     bbox: [min, max],
   }
@@ -375,10 +454,16 @@ const rangeOf = (points: Vec2[], axis: 0 | 1) => {
   return { min, max }
 }
 
-const intersectProfilesMesh = (
-  spec: Extract<CadSolidSpec, { op: 'intersect_profiles' }>,
-  path = 'spec',
-): KernelMesh => {
+type ProfileSolidSpec = {
+  profileXY?: [number, number][]
+  profileZY?: [number, number][]
+  profileXZ?: [number, number][]
+  sideProfile?: [number, number][]
+  topProfile?: [number, number][]
+  depthMargin?: number
+}
+
+const intersectProfilesMesh = (spec: ProfileSolidSpec, path = 'spec'): KernelMesh => {
   const sourceXY = spec.profileXY ?? spec.sideProfile
   const sourceXZ = spec.profileXZ ?? spec.topProfile
   const sourceZY = spec.profileZY
@@ -554,6 +639,189 @@ const mergeMeshes = (meshes: KernelMesh[]): KernelMesh => {
   return finishMesh(positions, indices)
 }
 
+const resampleClosed = (polygon: Vec2[], count: number): Vec2[] => {
+  const n = polygon.length
+  const segments: number[] = []
+  let total = 0
+  for (let i = 0; i < n; i += 1) {
+    const a = vec2(polygon[i])
+    const b = vec2(polygon[(i + 1) % n])
+    const distance = Math.hypot(b[0] - a[0], b[1] - a[1])
+    segments.push(distance)
+    total += distance
+  }
+  if (total < 1e-12) {
+    return Array.from({ length: count }, () => vec2(polygon[0]))
+  }
+  const sampled: Vec2[] = []
+  for (let i = 0; i < count; i += 1) {
+    const target = (i / count) * total
+    let accumulated = 0
+    let segment = 0
+    while (segment < n && accumulated + (segments[segment] ?? 0) < target - 1e-12) {
+      accumulated += segments[segment] ?? 0
+      segment += 1
+    }
+    const segmentLength = segments[segment % n] ?? 1
+    const t = segmentLength < 1e-12 ? 0 : (target - accumulated) / segmentLength
+    const a = vec2(polygon[segment % n])
+    const b = vec2(polygon[(segment + 1) % n])
+    sampled.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t])
+  }
+  return sampled
+}
+
+const ringDistance = (left: Vec2[], right: Vec2[], shift: number) => {
+  let distance = 0
+  for (let i = 0; i < left.length; i += 1) {
+    const a = vec2(left[i])
+    const b = vec2(right[(i + shift) % right.length])
+    distance += (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
+  }
+  return distance
+}
+
+const alignRing = (previous: Vec2[], next: Vec2[]): Vec2[] => {
+  let bestShift = 0
+  let best = Infinity
+  for (let shift = 0; shift < next.length; shift += 1) {
+    const distance = ringDistance(previous, next, shift)
+    if (distance < best) {
+      best = distance
+      bestShift = shift
+    }
+  }
+  const reversed = [...next].reverse()
+  let bestReverseShift = 0
+  let bestReverse = Infinity
+  for (let shift = 0; shift < reversed.length; shift += 1) {
+    const distance = ringDistance(previous, reversed, shift)
+    if (distance < bestReverse) {
+      bestReverse = distance
+      bestReverseShift = shift
+    }
+  }
+  const source = bestReverse < best ? reversed : next
+  const shift = bestReverse < best ? bestReverseShift : bestShift
+  return source.map((_, index) => vec2(source[(index + shift) % source.length]))
+}
+
+const sectionToWorld = (point: Vec2, along: number, axis: 'x' | 'y' | 'z'): Vec3 => {
+  if (axis === 'x') return [along, point[1], point[0]]
+  if (axis === 'z') return [point[0], point[1], along]
+  return [point[0], along, point[1]]
+}
+
+const loftMesh = (
+  spec: Extract<CadSolidSpec, { op: 'loft' }>,
+  path = 'spec',
+): KernelMesh => {
+  const cleaned = spec.sections.map((section, index) => cleanPolygon(section, `${path}.sections[${index}]`))
+  if (cleaned.length < 2) {
+    throw new CadSpecError(`${path}.sections`, 'loft needs at least two sections')
+  }
+  const first = cleaned[0] ?? []
+  const defaultSpan = Math.max(0.2, rangeOf(first, 0).max - rangeOf(first, 0).min, rangeOf(first, 1).max - rangeOf(first, 1).min)
+  const span = spec.span ?? defaultSpan
+  const heights =
+    spec.heights ??
+    cleaned.map((_, index) => (cleaned.length === 1 ? 0 : (index / (cleaned.length - 1)) * span))
+  const sampleCount = Math.max(8, ...cleaned.map((section) => section.length))
+  const rings = cleaned.map((section) => resampleClosed(section, sampleCount))
+  for (let i = 1; i < rings.length; i += 1) {
+    rings[i] = alignRing(rings[i - 1] ?? [], rings[i] ?? [])
+  }
+  const axis = spec.axis ?? 'y'
+  const positions: number[] = []
+  const indices: number[] = []
+  for (let i = 0; i < rings.length - 1; i += 1) {
+    const lower = rings[i] ?? []
+    const upper = rings[i + 1] ?? []
+    const along0 = heights[i] ?? i
+    const along1 = heights[i + 1] ?? i + 1
+    for (let p = 0; p < sampleCount; p += 1) {
+      const p0 = sectionToWorld(vec2(lower[p]), along0, axis)
+      const p1 = sectionToWorld(vec2(lower[(p + 1) % sampleCount]), along0, axis)
+      const p2 = sectionToWorld(vec2(upper[(p + 1) % sampleCount]), along1, axis)
+      const p3 = sectionToWorld(vec2(upper[p]), along1, axis)
+      pushTriangle(positions, indices, p0, p1, p2)
+      pushTriangle(positions, indices, p0, p2, p3)
+    }
+  }
+  const capRing = (ring: Vec2[], along: number, flip: boolean) => {
+    const { verts, tris } = triangulate(ring, `${path}.sections`)
+    for (const [i0, i1, i2] of tris) {
+      const a = sectionToWorld(vec2(verts[num(i0)]), along, axis)
+      const b = sectionToWorld(vec2(verts[num(i1)]), along, axis)
+      const c = sectionToWorld(vec2(verts[num(i2)]), along, axis)
+      if (flip) pushTriangle(positions, indices, a, c, b)
+      else pushTriangle(positions, indices, a, b, c)
+    }
+  }
+  const start = rings[0]
+  const end = rings[rings.length - 1]
+  if (start) capRing(start, heights[0] ?? 0, true)
+  if (end) capRing(end, heights[heights.length - 1] ?? span, false)
+  return finishMesh(positions, indices)
+}
+
+const torusMesh = (major: number, minor: number, radial = 32, tubular = 24): KernelMesh => {
+  const positions: number[] = []
+  const indices: number[] = []
+  for (let i = 0; i < radial; i += 1) {
+    const u = (i / radial) * Math.PI * 2
+    for (let j = 0; j < tubular; j += 1) {
+      const v = (j / tubular) * Math.PI * 2
+      positions.push(
+        (major + minor * Math.cos(v)) * Math.cos(u),
+        minor * Math.sin(v) + minor,
+        (major + minor * Math.cos(v)) * Math.sin(u),
+      )
+    }
+  }
+  for (let i = 0; i < radial; i += 1) {
+    const i1 = (i + 1) % radial
+    for (let j = 0; j < tubular; j += 1) {
+      const j1 = (j + 1) % tubular
+      const a = i * tubular + j
+      const b = i1 * tubular + j
+      const c = i1 * tubular + j1
+      const d = i * tubular + j1
+      indices.push(a, b, c, a, c, d)
+    }
+  }
+  return finishMesh(positions, indices)
+}
+
+const capsuleMesh = (radius: number, height: number, segments = 32): KernelMesh => {
+  const hemi = 12
+  const profile: Vec2[] = []
+  for (let i = 0; i <= hemi; i += 1) {
+    const t = (i / hemi) * (Math.PI / 2)
+    profile.push([Math.sin(t) * radius, radius - Math.cos(t) * radius])
+  }
+  for (let i = 0; i <= hemi; i += 1) {
+    const t = (i / hemi) * (Math.PI / 2)
+    profile.push([Math.cos(t) * radius, radius + height + Math.sin(t) * radius])
+  }
+  profile.push([0, 2 * radius + height], [0, 0])
+  return revolveMesh(profile, 360, segments, 'spec')
+}
+
+const ellipsoidMesh = (radii: Vec3, segments = 32): KernelMesh => {
+  const profile: Vec2[] = []
+  for (let i = 0; i <= 24; i += 1) {
+    const t = (i / 24) * Math.PI
+    profile.push([Math.sin(t), 1 - Math.cos(t)])
+  }
+  const unit = revolveMesh(profile, 360, segments, 'spec')
+  const positions: number[] = []
+  for (let i = 0; i < unit.positions.length; i += 3) {
+    positions.push(num(unit.positions[i]) * radii[0], num(unit.positions[i + 1]) * radii[1], num(unit.positions[i + 2]) * radii[2])
+  }
+  return finishMesh(positions, unit.indices)
+}
+
 const evaluateNode = (spec: CadSolidSpec, path = 'spec'): KernelMesh => {
   let mesh: KernelMesh
   switch (spec.op) {
@@ -639,13 +907,28 @@ const evaluateNode = (spec: CadSolidSpec, path = 'spec'): KernelMesh => {
       )
       break
     }
+    case 'loft':
+      mesh = loftMesh(spec, path)
+      break
+    case 'hull':
+      mesh = intersectProfilesMesh(spec, path)
+      break
+    case 'torus':
+      mesh = torusMesh(spec.R, spec.r)
+      break
+    case 'capsule':
+      mesh = capsuleMesh(spec.r, spec.h)
+      break
+    case 'ellipsoid':
+      mesh = ellipsoidMesh(spec.radii)
+      break
     default:
       throw new Error('Unsupported CAD solid operation.')
   }
   return applyTransforms(mesh, spec)
 }
 
-export const evaluateCadSolidSpec = (input: unknown): KernelMesh => {
+export const evaluateCadSolidSpec = (input: unknown, options?: { budget?: number }): KernelMesh => {
   const parsed = CadSolidSpecSchema.safeParse(input)
   if (!parsed.success) {
     const issue = parsed.error.issues[0]
@@ -656,10 +939,11 @@ export const evaluateCadSolidSpec = (input: unknown): KernelMesh => {
   if (mesh.positions.length === 0) {
     throw new CadSpecError('spec', 'CAD solid spec produced an empty mesh.')
   }
+  enforceBudget(mesh, options?.budget ?? KERNEL_TRIANGLE_BUDGET)
   return mesh
 }
 
-export const evaluateCadSolidSpecCached = (input: unknown): KernelMesh => {
+export const evaluateCadSolidSpecCached = (input: unknown, options?: { budget?: number }): KernelMesh => {
   const parsed = CadSolidSpecSchema.safeParse(input)
   if (!parsed.success) {
     const issue = parsed.error.issues[0]
@@ -668,11 +952,15 @@ export const evaluateCadSolidSpecCached = (input: unknown): KernelMesh => {
   }
   const key = hashCadSolidSpec(parsed.data)
   const cached = meshCache.get(key)
-  if (cached) return cached
+  if (cached) {
+    enforceBudget(cached, options?.budget ?? KERNEL_TRIANGLE_BUDGET)
+    return cached
+  }
   const mesh = evaluateNode(parsed.data, 'spec')
   if (mesh.positions.length === 0) {
     throw new CadSpecError('spec', 'CAD solid spec produced an empty mesh.')
   }
+  enforceBudget(mesh, options?.budget ?? KERNEL_TRIANGLE_BUDGET)
   meshCache.set(key, mesh)
   return mesh
 }

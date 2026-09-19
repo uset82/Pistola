@@ -22,8 +22,10 @@ Check once per session and note the result:
 | `architecture` | `create_wall`, `create_slab`, `create_roof`, `place_door`, `place_window`, `create_zone` | none | none |
 | `primitive` | `place_item` with `assetId: primitive-<kind>` and optional `color` | Child `parentId` positions are parent-relative. Set `allowOverlap: true` on stacked parts. | none |
 | `profile-extrude` | `build_cad_solid` `{ op: "extrude", polygon, height }` | Local kernel runs in the browser on every host | `execute_cad_brief` closed polyline, then primitive fallback |
-| `silhouette-intersection` | `build_cad_solid` `{ op: "intersection", children: [sideExtrude, topExtrude] }` | Real CSG via `three-bvh-csg` | `profile-extrude` of the side view at full width |
+| `silhouette-intersection` | `build_cad_solid` `{ op: "intersect_profiles" }` or `{ op: "hull" }` with 2–3 views | `hull` needs all three of profileXY, profileZY, profileXZ | `profile-extrude` of the side view at full width |
+| `loft` | `build_cad_solid` `{ op: "loft", sections, axis?, heights? }` | Cross-sections along +Y by default; kernel budget 50k triangles | stacked `extrude` or `place_item` |
 | `revolve` | `build_cad_solid` `{ op: "revolve", profile, angle }` | Local kernel, not the hosted FreeCAD mock | Cylinder, cone, or capsule primitives |
+| `torus` / `capsule` / `ellipsoid` | `build_cad_solid` `{ op: "torus"|"capsule"|"ellipsoid" }` | Bottom-center; optional body `roughness` / `metalness` / `opacity` | matching `place_item` primitives |
 | `mac` | `generate_mac_part` | Needs a real MAC runtime (local `PISTOLA_MAC_ROOT`). Hosted throws and asks for `build_cad_solid`. | Decompose into `build_cad_solid` ops |
 
 When you choose a fallback, record it in the plan so the critic judges the result fairly and the librarian can learn from it.
