@@ -48,6 +48,7 @@ const nodeCreatingActionTypes = new Set<AssistantAction['type']>([
   'add_cad_box_ears',
   'extrude_cad_body_face',
   'shell_cad_body',
+  'build_cad_solid',
 ])
 
 const implicitTargetDriftActionTypes = new Set<AssistantAction['type']>([

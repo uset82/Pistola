@@ -268,6 +268,68 @@ const extrudeSolid = (polygon: Vec2[], height: number): KernelMesh => {
   return finishMesh(positions, indices)
 }
 
+const extrudeProfileXy = (polygon: Vec2[], zMin: number, zMax: number): KernelMesh => {
+  const outer = ensureCcw(polygon)
+  const { verts, tris } = triangulate(outer)
+  const positions: number[] = []
+  const indices: number[] = []
+  for (const [i0, i1, i2] of tris) {
+    const a = vec2(verts[num(i0)])
+    const b = vec2(verts[num(i1)])
+    const c = vec2(verts[num(i2)])
+    pushTriangle(positions, indices, [a[0], a[1], zMin], [c[0], c[1], zMin], [b[0], b[1], zMin])
+    pushTriangle(positions, indices, [a[0], a[1], zMax], [b[0], b[1], zMax], [c[0], c[1], zMax])
+  }
+  for (let i = 0; i < outer.length; i += 1) {
+    const a = vec2(outer[i])
+    const b = vec2(outer[(i + 1) % outer.length])
+    pushTriangle(positions, indices, [a[0], a[1], zMin], [b[0], b[1], zMin], [b[0], b[1], zMax])
+    pushTriangle(positions, indices, [a[0], a[1], zMin], [b[0], b[1], zMax], [a[0], a[1], zMax])
+  }
+  return finishMesh(positions, indices)
+}
+
+const extrudeProfileXz = (polygon: Vec2[], yMin: number, yMax: number): KernelMesh => {
+  const height = Math.max(1e-4, yMax - yMin)
+  const solid = extrudeSolid(polygon, height)
+  return applyTransforms(solid, {
+    op: 'box',
+    size: [1, 1, 1],
+    translate: [0, yMin, 0],
+  })
+}
+
+const intersectProfilesMesh = (
+  sideProfile: Vec2[],
+  topProfile: Vec2[],
+  depthMargin = 0.1,
+): KernelMesh => {
+  let sideMinY = Infinity
+  let sideMaxY = -Infinity
+  for (const pt of sideProfile) {
+    sideMinY = Math.min(sideMinY, pt[1])
+    sideMaxY = Math.max(sideMaxY, pt[1])
+  }
+
+  let topMinZ = Infinity
+  let topMaxZ = -Infinity
+  for (const pt of topProfile) {
+    topMinZ = Math.min(topMinZ, pt[1])
+    topMaxZ = Math.max(topMaxZ, pt[1])
+  }
+
+  const margin = Math.max(0.05, depthMargin)
+  const zMin = topMinZ - margin
+  const zMax = topMaxZ + margin
+  const yMin = sideMinY - margin
+  const yMax = sideMaxY + margin
+
+  const sideSolid = extrudeProfileXy(sideProfile, zMin, zMax)
+  const topSolid = extrudeProfileXz(topProfile, yMin, yMax)
+
+  return evaluateBoolean(sideSolid, topSolid, 'intersection')
+}
+
 const extrudeMesh = (polygon: Vec2[], holes: Vec2[][] = [], height: number): KernelMesh => {
   const outer = extrudeSolid(polygon, height)
   let mesh = outer
@@ -413,6 +475,9 @@ const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
       )
       break
     }
+    case 'intersect_profiles':
+      mesh = intersectProfilesMesh(spec.sideProfile, spec.topProfile, spec.depthMargin)
+      break
     case 'mirror': {
       const child = evaluateNode(spec.child)
       const axis = spec.axis === 'x' ? 0 : spec.axis === 'y' ? 1 : 2

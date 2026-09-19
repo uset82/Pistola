@@ -537,6 +537,154 @@ export const humanoidRobotRecipe: CreationRecipe = {
   },
 }
 
+export const dogRecipe: CreationRecipe = {
+  id: 'dog',
+  name: '3D Dog Figure',
+  category: 'organic',
+  keywords: [
+    'dog',
+    'perro',
+    'perrito',
+    'perrita',
+    'cachorro',
+    'puppy',
+    'hound',
+    'canino',
+    'doggy',
+    'doggie',
+    'can',
+  ],
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
+    const rootRef = '$ref_dog_root'
+    return [
+      // Torso / Body (Root node)
+      {
+        type: 'place_item',
+        refId: rootRef,
+        placement: 'explicit',
+        name: 'Dog Torso',
+        assetId: 'primitive-box',
+        position: [x, y + 0.55, z],
+        scale: [0.6, 0.5, 1.1],
+      },
+      // Head
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Dog Head',
+        assetId: 'primitive-box',
+        allowOverlap: true,
+        position: [x, y + 0.95, z + 0.55],
+        scale: [0.45, 0.45, 0.45],
+      },
+      // Snout
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Dog Snout',
+        assetId: 'primitive-box',
+        allowOverlap: true,
+        position: [x, y + 0.85, z + 0.85],
+        scale: [0.3, 0.25, 0.3],
+      },
+      // Nose
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Dog Nose',
+        assetId: 'primitive-sphere',
+        allowOverlap: true,
+        position: [x, y + 0.92, z + 1.0],
+        scale: [0.1, 0.08, 0.1],
+      },
+      // Left Ear
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Left Ear',
+        assetId: 'primitive-wedge',
+        allowOverlap: true,
+        position: [x - 0.2, y + 1.2, z + 0.5],
+        scale: [0.12, 0.25, 0.18],
+        rotation: [0, 0, -0.2],
+      },
+      // Right Ear
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Right Ear',
+        assetId: 'primitive-wedge',
+        allowOverlap: true,
+        position: [x + 0.2, y + 1.2, z + 0.5],
+        scale: [0.12, 0.25, 0.18],
+        rotation: [0, 0, 0.2],
+      },
+      // Front-Left Leg
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Front Left Leg',
+        assetId: 'primitive-cylinder',
+        allowOverlap: true,
+        position: [x - 0.22, y + 0.25, z + 0.38],
+        scale: [0.14, 0.5, 0.14],
+      },
+      // Front-Right Leg
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Front Right Leg',
+        assetId: 'primitive-cylinder',
+        allowOverlap: true,
+        position: [x + 0.22, y + 0.25, z + 0.38],
+        scale: [0.14, 0.5, 0.14],
+      },
+      // Rear-Left Leg
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Rear Left Leg',
+        assetId: 'primitive-cylinder',
+        allowOverlap: true,
+        position: [x - 0.22, y + 0.25, z - 0.38],
+        scale: [0.14, 0.5, 0.14],
+      },
+      // Rear-Right Leg
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Rear Right Leg',
+        assetId: 'primitive-cylinder',
+        allowOverlap: true,
+        position: [x + 0.22, y + 0.25, z - 0.38],
+        scale: [0.14, 0.5, 0.14],
+      },
+      // Tail
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Dog Tail',
+        assetId: 'primitive-cylinder',
+        allowOverlap: true,
+        position: [x, y + 0.75, z - 0.65],
+        scale: [0.08, 0.45, 0.08],
+        rotation: [-0.6, 0, 0],
+      },
+    ]
+  },
+}
+
 export const carRecipe: CreationRecipe = {
   id: 'car',
   name: 'Automobile Assembly',
@@ -971,9 +1119,7 @@ export const boatRecipe: CreationRecipe = {
     'ship',
     'sailboat',
     'velero',
-    'yacht',
     'bote',
-    'lancha',
     'navio',
     'navío',
     'buque',
@@ -1130,10 +1276,10 @@ export const boatDetailActions = ({
 export const relativizeParentedRecipeActions = (actions: AssistantAction[]): AssistantAction[] => {
   const parentWorld = new Map<string, [number, number, number]>()
   return actions.map((action) => {
-    if (action.type !== 'place_item') return action
-    if (action.refId && action.position) {
+    if ((action.type === 'place_item' || action.type === 'build_cad_solid') && action.refId && action.position) {
       parentWorld.set(action.refId, action.position)
     }
+    if (action.type !== 'place_item') return action
     if (action.parentId && action.position && parentWorld.has(action.parentId)) {
       const parent = parentWorld.get(action.parentId)
       if (!parent) return action
@@ -1155,23 +1301,156 @@ const withRelativeParents = (recipe: CreationRecipe): CreationRecipe => ({
   generateActions: (params) => relativizeParentedRecipeActions(recipe.generateActions(params)),
 })
 
+export const speedboatRecipe: CreationRecipe = {
+  id: 'speedboat',
+  name: 'CAD Speedboat Assembly',
+  category: 'vehicle',
+  keywords: [
+    'speedboat',
+    'lancha rapida',
+    'lancha rápida',
+    'lancha deportiva',
+    'yate',
+    'yacht',
+    'barco cad',
+    'bote veloz',
+  ],
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
+    const rootRef = '$ref_speedboat_root'
+    return [
+      // Hydrodynamic Sculpted CAD Hull (Root node)
+      {
+        type: 'build_cad_solid',
+        refId: rootRef,
+        name: 'Speedboat Hull',
+        color: '#0284c7',
+        position: [x, y, z],
+        spec: {
+          op: 'intersect_profiles',
+          sideProfile: [
+            [-2.5, 0.95],
+            [-2.3, 0.45],
+            [-1.8, 0.1],
+            [-0.5, 0.0],
+            [2.5, 0.0],
+            [2.5, 0.75],
+            [1.0, 0.78],
+            [-0.5, 0.82],
+            [-1.8, 0.88],
+          ],
+          topProfile: [
+            [-2.5, 0.0],
+            [-2.0, -0.6],
+            [-1.0, -0.9],
+            [0.0, -0.9],
+            [2.5, -0.7],
+            [2.5, 0.7],
+            [0.0, 0.9],
+            [-1.0, 0.9],
+            [-2.0, 0.6],
+          ],
+        },
+      },
+      // Cockpit Windshield (Tinted glass / wedge)
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Cockpit Windshield',
+        assetId: 'primitive-wedge',
+        allowOverlap: true,
+        position: [x - 0.5, y + 0.82, z],
+        scale: [1.3, 0.45, 0.65],
+        rotation: [0, -Math.PI / 2, 0],
+      },
+      // Cockpit Interior / Seating
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Cockpit Seating',
+        assetId: 'primitive-box',
+        allowOverlap: true,
+        position: [x + 0.4, y + 0.65, z],
+        scale: [1.2, 0.35, 1.1],
+      },
+      // Steering Console
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Steering Helm',
+        assetId: 'primitive-box',
+        allowOverlap: true,
+        position: [x - 0.2, y + 0.8, z],
+        scale: [0.35, 0.35, 0.8],
+      },
+      // Port Outboard Engine
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Port Outboard Motor',
+        assetId: 'primitive-box',
+        allowOverlap: true,
+        position: [x + 2.65, y + 0.55, z - 0.35],
+        scale: [0.45, 0.65, 0.3],
+      },
+      // Starboard Outboard Engine
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Starboard Outboard Motor',
+        assetId: 'primitive-box',
+        allowOverlap: true,
+        position: [x + 2.65, y + 0.55, z + 0.35],
+        scale: [0.45, 0.65, 0.3],
+      },
+      // Chrome Bow Rail
+      {
+        type: 'place_item',
+        parentId: rootRef,
+        placement: 'explicit',
+        name: 'Bow Rail',
+        assetId: 'primitive-torus',
+        allowOverlap: true,
+        position: [x - 1.8, y + 0.92, z],
+        scale: [0.5, 0.1, 0.5],
+        rotation: [Math.PI / 2, 0, 0],
+      },
+    ]
+  },
+}
+
 export const CREATION_RECIPES: CreationRecipe[] = [
   heartRecipe,
   boardRecipe,
   airplaneRecipe,
   robotArmRecipe,
   humanoidRobotRecipe,
+  dogRecipe,
   carRecipe,
   tableRecipe,
   chairRecipe,
   droneRecipe,
   rocketRecipe,
+  speedboatRecipe,
   boatRecipe,
 ].map(withRelativeParents)
 
 export const findMatchingRecipe = (prompt: string): CreationRecipe | null => {
   const normalized = prompt.trim().toLowerCase()
   for (const recipe of CREATION_RECIPES) {
+    if (
+      recipe.id === 'dog' &&
+      /\b(casa[\p{L}\p{N}_-]*|casita[\p{L}\p{N}_-]*|house|home|shelter|refugio|kennel|shed)\b/iu.test(
+        normalized,
+      )
+    ) {
+      continue
+    }
     if (recipe.keywords.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(normalized))) {
       return recipe
     }

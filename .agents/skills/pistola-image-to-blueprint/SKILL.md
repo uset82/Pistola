@@ -11,8 +11,16 @@ The blueprint is the contract between the picture and the build. Every part must
 
 1. **Scale anchor.** Choose one real dimension, usually the overall length or height, from the intake or a sensible default: toy boat 0.4 m, chair seat height 0.45 m, door 2.1 m. Every other size comes from ratios in the image, never from guesses.
 2. **Crop the views** from `ortho-sheet.png` into `view-front.png`, `view-side.png`, and `view-top.png` (Pillow crop, with a small white margin).
-3. **Trace** each view with the bundled script. The tracer needs Pillow; run it as `python scripts/trace_silhouette.py self-test` to check the setup.
+3. **Trace** the views with the bundled script. The tracer needs Pillow; run it as `python scripts/trace_silhouette.py self-test` to check the setup.
 
+   For dual-axis organic hulls (boats, cars, animal bodies, aircraft):
+   ```bash
+   # Trace side + top views from an orthographic sheet directly into an intersect_profiles spec:
+   python scripts/trace_silhouette.py trace-ortho ortho-sheet.png --length-m 0.40 --width-m 0.16 --height-m 0.12 --out hull.json
+   ```
+   This generates a ready-to-run `build_cad_solid` action with `op: "intersect_profiles"` that performs CSG boolean intersection between the side extrusion and top extrusion.
+
+   For single view profiles or palette sampling:
    ```bash
    python scripts/trace_silhouette.py trace view-side.png --width-m 0.40 --view side --out side.json
    python scripts/trace_silhouette.py trace view-top.png  --width-m 0.40 --view top  --out top.json

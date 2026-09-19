@@ -30,9 +30,9 @@
             "status": "done",
             "evidence": {
               "kind": "observation",
-              "summary": "Using level level_5ngg7bgl99djm4h2."
+              "summary": "Using level level_0oax1bczxmu2pu24."
             },
-            "completedAt": 1789839816218
+            "completedAt": 1789840986184
           },
           {
             "id": "build",
@@ -44,15 +44,15 @@
               "summary": "4 actions completed.",
               "actionCount": 4,
               "createdNodeIds": [
-                "item_3ihxs2it7q55vmjw",
-                "item_ho33liiyfotdenfs",
-                "item_0ee2lnzmde05o9w2",
-                "item_g4rtyevsmuqnvtn8"
+                "item_u0esrm8vw760xpjc",
+                "item_4abwg2sg4y531dsi",
+                "item_gbjg83bkhiuz5ohu",
+                "item_ajw9nsw5zrmo4324"
               ],
               "warnings": []
             },
-            "startedAt": 1789839816328,
-            "completedAt": 1789839817556
+            "startedAt": 1789840986209,
+            "completedAt": 1789840986569
           },
           {
             "id": "verify",
@@ -63,13 +63,13 @@
               "kind": "observation",
               "summary": "Inspect found 4 bodies."
             },
-            "completedAt": 1789839818197
+            "completedAt": 1789840986856
           }
         ]
       }
     ],
-    "createdAt": 1789839816181,
-    "updatedAt": 1789839818197,
+    "createdAt": 1789840986158,
+    "updatedAt": 1789840986856,
     "undoAvailable": false
   },
   "built": {
@@ -91,9 +91,9 @@
               "status": "done",
               "evidence": {
                 "kind": "observation",
-                "summary": "Using level level_5ngg7bgl99djm4h2."
+                "summary": "Using level level_0oax1bczxmu2pu24."
               },
-              "completedAt": 1789839816218
+              "completedAt": 1789840986184
             },
             {
               "id": "build",
@@ -105,15 +105,15 @@
                 "summary": "4 actions completed.",
                 "actionCount": 4,
                 "createdNodeIds": [
-                  "item_3ihxs2it7q55vmjw",
-                  "item_ho33liiyfotdenfs",
-                  "item_0ee2lnzmde05o9w2",
-                  "item_g4rtyevsmuqnvtn8"
+                  "item_u0esrm8vw760xpjc",
+                  "item_4abwg2sg4y531dsi",
+                  "item_gbjg83bkhiuz5ohu",
+                  "item_ajw9nsw5zrmo4324"
                 ],
                 "warnings": []
               },
-              "startedAt": 1789839816328,
-              "completedAt": 1789839817556
+              "startedAt": 1789840986209,
+              "completedAt": 1789840986569
             },
             {
               "id": "verify",
@@ -124,8 +124,8 @@
           ]
         }
       ],
-      "createdAt": 1789839816181,
-      "updatedAt": 1789839817556,
+      "createdAt": 1789840986158,
+      "updatedAt": 1789840986569,
       "undoAvailable": true
     },
     "validation": {
@@ -143,17 +143,17 @@
       "failureKind": null,
       "failedActionIndex": null,
       "resolvedForwardRefs": {
-        "$ref_sailboat_hull": "item_3ihxs2it7q55vmjw"
+        "$ref_sailboat_hull": "item_u0esrm8vw760xpjc"
       },
       "completedActionCount": 4,
       "requiresReview": true,
       "destructiveActionCount": 0,
       "snapshotRestored": false,
       "createdNodeIds": [
-        "item_3ihxs2it7q55vmjw",
-        "item_ho33liiyfotdenfs",
-        "item_0ee2lnzmde05o9w2",
-        "item_g4rtyevsmuqnvtn8"
+        "item_u0esrm8vw760xpjc",
+        "item_4abwg2sg4y531dsi",
+        "item_gbjg83bkhiuz5ohu",
+        "item_ajw9nsw5zrmo4324"
       ],
       "bodyIds": [],
       "sketchIds": []
@@ -166,10 +166,10 @@
     "hasMore": false,
     "nodes": [
       {
-        "id": "item_3ihxs2it7q55vmjw",
+        "id": "item_u0esrm8vw760xpjc",
         "type": "item",
         "name": "Sailboat Hull",
-        "parentId": "level_5ngg7bgl99djm4h2",
+        "parentId": "level_0oax1bczxmu2pu24",
         "position": [
           0,
           0,
@@ -199,10 +199,10 @@
         }
       },
       {
-        "id": "item_ho33liiyfotdenfs",
+        "id": "item_4abwg2sg4y531dsi",
         "type": "item",
         "name": "Sailboat Keel",
-        "parentId": "item_3ihxs2it7q55vmjw",
+        "parentId": "item_u0esrm8vw760xpjc",
         "position": [
           0,
           -0.35,
@@ -232,10 +232,10 @@
         }
       },
       {
-        "id": "item_0ee2lnzmde05o9w2",
+        "id": "item_gbjg83bkhiuz5ohu",
         "type": "item",
         "name": "Sailboat Mast",
-        "parentId": "item_3ihxs2it7q55vmjw",
+        "parentId": "item_u0esrm8vw760xpjc",
         "position": [
           0,
           0.45,
@@ -265,10 +265,10 @@
         }
       },
       {
-        "id": "item_g4rtyevsmuqnvtn8",
+        "id": "item_ajw9nsw5zrmo4324",
         "type": "item",
         "name": "Sailboat Sail",
-        "parentId": "item_3ihxs2it7q55vmjw",
+        "parentId": "item_u0esrm8vw760xpjc",
         "position": [
           0.15,
           0.9,

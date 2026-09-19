@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { clearSceneHistory, useScene } from '@pascal-app/core'
+import { clearSceneHistory, useScene, type AnyNodeId } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
 import { executeAssistantPlan, validateAssistantPlan } from './execute'
 import { prepareAssistantActionForExecution } from './execution-preparation'
@@ -217,4 +217,29 @@ test('executeAssistantPlan routes execute_cad_brief through the runtime bridge',
   assert.equal(result.ok, true)
   assert.deepEqual(result.bodyIds, ['cbody_generated'])
   assert.deepEqual(result.sketchIds, ['csketch_generated'])
+})
+
+test('executeAssistantPlan falls back to build_cad_solid when MAC runtime is unavailable', async () => {
+  resetSceneWithTestNodes([])
+
+  const result = await executeAssistantPlan(
+    [{ type: 'generate_mac_part', prompt: 'crea un perro' }],
+    {
+      reviewConfirmed: true,
+      runtime: {
+        generateMacPart: async () => {
+          throw new Error(
+            'MAC runtime unavailable here; use build_cad_solid for real geometry on this host.',
+          )
+        },
+      },
+    },
+  )
+
+  assert.equal(result.ok, true)
+  assert.equal(result.completedActionCount, 1)
+  assert.equal(result.bodyIds.length, 1)
+  const createdBody = useScene.getState().nodes[result.bodyIds[0] as AnyNodeId]
+  assert.ok(createdBody)
+  assert.equal(createdBody.type, 'cad-body')
 })

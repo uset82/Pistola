@@ -103,6 +103,74 @@ def largest_component(mask: list[list[bool]]) -> set[tuple[int, int]]:
     return best
 
 
+def all_components(mask: list[list[bool]], min_size: int = 24) -> list[set[tuple[int, int]]]:
+    h, w = len(mask), len(mask[0])
+    seen = [[False] * w for _ in range(h)]
+    comps: list[set[tuple[int, int]]] = []
+    for sy in range(h):
+        for sx in range(w):
+            if not mask[sy][sx] or seen[sy][sx]:
+                continue
+            comp = set()
+            queue = deque([(sx, sy)])
+            seen[sy][sx] = True
+            while queue:
+                x, y = queue.popleft()
+                comp.add((x, y))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and mask[ny][nx] and not seen[ny][nx]:
+                        seen[ny][nx] = True
+                        queue.append((nx, ny))
+            if len(comp) >= min_size:
+                comps.append(comp)
+    comps.sort(key=lambda c: len(c), reverse=True)
+    return comps
+
+
+def trace_component(comp: set[tuple[int, int]], *, width_m: float | None = None,
+                    height_m: float | None = None, view: str = "side", origin: str | None = None,
+                    epsilon: float = 1.5) -> dict:
+    contour = moore_trace(comp)
+    xs = [p[0] for p in comp]
+    ys = [p[1] for p in comp]
+    min_x, max_x, min_y, max_y = min(xs), max(xs), min(ys), max(ys)
+    width_px, height_px = max_x - min_x + 1, max_y - min_y + 1
+
+    if width_m is not None and height_m is not None:
+        scale_x = width_m / width_px
+        scale_y = height_m / height_px
+    elif width_m is not None:
+        scale_x = scale_y = width_m / width_px
+    elif height_m is not None:
+        scale_x = scale_y = height_m / height_px
+    else:
+        scale_x = scale_y = 1.0
+
+    origin = origin or ("center" if view == "top" else "bottom-center")
+    cx = (min_x + max_x) / 2
+    base_y = max_y + 0.5 if origin == "bottom-center" else (min_y + max_y) / 2
+
+    simplified = simplify_closed(contour, epsilon)
+    pts = [[round((x - cx) * scale_x, 4), round((base_y - y) * scale_y, 4)] for x, y in simplified]
+    area = signed_area(pts)
+    if area < 0:
+        pts.reverse()
+        area = -area
+
+    return {
+        "view": view,
+        "units": "m",
+        "origin": origin,
+        "width_m": round(width_px * scale_x, 4),
+        "height_m": round(height_px * scale_y, 4),
+        "area_m2": round(area, 5),
+        "point_count": len(pts),
+        "points": pts,
+        "pixel_bbox": [min_x, min_y, max_x, max_y],
+    }
+
+
 def moore_trace(comp: set[tuple[int, int]]) -> list[tuple[int, int]]:
     start = min(comp, key=lambda p: (p[1], p[0]))  # topmost, then leftmost: west is outside
     contour = [start]
@@ -215,6 +283,45 @@ def trace_image(img: Image.Image, *, width_m=None, height_m=None, view="side", o
     }
 
 
+def trace_ortho_sheet(img: Image.Image, *, length_m: float, width_m: float, height_m: float,
+                      epsilon: float = 1.5, threshold: int = 40, dilate_px: int = 0) -> dict:
+    """Trace an orthographic sheet with side view and top view into Pistola CAD intersect_profiles spec."""
+    mask = dilate(foreground_mask(img, threshold), dilate_px)
+    comps = all_components(mask)
+    if len(comps) < 2:
+        w, h = img.size
+        top_half = img.crop((0, 0, w, h // 2))
+        bottom_half = img.crop((0, h // 2, w, h))
+        side_res = trace_image(top_half, width_m=length_m, height_m=height_m, view="side", origin="bottom-center", epsilon=epsilon, threshold=threshold)
+        top_res = trace_image(bottom_half, width_m=length_m, height_m=width_m, view="top", origin="center", epsilon=epsilon, threshold=threshold)
+    else:
+        c1, c2 = comps[0], comps[1]
+        c1_avg_y = sum(p[1] for p in c1) / len(c1)
+        c2_avg_y = sum(p[1] for p in c2) / len(c2)
+        comp_side, comp_top = (c1, c2) if c1_avg_y < c2_avg_y else (c2, c1)
+        side_res = trace_component(comp_side, width_m=length_m, height_m=height_m, view="side", origin="bottom-center", epsilon=epsilon)
+        top_res = trace_component(comp_top, width_m=length_m, height_m=width_m, view="top", origin="center", epsilon=epsilon)
+
+    return {
+        "action": "build_cad_solid",
+        "name": "traced_solid",
+        "dimensions": {
+            "length_m": length_m,
+            "width_m": width_m,
+            "height_m": height_m,
+        },
+        "spec": {
+            "op": "intersect_profiles",
+            "sideProfile": side_res["points"],
+            "topProfile": top_res["points"],
+        },
+        "views": {
+            "side": side_res,
+            "top": top_res,
+        },
+    }
+
+
 def palette(img: Image.Image, colors: int, threshold: int = 40) -> list[dict]:
     mask = foreground_mask(img, threshold)
     w, h = img.size
@@ -248,11 +355,23 @@ def self_test() -> int:
     rect = trace_image(img, width_m=1.0, view="top")
     ok_rect = abs(rect["area_m2"] - 0.5) / 0.5 < 0.05 and rect["point_count"] <= 8
 
+    ortho_img = Image.new("RGB", (600, 600), "white")
+    draw = ImageDraw.Draw(ortho_img)
+    draw.ellipse((50, 50, 550, 250), fill="black")
+    draw.ellipse((100, 350, 500, 550), fill="black")
+    ortho_res = trace_ortho_sheet(ortho_img.convert("RGBA"), length_m=3.0, width_m=1.5, height_m=1.0)
+    ok_ortho = (
+        ortho_res["spec"]["op"] == "intersect_profiles"
+        and len(ortho_res["spec"]["sideProfile"]) >= 4
+        and len(ortho_res["spec"]["topProfile"]) >= 4
+    )
+
     print(json.dumps({
         "ellipse": {"area_m2": result["area_m2"], "expected": round(expected, 5), "ok": ok_ellipse},
         "rectangle": {"area_m2": rect["area_m2"], "points": rect["point_count"], "ok": ok_rect},
+        "ortho_sheet": {"op": ortho_res["spec"]["op"], "ok": ok_ortho},
     }, indent=2))
-    return 0 if ok_ellipse and ok_rect else 1
+    return 0 if ok_ellipse and ok_rect and ok_ortho else 1
 
 
 def main(argv=None) -> int:
@@ -272,6 +391,16 @@ def main(argv=None) -> int:
                    help="grow the mask by N px to merge nearly-touching parts (inflates the outline by ~N px)")
     t.add_argument("--out")
 
+    o = sub.add_parser("trace-ortho", help="trace side + top orthographic sheet into build_cad_solid action")
+    o.add_argument("image")
+    o.add_argument("--length-m", type=float, required=True, help="total length in meters along X")
+    o.add_argument("--width-m", type=float, required=True, help="total width in meters along Z")
+    o.add_argument("--height-m", type=float, required=True, help="total height in meters along Y")
+    o.add_argument("--epsilon", type=float, default=1.5, help="simplification tolerance in pixels")
+    o.add_argument("--threshold", type=int, default=40, help="color distance from the background")
+    o.add_argument("--dilate", type=int, default=0)
+    o.add_argument("--out")
+
     p = sub.add_parser("palette", help="dominant object colors as hex")
     p.add_argument("image")
     p.add_argument("--colors", type=int, default=5)
@@ -287,16 +416,28 @@ def main(argv=None) -> int:
         print(json.dumps(palette(img, args.colors), indent=2))
         return 0
 
-    result = trace_image(
-        img,
-        width_m=args.width_m,
-        height_m=args.height_m,
-        view=args.view,
-        origin=args.origin,
-        epsilon=args.epsilon,
-        threshold=args.threshold,
-        dilate_px=args.dilate,
-    )
+    if args.command == "trace-ortho":
+        result = trace_ortho_sheet(
+            img,
+            length_m=args.length_m,
+            width_m=args.width_m,
+            height_m=args.height_m,
+            epsilon=args.epsilon,
+            threshold=args.threshold,
+            dilate_px=args.dilate,
+        )
+    else:
+        result = trace_image(
+            img,
+            width_m=args.width_m,
+            height_m=args.height_m,
+            view=args.view,
+            origin=args.origin,
+            epsilon=args.epsilon,
+            threshold=args.threshold,
+            dilate_px=args.dilate,
+        )
+
     text = json.dumps(result, indent=2)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as handle:

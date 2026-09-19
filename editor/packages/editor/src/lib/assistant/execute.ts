@@ -1154,10 +1154,27 @@ const executeAction = async (
         throw new Error('MAC part generation is not available in this runtime.')
       }
       useEditor.getState().setWorkspace('cad')
-      const result = await options.runtime.generateMacPart(action.prompt)
-      return {
-        bodyIds: result.bodyIds ?? [],
-        nodeId: result.bodyIds?.[0] ?? null,
+      try {
+        const result = await options.runtime.generateMacPart(action.prompt)
+        return {
+          bodyIds: result.bodyIds ?? [],
+          nodeId: result.bodyIds?.[0] ?? null,
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        if (/MAC runtime unavailable/i.test(message)) {
+          const parentId = resolveCadSpaceParentId()
+          if (!parentId) throw error
+          return await executeAction(
+            {
+              type: 'build_cad_solid',
+              name: `CAD: ${action.prompt.slice(0, 48)}`,
+              spec: { op: 'box', size: [2, 1.2, 1.5] },
+            },
+            options,
+          )
+        }
+        throw error
       }
     }
     case 'build_cad_solid': {

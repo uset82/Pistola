@@ -719,6 +719,7 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('build_cad_solid'),
+    refId: AssistantForwardRefIdSchema.optional(),
     name: z.string().optional(),
     spec: z.record(z.string(), z.unknown()),
     position: AssistantPoint3Schema.optional(),

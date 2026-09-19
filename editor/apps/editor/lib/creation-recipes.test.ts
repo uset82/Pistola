@@ -218,3 +218,67 @@ test('createAssistantTurnResult creates a 3D boat assembly for "hola genera un b
   }
 })
 
+test('findMatchingRecipe recognizes dog nouns in Spanish and English', () => {
+  assert.equal(findMatchingRecipe('crea un perro')?.id, 'dog')
+  assert.equal(findMatchingRecipe('un perrito')?.id, 'dog')
+  assert.equal(findMatchingRecipe('make a dog')?.id, 'dog')
+  assert.equal(findMatchingRecipe('puppy')?.id, 'dog')
+})
+
+test('createAssistantTurnResult creates a 3D dog assembly for "crea un perro"', async () => {
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'crea un perro',
+      chatMode: 'create',
+      context: { workspace: 'architecture' },
+    },
+    NO_AUTH_ENV,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.ok(result.turn.actions.length >= 8)
+  const root = result.turn.actions[0]
+  assert.equal(root?.type, 'place_item')
+  if (root?.type === 'place_item') {
+    assert.equal(root.refId, '$ref_dog_root')
+    assert.equal(root.name, 'Dog Torso')
+  }
+  assert.equal(
+    result.turn.actions.some((action) => action.type === 'generate_mac_part'),
+    false,
+  )
+})
+
+test('createAssistantTurnResult creates a sculpted CAD speedboat for "crea una lancha rápida 3D"', async () => {
+  assert.equal(findMatchingRecipe('crea una lancha rápida')?.id, 'speedboat')
+  assert.equal(findMatchingRecipe('make a speedboat')?.id, 'speedboat')
+  assert.equal(findMatchingRecipe('yacht')?.id, 'speedboat')
+
+  const result = await createAssistantTurnResult(
+    {
+      prompt: 'crea una lancha rápida 3D',
+      context: {},
+    },
+    NO_AUTH_ENV,
+  )
+
+  assert.equal(result.turn.mode, 'plan')
+  assert.ok(result.turn.actions.length >= 6)
+  const [hull, ...parts] = result.turn.actions
+  assert.equal(hull?.type, 'build_cad_solid')
+  if (hull?.type === 'build_cad_solid') {
+    assert.equal(hull.refId, '$ref_speedboat_root')
+    assert.equal(hull.name, 'Speedboat Hull')
+    assert.equal(hull.spec.op, 'intersect_profiles')
+    assert.ok(Array.isArray(hull.spec.sideProfile))
+    assert.ok(Array.isArray(hull.spec.topProfile))
+  }
+  for (const part of parts) {
+    assert.equal(part.type, 'place_item')
+    if (part.type === 'place_item') {
+      assert.equal(part.parentId, '$ref_speedboat_root')
+    }
+  }
+})
+
+

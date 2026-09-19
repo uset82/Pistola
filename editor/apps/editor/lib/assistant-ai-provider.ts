@@ -358,6 +358,20 @@ const ASSISTANT_ACTION_GUIDE = [
   { type: 'delete_nodes', shape: { type: 'delete_nodes', nodeIds: ['node_id_1', 'node_id_2'] } },
   { type: 'clear_level_contents', shape: { type: 'clear_level_contents', levelId: 'level_id optional if current level should be cleared' } },
   { type: 'execute_cad_brief', shape: { type: 'execute_cad_brief', brief: ASSISTANT_BOX_BRIEF_EXAMPLE } },
+  {
+    type: 'build_cad_solid',
+    shape: {
+      type: 'build_cad_solid',
+      name: 'Organic Hull',
+      color: '#0284c7',
+      position: [0, 0, 0],
+      spec: {
+        op: 'intersect_profiles',
+        sideProfile: [[-2, 0], [2, 0], [2, 0.8], [-2, 1.2]],
+        topProfile: [[-2, 0], [0, -0.6], [2, -0.5], [2, 0.5], [0, 0.6]],
+      },
+    },
+  },
   { type: 'create_default_cad_sketch', shape: { type: 'create_default_cad_sketch', position: [0, 0.01, 0] } },
   {
     type: 'extrude_cad_sketch',
@@ -1013,7 +1027,7 @@ Action field constraints (use only these exact values):
 Any mutating scene plan must require review before execution.
 Use catalog item ids exactly as provided in the workspace context.
 Available procedural primitives for place_item: primitive-box, primitive-sphere, primitive-cylinder, primitive-cone, primitive-torus, primitive-capsule, primitive-wedge. Use them to construct compound assemblies (robots, vehicles, airplanes, furniture) when an explicit catalog model does not exist.
-Use execute_cad_brief for FreeCAD interactive prismatic CAD (sketches, extrudes, simple solids) so the assistant returns a structured CAD brief. Use generate_mac_part for standalone mechanical / printable parts that need Multi-Agent-CAD (mechanisms, complex solids, print-in-place, geneva, gears, cages). Prefer generate_mac_part when the user asks for a complete engineered part rather than a sketch-based edit. Use run_cad_prompt only as a backward-compatible internal macro when you genuinely cannot translate the request into direct CAD/body actions, and never emit run_cad_prompt when assistantSession.cadMacroExpansion is true. Use extrude_cad_sketch or revolve_cad_sketch only when the user explicitly asks to operate on the active or selected CAD sketch.
+Use execute_cad_brief for FreeCAD interactive prismatic CAD (sketches, extrudes, simple solids) so the assistant returns a structured CAD brief. Use build_cad_solid for local parametric solids (box, cylinder, sphere, extrude, revolve, union, difference, and intersect_profiles for smooth organic hulls derived from dual-axis side and top silhouettes) when creating geometric solids in CAD space, especially on hosts where Multi-Agent-CAD runtime is unavailable. Use generate_mac_part for standalone mechanical / printable parts that need Multi-Agent-CAD (mechanisms, complex solids, print-in-place, geneva, gears, cages). Prefer generate_mac_part when the user asks for a complete engineered part rather than a sketch-based edit. Use run_cad_prompt only as a backward-compatible internal macro when you genuinely cannot translate the request into direct CAD/body actions, and never emit run_cad_prompt when assistantSession.cadMacroExpansion is true. Use extrude_cad_sketch or revolve_cad_sketch only when the user explicitly asks to operate on the active or selected CAD sketch.
 If the user provides an image and asks to recreate, approximate, furnish, or model something buildable, return an executable plan or a clarification when geometry is blocked. Do not force image requests into chat-only responses.
 Prefer editable approximations over fake precision when the exact asset or geometry is unavailable.
 If the user asks for a vague aesthetic change such as "nice entrance", ask clarifying questions instead of mutating the scene.

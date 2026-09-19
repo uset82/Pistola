@@ -79,3 +79,40 @@ test('build_cad_solid spec validation accepts a heart-like extrude and rejects e
   assert.equal(ok.success, true)
   assert.equal(validateCadSolidSpec({ op: 'union', children: [] }).success, false)
 })
+
+test('build_cad_solid intersect_profiles generates a smooth 3D hull from orthogonal 2D profiles', () => {
+  const sideProfile: [number, number][] = [
+    [-2, 0],
+    [2, 0],
+    [2, 0.8],
+    [0, 0.7],
+    [-2, 1.2],
+  ]
+  const topProfile: [number, number][] = [
+    [-2, 0],
+    [0, -0.6],
+    [2, -0.5],
+    [2, 0.5],
+    [0, 0.6],
+  ]
+
+  const validation = validateCadSolidSpec({
+    op: 'intersect_profiles',
+    sideProfile,
+    topProfile,
+  })
+  assert.equal(validation.success, true)
+
+  const hull = evaluateCadSolidSpec({
+    op: 'intersect_profiles',
+    sideProfile,
+    topProfile,
+  })
+
+  assert.ok(hull.volume > 0.5, `Volume should be positive, got ${hull.volume}`)
+  assert.ok(hull.positions.length > 20, 'Should contain 3D mesh vertices')
+  assert.ok(hull.indices.length > 20, 'Should contain triangle indices')
+  // Check that X dimension matches the length of the profiles (-2 to 2)
+  const [min, max] = hull.bbox
+  assert.ok(Math.abs((max[0] - min[0]) - 4.0) < 0.1, `Length in X should match profile length (~4m), got ${max[0] - min[0]}`)
+})

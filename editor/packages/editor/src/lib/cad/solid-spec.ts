@@ -72,6 +72,15 @@ export type CadSolidSpec =
       scale?: [number, number, number]
     }
   | {
+      op: 'intersect_profiles'
+      sideProfile: [number, number][]
+      topProfile: [number, number][]
+      depthMargin?: number
+      translate?: [number, number, number]
+      rotate?: [number, number, number]
+      scale?: [number, number, number]
+    }
+  | {
       op: 'mirror'
       axis?: 'x' | 'y' | 'z'
       child: CadSolidSpec
@@ -125,6 +134,13 @@ export const CadSolidSpecSchema: z.ZodType<CadSolidSpec> = z.lazy(() =>
     z.object({ op: z.literal('union'), children: z.array(CadSolidSpecSchema).min(1), ...transforms }),
     z.object({ op: z.literal('difference'), children: z.array(CadSolidSpecSchema).min(2), ...transforms }),
     z.object({ op: z.literal('intersection'), children: z.array(CadSolidSpecSchema).min(2), ...transforms }),
+    z.object({
+      op: z.literal('intersect_profiles'),
+      sideProfile: CadPolygonSchema,
+      topProfile: CadPolygonSchema,
+      depthMargin: z.number().positive().optional(),
+      ...transforms,
+    }),
     z.object({
       op: z.literal('mirror'),
       axis: z.enum(['x', 'y', 'z']).default('x'),
