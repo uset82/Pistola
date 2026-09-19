@@ -760,16 +760,18 @@ export const placeItem = (action: Extract<AssistantAction, { type: 'place_item' 
     return item.id
   }
 
-  const validation = spatialGridManager.canPlaceOnFloor(
-    placement.levelId,
-    [placement.position[0], 0, placement.position[2]],
-    dimensions,
-    rotation,
-    [],
-  )
+  if (!action.allowOverlap) {
+    const validation = spatialGridManager.canPlaceOnFloor(
+      placement.levelId,
+      [placement.position[0], 0, placement.position[2]],
+      dimensions,
+      rotation,
+      [],
+    )
 
-  if (!validation.valid) {
-    throw new Error(`Asset "${asset.name}" cannot be placed at the requested floor position.`)
+    if (!validation.valid) {
+      throw new Error(`Asset "${asset.name}" cannot be placed at the requested floor position.`)
+    }
   }
 
   const item = ItemNode.parse({

@@ -432,6 +432,8 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     rotation: AssistantPoint3Schema.optional(),
     scale: AssistantPoint3Schema.optional(),
     side: AssistantSideSchema.optional(),
+    /** Assembly subparts may intentionally occupy the parent object's footprint. */
+    allowOverlap: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('place_door'),
