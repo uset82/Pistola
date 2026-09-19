@@ -1,523 +1,441 @@
-#!/usr/bin/env bun
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { z } from 'zod'
+#!/usr/bin/env node
+import { createBridgeDriver } from './drivers/bridge.ts'
+import { createBrowserDriver } from './drivers/browser.ts'
+import type { PageDriver } from './drivers/types.ts'
+import { createStdioServer, type McpTool } from './stdio.ts'
 
-const DEFAULT_BASE_URL = process.env.PISTOLA_BASE_URL || 'http://127.0.0.1:3002'
-const LOCAL_TOKEN = process.env.PISTOLA_LOCAL_API_TOKEN?.trim() || ''
+const assistantToolsEnabled = process.env.PISTOLA_MCP_ASSISTANT_TOOLS === '1'
+const transportName = process.env.PISTOLA_TRANSPORT === 'bridge' ? 'bridge' : 'browser'
 
-const textResult = (text: string, isError = false) => ({
-  content: [{ type: 'text' as const, text }],
-  ...(isError ? { isError: true } : {}),
+const jsonResult = (data: unknown, isError = false) => ({
+  content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+  isError,
 })
 
-const jsonResult = (value: unknown, isError = false) =>
-  textResult(JSON.stringify(value, null, 2), isError)
-
-async function pistolaFetch(pathname: string, init?: RequestInit) {
-  const headers = new Headers(init?.headers)
-  if (!headers.has('Content-Type') && init?.body && !(init.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json')
-  }
-  if (LOCAL_TOKEN) {
-    headers.set('Authorization', `Bearer ${LOCAL_TOKEN}`)
-  }
-
-  const response = await fetch(`${DEFAULT_BASE_URL}${pathname}`, {
-    ...init,
-    headers,
-    cache: 'no-store',
-  })
-
-  const contentType = response.headers.get('content-type') || ''
-  const payload = contentType.includes('application/json')
-    ? await response.json()
-    : await response.text()
-
-  if (!response.ok) {
-    const message =
-      typeof payload === 'object' && payload && 'error' in payload
-        ? String((payload as { error: unknown }).error)
-        : typeof payload === 'string'
-          ? payload
-          : `Request failed with status ${response.status}`
-    throw new Error(message)
-  }
-
-  return payload
-}
-
-async function waitForCommandResult(sessionId: string, commandId: string, timeoutMs = 600_000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    const payload = (await pistolaFetch(
-      `/api/workspace/command?sessionId=${encodeURIComponent(sessionId)}&commandId=${encodeURIComponent(commandId)}`,
-    )) as { pending?: boolean; result?: unknown }
-    if (!payload.pending && payload.result) {
-      return payload.result
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-  }
-  throw new Error('Timed out waiting for the live editor to execute the command.')
-}
-
-async function waitForMacJob(jobId: string, timeoutMs = 1_800_000) {
-  const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
-    const job = (await pistolaFetch(`/api/mac/jobs/${encodeURIComponent(jobId)}`)) as {
-      status?: string
-      error?: string
-    }
-    if (job.status === 'succeeded' || job.status === 'failed') {
-      return job
-    }
-    await new Promise((resolve) => setTimeout(resolve, 2500))
-  }
-  throw new Error('Timed out waiting for MAC job.')
-}
-
-const server = new McpServer({
-  name: 'pistola',
-  version: '0.1.0',
+const imageResult = (data: string, mime = 'image/png', extra?: unknown) => ({
+  content: [
+    { type: 'image', data, mimeType: mime },
+    ...(extra ? [{ type: 'text', text: JSON.stringify(extra, null, 2) }] : []),
+  ],
 })
 
-server.tool(
-  'pistola_status',
-  'Report Pistola helper health, installed AI model, and active workspace session.',
-  {},
-  async () => {
-    try {
-      const [workspace, cadHealth, macHealth, aiConfig] = await Promise.all([
-        pistolaFetch('/api/workspace/session'),
-        pistolaFetch('/api/cad/health').catch((error: Error) => ({ error: error.message })),
-        pistolaFetch('/api/mac/health').catch((error: Error) => ({ error: error.message })),
-        pistolaFetch('/api/ai/config').catch((error: Error) => ({ error: error.message })),
-      ])
-      return jsonResult({
-        baseUrl: DEFAULT_BASE_URL,
-        workspace,
-        cadHealth,
-        macHealth,
-        aiConfig,
-      })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
+const objectSchema = (properties: Record<string, unknown> = {}, required: string[] = []) => ({
+  type: 'object',
+  properties,
+  required,
+  additionalProperties: true,
+})
 
-server.tool(
-  'pistola_configure_model',
-  'Install the user OpenRouter/OpenAI model used by assistant, CAD planning, and MAC.',
+let driverPromise: Promise<PageDriver> | null = null
+
+const getDriver = () => {
+  driverPromise ??= transportName === 'bridge' ? createBridgeDriver() : createBrowserDriver()
+  return driverPromise
+}
+
+const invoke = async (method: string, args?: unknown) => {
+  const driver = await getDriver()
+  return driver.invoke(method, args)
+}
+
+const unwrap = (value: unknown) => {
+  if (value && typeof value === 'object' && 'data' in value) return (value as { data: unknown }).data
+  if (value && typeof value === 'object' && 'output' in value) return (value as { output: unknown }).output
+  return value
+}
+
+const runActions = async (actions: unknown[], confirmDestructive = false) =>
+  unwrap(await invoke('run', [actions, { confirmDestructive }]))
+
+const tools: McpTool[] = [
   {
-    provider: z.enum(['openrouter', 'openai']).default('openrouter'),
-    apiKey: z.string().min(1),
-    model: z.string().default('openrouter/free'),
-    baseUrl: z.string().default('https://openrouter.ai/api/v1'),
-  },
-  async ({ provider, apiKey, model, baseUrl }) => {
-    try {
-      const saved = await pistolaFetch('/api/ai/config', {
-        method: 'PUT',
-        body: JSON.stringify({ provider, apiKey, model, baseUrl }),
-      })
-      const tested = await pistolaFetch('/api/ai/test', {
-        method: 'POST',
-        body: JSON.stringify({ provider, apiKey, model, baseUrl }),
-      }).catch((error: Error) => ({ ok: false, error: error.message }))
-      return jsonResult({ saved, tested })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_get_workspace',
-  'Get the live editor workspace snapshot (phase, selection, node count).',
-  {},
-  async () => {
-    try {
-      return jsonResult(await pistolaFetch('/api/workspace/session'))
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_plan',
-  'Plan assistant actions from a natural-language prompt without executing them.',
-  {
-    prompt: z.string().min(1),
-    chatMode: z.enum(['ask', 'create', 'refine']).default('create'),
-  },
-  async ({ prompt, chatMode }) => {
-    try {
-      const payload = await pistolaFetch('/api/assistant/plan', {
-        method: 'POST',
-        body: JSON.stringify({ prompt, chatMode }),
-      })
-      return jsonResult(payload)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_execute',
-  'Enqueue validated assistant actions for the live editor tab to execute.',
-  {
-    actions: z.array(z.record(z.string(), z.unknown())).min(1),
-    sessionId: z.string().optional(),
-  },
-  async ({ actions, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({ actions, sessionId }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult({ enqueued, result })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_chat',
-  'Plan and execute a prompt in the live editor workspace (requires an open editor tab).',
-  {
-    prompt: z.string().min(1),
-    chatMode: z.enum(['ask', 'create', 'refine']).default('create'),
-    sessionId: z.string().optional(),
-  },
-  async ({ prompt, chatMode, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({ prompt, chatMode, sessionId }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult({ enqueued, result })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_generate_mac',
-  'Start Multi-Agent-CAD part generation, wait for artifacts, then import into the live scene when a session exists.',
-  {
-    prompt: z.string().min(1),
-    importIntoScene: z.boolean().default(true),
-    sessionId: z.string().optional(),
-  },
-  async ({ prompt, importIntoScene, sessionId }) => {
-    try {
-      if (importIntoScene) {
-        const enqueued = (await pistolaFetch('/api/workspace/command', {
-          method: 'POST',
-          body: JSON.stringify({ prompt, generateMac: true, sessionId }),
-        })) as { sessionId: string; command: { id: string } }
-        const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id, 1_800_000)
-        return jsonResult({ mode: 'import', enqueued, result })
+    name: 'pistola_status',
+    description: 'Report the current Pistola target, page API version, transport, and forbidden-request count.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        const driver = await getDriver()
+        const opened = await driver.open()
+        return jsonResult({
+          ok: true,
+          target: driver.target,
+          transport: driver.kind,
+          apiVersion: opened.apiVersion || driver.apiVersion,
+          signInRequired: opened.signInRequired,
+          forbiddenRequestCount: driver.forbiddenCount(),
+          forbiddenHits: driver.forbiddenHits(),
+          assistantTools: assistantToolsEnabled,
+        })
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
-
-      const created = (await pistolaFetch('/api/mac/jobs', {
-        method: 'POST',
-        body: JSON.stringify({ prompt, mode: 'part' }),
-      })) as { jobId: string }
-      const job = await waitForMacJob(created.jobId)
-      return jsonResult({ mode: 'artifacts-only', created, job })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
+    },
   },
-)
-
-server.tool(
-  'pistola_generate_cad',
-  'Generate a FreeCAD CadBrief from a prompt (planning only). Execute via pistola_execute with execute_cad_brief.',
   {
-    prompt: z.string().min(1),
-  },
-  async ({ prompt }) => {
-    try {
-      const brief = await pistolaFetch('/api/cad/brief', {
-        method: 'POST',
-        body: JSON.stringify({ prompt }),
-      })
-      return jsonResult(brief)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_get_job',
-  'Fetch a FreeCAD CAD job or MAC job by id.',
-  {
-    engine: z.enum(['cad', 'mac']).default('mac'),
-    jobId: z.string().min(1),
-  },
-  async ({ engine, jobId }) => {
-    try {
-      const path =
-        engine === 'mac'
-          ? `/api/mac/jobs/${encodeURIComponent(jobId)}`
-          : `/api/cad/jobs/${encodeURIComponent(jobId)}`
-      return jsonResult(await pistolaFetch(path))
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_list_artifacts',
-  'Describe artifact URLs from a completed MAC job payload (pass jobId).',
-  {
-    jobId: z.string().min(1),
-  },
-  async ({ jobId }) => {
-    try {
-      const job = (await pistolaFetch(`/api/mac/jobs/${encodeURIComponent(jobId)}`)) as {
-        result?: { artifacts?: Record<string, unknown> }
+    name: 'pistola_open',
+    description: 'Open or reuse the Pistola workspace tab and wait until window.pistola.invoke is ready.',
+    inputSchema: objectSchema({ target: { type: 'string' } }),
+    handler: async (args) => {
+      try {
+        if (typeof args.target === 'string') process.env.PISTOLA_TARGET = args.target
+        const driver = await getDriver()
+        const opened = await driver.open()
+        return jsonResult({ ...opened, target: driver.target, transport: driver.kind })
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
-      return jsonResult({
-        jobId,
-        artifacts: job.result?.artifacts || {},
-        note: 'Artifact paths are served under /api/mac/artifacts/*',
-      })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
+    },
   },
-)
-
-server.tool(
-  'pistola_inspect_scene',
-  'Inspect nodes in the live scene with optional filtering by levelId, node type, name query, and pagination.',
   {
-    levelId: z.string().optional(),
-    type: z.string().optional(),
-    nameQuery: z.string().optional(),
-    limit: z.number().int().min(1).max(100).default(25),
-    offset: z.number().int().min(0).default(0),
-    sessionId: z.string().optional(),
+    name: 'pistola_manual',
+    description: 'Read the page-level Pistola action grammar, primitive ids, and solid-spec rules.',
+    inputSchema: objectSchema({ filter: { type: 'string' } }),
+    handler: async (args) => {
+      try {
+        const manual = unwrap(await invoke('manual')) as Record<string, unknown>
+        if (typeof args.filter !== 'string') return jsonResult(manual)
+        const needle = args.filter.toLowerCase()
+        const capabilities = Array.isArray(manual.capabilities)
+          ? manual.capabilities.filter((item) => JSON.stringify(item).toLowerCase().includes(needle))
+          : []
+        return jsonResult({ ...manual, capabilities })
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ levelId, type, nameQuery, limit, offset, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'read',
-          tool: 'inspect_scene',
-          arguments: { levelId, type, nameQuery, limit, offset },
-          sessionId,
-        }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_get_nodes',
-  'Retrieve detailed summaries for specific node IDs from the live scene.',
   {
-    nodeIds: z.array(z.string()).min(1),
-    sessionId: z.string().optional(),
+    name: 'pistola_inspect',
+    description: 'Inspect the live scene: nodes, selection, and counts.',
+    inputSchema: objectSchema({
+      levelId: { type: 'string' },
+      type: { type: 'string' },
+      nameQuery: { type: 'string' },
+      limit: { type: 'number' },
+    }),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('inspect', args)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ nodeIds, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'read',
-          tool: 'get_nodes',
-          arguments: { nodeIds },
-          sessionId,
-        }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_measure',
-  'Measure distances, bounding boxes, wall lengths, zone areas, or free floor space in the live editor scene.',
   {
-    mode: z.enum(['distance', 'bounds', 'wall_length', 'zone_area', 'free_floor_space']),
-    nodeIds: z.array(z.string()).optional(),
-    pointA: z.tuple([z.number(), z.number(), z.number()]).optional(),
-    pointB: z.tuple([z.number(), z.number(), z.number()]).optional(),
-    sessionId: z.string().optional(),
+    name: 'pistola_get_nodes',
+    description: 'Read specific scene nodes by id.',
+    inputSchema: objectSchema({ nodeIds: { type: 'array', items: { type: 'string' } } }, ['nodeIds']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('getNodes', [args.nodeIds])))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ mode, nodeIds, pointA, pointB, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'read',
-          tool: 'measure',
-          arguments: { mode, nodeIds, pointA, pointB },
-          sessionId,
-        }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_search_catalog',
-  'Search the assistant catalog of furniture, architectural, and equipment items.',
   {
-    query: z.string().default(''),
-    category: z.string().optional(),
-    limit: z.number().int().min(1).max(50).default(20),
-    sessionId: z.string().optional(),
+    name: 'pistola_measure',
+    description: 'Measure distances, bounds, or zone occupancy in the live scene.',
+    inputSchema: objectSchema({ mode: { type: 'string' } }, ['mode']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('measure', args)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ query, category, limit, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'read',
-          tool: 'search_catalog',
-          arguments: { query, category, limit },
-          sessionId,
-        }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_list_capabilities',
-  'List registered assistant capabilities (actions, domains, safety flags, and examples).',
   {
-    domain: z
-      .enum(['workspace', 'viewer', 'structure', 'furnish', 'transform', 'cad', 'history'])
-      .optional(),
-    sessionId: z.string().optional(),
+    name: 'pistola_search_catalog',
+    description: 'Search catalog items, including primitive-* ids.',
+    inputSchema: objectSchema({ query: { type: 'string' } }),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('searchCatalog', typeof args.query === 'string' ? args.query : '')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ domain, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'read',
-          tool: 'list_capabilities',
-          arguments: { domain },
-          sessionId,
-        }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_list_recipes',
-  'List available parametric creation recipes (heart, airplane, board, robot arm, car, table, etc.).',
   {
-    sessionId: z.string().optional(),
+    name: 'pistola_list_recipes',
+    description: 'List built-in creation recipes.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('listRecipes')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'read',
-          tool: 'list_recipes',
-          arguments: {},
-          sessionId,
-        }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_agent',
-  'Run the full agentic operator loop in the live editor workspace: observes the scene, measures geometry, executes actions, and returns the timeline and final turn.',
   {
-    prompt: z.string().min(1),
-    chatMode: z.enum(['ask', 'create', 'refine']).default('create'),
-    sessionId: z.string().optional(),
+    name: 'pistola_validate',
+    description: 'Validate a typed action batch without mutating the scene.',
+    inputSchema: objectSchema({ actions: { type: 'array' } }, ['actions']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('validate', [args.actions])))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ prompt, chatMode, sessionId }) => {
-    try {
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({ type: 'agent', prompt, chatMode, sessionId }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id, 600_000)
-      return jsonResult({ enqueued, result })
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
-    }
-  },
-)
-
-server.tool(
-  'pistola_camera',
-  'Control the live viewport camera: top-down view, perspective/orthographic modes, orbit, or focus nodes.',
   {
-    view: z.enum(['top', 'perspective', 'orthographic']).optional(),
-    orbit: z.enum(['cw', 'ccw']).optional(),
-    focusNodeId: z.string().optional(),
-    sessionId: z.string().optional(),
+    name: 'pistola_run',
+    description:
+      'Execute a typed, validated action batch through window.pistola.invoke. confirmDestructive defaults to false.',
+    inputSchema: objectSchema(
+      { actions: { type: 'array' }, confirmDestructive: { type: 'boolean' } },
+      ['actions'],
+    ),
+    handler: async (args) => {
+      try {
+        return jsonResult(await runActions(args.actions as unknown[], args.confirmDestructive === true))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
   },
-  async ({ view, orbit, focusNodeId, sessionId }) => {
-    try {
-      const actions: unknown[] = []
-      if (view === 'top') actions.push({ type: 'camera_top_view' })
-      else if (view === 'perspective') actions.push({ type: 'set_camera_mode', cameraMode: 'perspective' })
-      else if (view === 'orthographic') actions.push({ type: 'set_camera_mode', cameraMode: 'orthographic' })
-      if (orbit) actions.push({ type: 'orbit_camera', direction: orbit })
-      if (focusNodeId) actions.push({ type: 'focus_camera_on_nodes', nodeIds: [focusNodeId] })
+  {
+    name: 'pistola_execute',
+    description: 'Deprecated alias of pistola_run. Still enforces confirmDestructive.',
+    inputSchema: objectSchema(
+      { actions: { type: 'array' }, confirmDestructive: { type: 'boolean' } },
+      ['actions'],
+    ),
+    handler: async (args) => {
+      try {
+        return jsonResult({
+          deprecated: true,
+          aliasOf: 'pistola_run',
+          result: await runActions(args.actions as unknown[], args.confirmDestructive === true),
+        })
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_screenshot',
+    description: 'Capture the live viewport canvas as a PNG.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        const driver = await getDriver()
+        const shot = await driver.screenshot()
+        return imageResult(shot.data, shot.mime, { forbiddenRequestCount: driver.forbiddenCount() })
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_undo',
+    description: 'Undo the last scene mutation.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('undo')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_redo',
+    description: 'Redo the last undone scene mutation.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('redo')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_wait_idle',
+    description: 'Wait until CAD/MAC regeneration is idle.',
+    inputSchema: objectSchema({ timeoutMs: { type: 'number' } }),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('waitForIdle', typeof args.timeoutMs === 'number' ? args.timeoutMs : 20_000)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_camera',
+    description: 'Run a single camera action such as orbit_camera, camera_top_view, or focus_camera_on_nodes.',
+    inputSchema: objectSchema({ action: { type: 'object' } }, ['action']),
+    handler: async (args) => {
+      try {
+        return jsonResult(await runActions([args.action], false))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_create',
+    description: 'Create a checkbox operator plan before any scene mutation.',
+    inputSchema: objectSchema({ plan: { type: 'object' } }, ['plan']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.create', args.plan)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_get',
+    description: 'Read the active operator plan.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.get')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_run_step',
+    description: 'Validate and execute one plan step through taskPlan.runStep.',
+    inputSchema: objectSchema(
+      {
+        planId: { type: 'string' },
+        phaseId: { type: 'string' },
+        stepId: { type: 'string' },
+        actions: { type: 'array' },
+        confirmDestructive: { type: 'boolean' },
+      },
+      ['planId', 'phaseId', 'stepId', 'actions'],
+    ),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.runStep', args)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_update_step',
+    description: 'Mark observation or validation steps done. Execution steps must use pistola_task_run_step.',
+    inputSchema: objectSchema(
+      {
+        planId: { type: 'string' },
+        phaseId: { type: 'string' },
+        stepId: { type: 'string' },
+        status: { type: 'string' },
+        evidence: { type: 'object' },
+      },
+      ['planId', 'phaseId', 'stepId', 'status'],
+    ),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.updateStep', args)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_complete',
+    description: 'Complete the active operator plan with a summary.',
+    inputSchema: objectSchema({ planId: { type: 'string' }, summary: { type: 'string' } }, ['planId', 'summary']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.complete', [args.planId, args.summary])))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_undo',
+    description: 'Restore the scene snapshot captured before the plan started.',
+    inputSchema: objectSchema({ planId: { type: 'string' } }, ['planId']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.undo', args.planId)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_clear',
+    description: 'Clear the active operator plan.',
+    inputSchema: objectSchema({ planId: { type: 'string' } }),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.clear', args.planId)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+]
 
-      const enqueued = (await pistolaFetch('/api/workspace/command', {
-        method: 'POST',
-        body: JSON.stringify({ type: 'execute', actions, sessionId }),
-      })) as { sessionId: string; command: { id: string } }
-      const result = await waitForCommandResult(enqueued.sessionId, enqueued.command.id)
-      return jsonResult(result)
-    } catch (error) {
-      return textResult(error instanceof Error ? error.message : String(error), true)
+if (assistantToolsEnabled) {
+  const prefix = "[Uses Pistola's in-app AI model, not the IDE's model] "
+  const baseUrl = () => (process.env.PISTOLA_BASE_URL ?? 'http://127.0.0.1:3002').replace(/\/$/, '')
+  const assistantFetch = async (path: string, init: RequestInit = {}) => {
+    const response = await fetch(`${baseUrl()}${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      throw new Error(
+        typeof (payload as { error?: string }).error === 'string'
+          ? (payload as { error: string }).error
+          : `Assistant ${path} failed (${response.status}).`,
+      )
     }
-  },
-)
+    return payload
+  }
+  tools.push(
+    {
+      name: 'pistola_assistant_plan',
+      description: `${prefix}Ask Pistola's in-app model to propose actions. IDE agents should not use this.`,
+      inputSchema: objectSchema({ prompt: { type: 'string' }, chatMode: { type: 'string' } }, ['prompt']),
+      handler: async (args) => {
+        try {
+          return jsonResult(
+            await assistantFetch('/api/assistant/plan', {
+              method: 'POST',
+              body: JSON.stringify({ prompt: args.prompt, chatMode: args.chatMode ?? 'create' }),
+            }),
+          )
+        } catch (error) {
+          return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+        }
+      },
+    },
+    {
+      name: 'pistola_assistant_chat',
+      description: `${prefix}Send a natural-language turn to Pistola's in-app chat.`,
+      inputSchema: objectSchema({ prompt: { type: 'string' }, chatMode: { type: 'string' } }, ['prompt']),
+      handler: async (args) => {
+        try {
+          return jsonResult(
+            await assistantFetch('/api/assistant/turn', {
+              method: 'POST',
+              body: JSON.stringify({ prompt: args.prompt, chatMode: args.chatMode ?? 'create' }),
+            }),
+          )
+        } catch (error) {
+          return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+        }
+      },
+    },
+  )
+}
 
-const transport = new StdioServerTransport()
-await server.connect(transport)
-
+createStdioServer(tools)

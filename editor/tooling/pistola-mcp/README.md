@@ -1,31 +1,75 @@
 # Pistola MCP
 
-Stdio MCP server that controls a running Pistola editor over localhost HTTP.
+Stdio MCP server that drives a live Pistola page through `window.pistola.invoke`. The IDE model
+plans; Pistola only executes typed actions. It runs on **Node ≥22.18**, not Bun.
 
 ## Prerequisites
 
-1. Start the editor app (`bun run dev` in `editor/`, typically `http://127.0.0.1:3002`).
-2. Open a live workspace tab (required for scene mutations).
-3. Choose one access mode:
-   - During local development, set `PISTOLA_LOCAL_API_TOKEN` to the same value in editor `.env.local` and the MCP environment. It authorizes MCP calls, but the live browser workspace must still be signed in for scene mutations.
-   - With no auth DB and no local token, set `PISTOLA_ALLOW_UNAUTHENTICATED_API=1` in the editor app environment for a development-only guest browser workspace. Setting it only on the MCP process does not configure the editor app.
+1. Node 22.18+ on the PATH.
+2. A reachable Pistola page: local editor, Canner, or a Sites export.
+3. Optional: a Chrome instance already listening on `127.0.0.1:9333` so the server can attach.
 
-## Tools
+## Transports
 
-- `pistola_status`
-- `pistola_configure_model`
-- `pistola_get_workspace`
-- `pistola_plan`
-- `pistola_execute`
-- `pistola_chat`
-- `pistola_generate_mac`
-- `pistola_generate_cad`
-- `pistola_get_job`
-- `pistola_list_artifacts`
+| `PISTOLA_TRANSPORT` | Use |
+|---|---|
+| `browser` (default) | Playwright launches or attaches to Chrome and calls `window.pistola.invoke`. Works on local, Canner, and Sites. |
+| `bridge` | HTTP `/api/workspace/command` with `{ type: "api", method, args }`. Local editor only. |
 
-## Run manually
+## Targets
+
+`PISTOLA_TARGET` accepts `local`, `canner`, `sites`, or any `http(s)://` URL.
+
+| Value | Default URL |
+|---|---|
+| `local` | `http://127.0.0.1:3002/workspace` (`PISTOLA_BASE_URL`) |
+| `canner` | `https://pistola.canner.app/workspace` (`PISTOLA_CANNER_URL`) |
+| `sites` | `PISTOLA_SITES_URL` or the current chatgpt.site workspace |
+
+Other env vars:
+
+- `PISTOLA_BROWSER_CDP_URL` — attach instead of launch (default `http://127.0.0.1:9333`)
+- `PISTOLA_BROWSER_PROFILE` — dedicated Chrome profile (default `%LOCALAPPDATA%/pistola/browser-profile`)
+- `PISTOLA_BROWSER_HEADLESS=0` — show the window
+- `PISTOLA_LOCAL_API_TOKEN` — only for `bridge`
+- `PISTOLA_MCP_ASSISTANT_TOOLS=1` — expose the in-app AI tools (off by default)
+
+## Default tools
+
+Session: `pistola_status`, `pistola_open`, `pistola_manual`
+
+Reads: `pistola_inspect`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`
+
+Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to false), deprecated `pistola_execute` (same check)
+
+View / history: `pistola_screenshot`, `pistola_undo`, `pistola_redo`, `pistola_wait_idle`, `pistola_camera`
+
+Tasks: `pistola_task_create`, `pistola_task_get`, `pistola_task_run_step`, `pistola_task_update_step`, `pistola_task_complete`, `pistola_task_undo`, `pistola_task_clear`
+
+Never use a `pistola_plan*` name. That prefix is reserved for the hidden AI tool.
+
+## Hidden AI tools
+
+Only when `PISTOLA_MCP_ASSISTANT_TOOLS=1`:
+
+- `pistola_assistant_plan`
+- `pistola_assistant_chat`
+
+Descriptions start with `[Uses Pistola's in-app AI model, not the IDE's model]`.
+
+## Run
 
 ```bash
 cd editor/tooling/pistola-mcp
-bun run start
+node ./src/index.ts
 ```
+
+E2E (MCP client over stdio, same as an IDE):
+
+```bash
+node editor/scripts/ide-direct-control-e2e.mjs --target local
+node editor/scripts/ide-direct-control-e2e.mjs --target sites
+node editor/scripts/ide-direct-control-e2e.mjs --list-tools
+```
+
+If `window.pistola.invoke` or `taskPlan` is missing, the server stops. It never falls back to chat.
