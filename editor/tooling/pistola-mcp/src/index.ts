@@ -194,6 +194,19 @@ const tools: McpTool[] = [
     },
   },
   {
+    name: 'pistola_check',
+    description:
+      'Run the structural checker on the live scene. Returns {ok, errorCount, warningCount, issues[]}. Also embedded on pistola_run and pistola_task_run_step.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('checkStructure')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
     name: 'pistola_run',
     description:
       'Execute a typed, validated action batch through window.pistola.invoke. confirmDestructive defaults to false.',
@@ -324,6 +337,7 @@ const tools: McpTool[] = [
         stepId: { type: 'string' },
         actions: { type: 'array' },
         confirmDestructive: { type: 'boolean' },
+        strict: { type: 'boolean' },
       },
       ['planId', 'phaseId', 'stepId', 'actions'],
     ),
@@ -351,6 +365,18 @@ const tools: McpTool[] = [
     handler: async (args) => {
       try {
         return jsonResult(unwrap(await invoke('taskPlan.updateStep', args)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_restore_best',
+    description: 'Restore the plan snapshot with the fewest structural errors.',
+    inputSchema: objectSchema({ planId: { type: 'string' } }, ['planId']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('taskPlan.restoreBest', args.planId)))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }

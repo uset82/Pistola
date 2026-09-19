@@ -1137,12 +1137,26 @@ export const moveTarget = (action: Extract<AssistantAction, { type: 'move_target
 
   if (node.type === 'cad-body') {
     const transform = getCadBodyTransform(node)
-    useScene.getState().updateNode(node.id, {
-      position: next,
-      transform: { ...transform, position: next },
-    } as Partial<AnyNode>)
+    useScene.setState((state) => ({
+      nodes: {
+        ...state.nodes,
+        [node.id]: {
+          ...node,
+          position: next,
+          transform: { ...transform, position: next },
+        },
+      },
+    }))
   } else {
-    useScene.getState().updateNode(node.id, { position: next } as Partial<AnyNode>)
+    useScene.setState((state) => ({
+      nodes: {
+        ...state.nodes,
+        [node.id]: {
+          ...node,
+          position: next,
+        },
+      },
+    }))
   }
 
   selectCreatedNode(node.id, node.type)

@@ -88,38 +88,46 @@ Files: `lib/cad/{local-kernel,solid-spec}.ts`, new `lib/cad/views.ts`, `lib/assi
 ### Phase 2: Structural checker and feedback (largest expected gain)
 Files: new `lib/structure/{scene-geometry,contact-graph,checks,report}.ts`, new
 `packages/core/src/lib/primitive-geometry.ts` (shared with `item-renderer.tsx`).
-- [ ] Every part becomes world triangles plus an axis-aligned box. Tolerance is max(2 mm, 0.5% of the
+- [x] Every part becomes world triangles plus an axis-aligned box. Tolerance is max(2 mm, 0.5% of the
   assembly diagonal).
-- [ ] Per-body checks:
+  — evidence: `bun test ./packages/editor/src/lib/structure/checks.test.ts` → `assembly tolerance is max(2mm, 0.5% of the diagonal)`
+- [x] Per-body checks:
   - `EMPTY_RESULT`;
   - `NOOP_DIFFERENCE`;
   - `DISJOINT_SHELLS`;
   - `OPEN_MESH`;
   - `DEGENERATE`;
   - `BUDGET` (over 50k triangles).
-- [ ] Assembly checks:
+  — evidence: same suite → `no-op cut produces NOOP_DIFFERENCE`; `open mesh produces OPEN_MESH`; codes in `editor/packages/editor/src/lib/structure/checks.ts`
+- [x] Assembly checks:
   - contact graph: box broadphase, then `three-mesh-bvh` distance;
   - `FLOATING_PART`;
   - `UNGROUNDED` / `BELOW_FLOOR`;
   - `BURIED_PART`;
   - `DUPLICATE_PART`;
   - `EXCESSIVE_OVERLAP` (warning).
-- [ ] Issues are structured:
+  — evidence: `floating mast produces FLOATING_PART`; `sunk keel produces BELOW_FLOOR`; `contact-graph.ts` uses `MeshBVH.closestPointToPoint`
+- [x] Issues are structured:
   ```
   {code, severity, actionIndex, specPath?, partId, otherPartId?, measured, fix:{hint, patch?}}
   ```
   - Floating parts get a `move_target {delta}` patch.
   - At most 20 issues, errors first.
-- [ ] `checkStructure` / `pistola_check`. `run` and `taskPlan.runStep` embed the report automatically, so
+  — evidence: fixture patches are `move_target`; `finalizeReport` slices to 20 errors-first
+- [x] `checkStructure` / `pistola_check`. `run` and `taskPlan.runStep` embed the report automatically, so
   agents can't skip feedback.
-- [ ] Keep-best:
+  — evidence: `run and invoke(checkStructure) embed the same report`; `mcp-tools-default.json` includes `pistola_check`
+- [x] Keep-best:
   - the plan keeps its best snapshot;
   - `taskPlan.restoreBest`;
   - regressions are flagged;
   - opt-in `strict` reverts the step.
-- [ ] Skill rule: at most 2 retries per step using the issue list, then fall back to a simpler technique.
-- [ ] Checkpoint: fixtures (floating mast, sunk keel, no-op cut, open revolve) produce their expected
+  — evidence: `keep-best stores a snapshot and strict reverts a regression`; MCP `pistola_task_restore_best`
+- [x] Skill rule: at most 2 retries per step using the issue list, then fall back to a simpler technique.
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop step 5
+- [x] Checkpoint: fixtures (floating mast, sunk keel, no-op cut, open revolve) produce their expected
   codes, and the patches clear them; the 8 recipes are validated and fixed; benchmark run.
+  — evidence: `bun test ./packages/editor/src/lib/structure/checks.test.ts` → 8 pass; `node editor/scripts/creation-benchmark/run.mjs --mode replay --out docs/tasks/evidence/creation-quality/phase-2` → `iou: 1`
 
 ### Phase 3: Plan contract (blueprint v2)
 Files: new `lib/blueprint/{schema,check}.ts`, `lib/operator-plan/operator-plan.ts`,
@@ -219,7 +227,7 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop section; `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop section (Phase 2: `pistola_check`, ≤2 retries, `restoreBest`); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
@@ -228,9 +236,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   - replay and score every phase;
   - full agent runs at baseline and after Phases 2, 4 and 5 (to limit IDE usage);
   - save `phase-N/scores.json` plus side-by-side renders.
-  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; `--mode agent --cli codex` skipped (no Phase 0 IDE quota); Phase 0 folder is `baseline/`
+  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; Phase 2 → `phase-2/scores.json` `iou: 1`; `--mode agent --cli codex` skipped (no Phase 0/2 IDE quota)
 - [x] `validate-task-evidence.mjs` passes; 0 forbidden AI-route requests.
-  — evidence: `node scripts/validate-task-evidence.mjs` (after this tick)
+  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 2 tick)
 
 ### Acceptance (held-out set, ≥2 headless IDEs, 3 seeds)
 - [ ] Final runnable rate ≥ 95%.

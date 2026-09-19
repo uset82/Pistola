@@ -1258,25 +1258,52 @@ export const boatDetailActions = ({
 }
 
 export const relativizeParentedRecipeActions = (actions: AssistantAction[]): AssistantAction[] => {
+  const defaultLevel = Object.values(useScene.getState().nodes).find((node) => node?.type === 'level')?.id
   const parentWorld = new Map<string, [number, number, number]>()
-  return actions.map((action) => {
+  const mapped = actions.map((action) => {
     if ((action.type === 'place_item' || action.type === 'build_cad_solid') && action.refId && action.position) {
       parentWorld.set(action.refId, action.position)
     }
-    if (action.type !== 'place_item') return action
-    if (action.parentId && action.position && parentWorld.has(action.parentId)) {
-      const parent = parentWorld.get(action.parentId)
-      if (!parent) return action
-      return {
-        ...action,
-        position: [
-          action.position[0] - parent[0],
-          action.position[1] - parent[1],
-          action.position[2] - parent[2],
-        ],
+    if (action.type === 'place_item') {
+      const next = { ...action, allowOverlap: action.allowOverlap ?? true }
+      if (defaultLevel && !next.levelId) next.levelId = defaultLevel
+      if (defaultLevel) {
+        delete (next as { parentId?: string }).parentId
+        return next
       }
+      if (next.parentId && next.position && parentWorld.has(next.parentId)) {
+        const parent = parentWorld.get(next.parentId)
+        if (!parent) return next
+        return {
+          ...next,
+          position: [
+            next.position[0] - parent[0],
+            next.position[1] - parent[1],
+            next.position[2] - parent[2],
+          ] as [number, number, number],
+        }
+      }
+      return next
+    }
+    if (action.type === 'build_cad_solid' && 'parentId' in action && action.parentId && defaultLevel) {
+      const next = { ...action }
+      delete (next as { parentId?: string }).parentId
+      return next
     }
     return action
+  })
+  if (!defaultLevel) return mapped
+  const ys = mapped.flatMap((action) =>
+    'position' in action && Array.isArray(action.position) ? [action.position[1] as number] : [],
+  )
+  const minY = ys.length > 0 ? Math.min(...ys) : 0
+  if (Math.abs(minY) < 1e-9) return mapped
+  return mapped.map((action) => {
+    if (!('position' in action) || !Array.isArray(action.position)) return action
+    return {
+      ...action,
+      position: [action.position[0], action.position[1] - minY, action.position[2]],
+    }
   })
 }
 

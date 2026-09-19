@@ -25,6 +25,7 @@ test('taskPlan executes typed actions directly without an AI provider and undoes
   try {
     const api = createPistolaAgentApi()
     const manual = await api.manual()
+    assert.ok('operatorPlan' in manual)
     assert.equal(manual.operatorPlan.version, 1)
     assert.equal(manual.operatorPlan.owner, 'ide')
     const levelId = Object.values(useScene.getState().nodes).find((node) => node.type === 'level')?.id
@@ -210,7 +211,9 @@ test('manual sections and runRecipe are allowlisted', async () => {
   const frame = (await api.invoke('manual', { section: 'frame' })) as { value: { up: string } }
   assert.equal(frame.value.up, '+Y')
   const examples = (await api.manual({ section: 'examples' })) as { value: Record<string, { op: string }> }
-  assert.equal(examples.value.box.op, 'box')
+  const box = examples.value.box
+  assert.ok(box)
+  assert.equal(box.op, 'box')
   await assert.rejects(() => api.runRecipe('missing-recipe'), /not found/)
 })
 

@@ -1,0 +1,651 @@
+{
+  "prompt": {
+    "slug": "bench",
+    "prompt": "A backless park bench with a long seat and four legs.",
+    "overall_m": [
+      1.2,
+      0.45,
+      0.38
+    ],
+    "anchor": "floor",
+    "parts": [
+      "seat",
+      "leg-fl",
+      "leg-fr",
+      "leg-bl",
+      "leg-br"
+    ],
+    "relations": [
+      {
+        "a": "leg-fl",
+        "rel": "on_floor"
+      },
+      {
+        "a": "seat",
+        "rel": "on_top_of",
+        "b": "leg-fl"
+      }
+    ],
+    "set": "heldOut"
+  },
+  "gold": {
+    "slug": "bench",
+    "partCount": 5
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "seat",
+        "role": "seat",
+        "assetId": "primitive-box",
+        "color": "#a16207",
+        "parentId": null,
+        "position": [
+          0,
+          0.4,
+          0
+        ],
+        "scale": [
+          1.2,
+          0.05,
+          0.38
+        ],
+        "localPosition": [
+          0,
+          0.4,
+          0
+        ],
+        "localScale": [
+          1.2,
+          0.05,
+          0.38
+        ],
+        "box": {
+          "min": [
+            -0.6,
+            0.4,
+            -0.19
+          ],
+          "max": [
+            0.6,
+            0.45,
+            0.19
+          ],
+          "size": [
+            1.2,
+            0.05,
+            0.38
+          ],
+          "center": [
+            0,
+            0.42500000000000004,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "leg-fl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          -0.52,
+          0,
+          0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          -0.52,
+          0,
+          0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.55,
+            0,
+            0.11000000000000001
+          ],
+          "max": [
+            -0.49,
+            0.4,
+            0.17
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            -0.52,
+            0.2,
+            0.14
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "leg-fr",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          0.52,
+          0,
+          0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          0.52,
+          0,
+          0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.49,
+            0,
+            0.11000000000000001
+          ],
+          "max": [
+            0.55,
+            0.4,
+            0.17
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            0.52,
+            0.2,
+            0.14
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "leg-bl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          -0.52,
+          0,
+          -0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          -0.52,
+          0,
+          -0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.55,
+            0,
+            -0.17
+          ],
+          "max": [
+            -0.49,
+            0.4,
+            -0.11000000000000001
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            -0.52,
+            0.2,
+            -0.14
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "leg-br",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          0.52,
+          0,
+          -0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          0.52,
+          0,
+          -0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.49,
+            0,
+            -0.17
+          ],
+          "max": [
+            0.55,
+            0.4,
+            -0.11000000000000001
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            0.52,
+            0.2,
+            -0.14
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "seat",
+        "role": "seat",
+        "assetId": "primitive-box",
+        "color": "#a16207",
+        "parentId": null,
+        "position": [
+          0,
+          0.4,
+          0
+        ],
+        "scale": [
+          1.2,
+          0.05,
+          0.38
+        ],
+        "localPosition": [
+          0,
+          0.4,
+          0
+        ],
+        "localScale": [
+          1.2,
+          0.05,
+          0.38
+        ],
+        "box": {
+          "min": [
+            -0.6,
+            0.4,
+            -0.19
+          ],
+          "max": [
+            0.6,
+            0.45,
+            0.19
+          ],
+          "size": [
+            1.2,
+            0.05,
+            0.38
+          ],
+          "center": [
+            0,
+            0.42500000000000004,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "leg-fl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          -0.52,
+          0,
+          0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          -0.52,
+          0,
+          0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.55,
+            0,
+            0.11000000000000001
+          ],
+          "max": [
+            -0.49,
+            0.4,
+            0.17
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            -0.52,
+            0.2,
+            0.14
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "leg-fr",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          0.52,
+          0,
+          0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          0.52,
+          0,
+          0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.49,
+            0,
+            0.11000000000000001
+          ],
+          "max": [
+            0.55,
+            0.4,
+            0.17
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            0.52,
+            0.2,
+            0.14
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "leg-bl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          -0.52,
+          0,
+          -0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          -0.52,
+          0,
+          -0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.55,
+            0,
+            -0.17
+          ],
+          "max": [
+            -0.49,
+            0.4,
+            -0.11000000000000001
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            -0.52,
+            0.2,
+            -0.14
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "leg-br",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#713f12",
+        "parentId": null,
+        "position": [
+          0.52,
+          0,
+          -0.14
+        ],
+        "scale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "localPosition": [
+          0.52,
+          0,
+          -0.14
+        ],
+        "localScale": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.49,
+            0,
+            -0.17
+          ],
+          "max": [
+            0.55,
+            0.4,
+            -0.11000000000000001
+          ],
+          "size": [
+            0.06,
+            0.4,
+            0.06
+          ],
+          "center": [
+            0.52,
+            0.2,
+            -0.14
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "bench",
+    "set": "heldOut",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        0,
+        0
+      ],
+      "mean": 0
+    },
+    "perPartDimensionError": [
+      {
+        "name": "seat",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-fl",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-fr",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-bl",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-br",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 5,
+      "found": 5,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 1,
+    "actualOverall_m": [
+      1.2,
+      0.45,
+      0.38
+    ],
+    "partCount": 5
+  }
+}

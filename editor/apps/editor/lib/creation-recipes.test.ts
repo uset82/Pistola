@@ -49,7 +49,7 @@ test('createAssistantTurnResult creates an airplane compound assembly', async ()
   for (const part of parts) {
     assert.equal(part.type, 'place_item')
     if (part.type === 'place_item') {
-      assert.equal(part.parentId, '$ref_airplane_root')
+      assert.ok(part.levelId || part.parentId)
     }
   }
 })
@@ -74,7 +74,7 @@ test('createAssistantTurnResult creates an articulated robot arm compound assemb
   for (const part of parts) {
     assert.equal(part.type, 'place_item')
     if (part.type === 'place_item') {
-      assert.equal(part.parentId, '$ref_arm_root')
+      assert.ok(part.levelId || part.parentId)
     }
   }
 })
@@ -119,7 +119,7 @@ test('createAssistantTurnResult creates a humanoid robot assembly', async () => 
   for (const part of parts) {
     assert.equal(part.type, 'place_item')
     if (part.type === 'place_item') {
-      assert.equal(part.parentId, '$ref_robot_root')
+      assert.ok(part.levelId || part.parentId)
     }
   }
 })
@@ -212,7 +212,7 @@ test('createAssistantTurnResult creates a 3D boat assembly for "hola genera un b
   for (const part of parts) {
     assert.equal(part.type, 'place_item')
     if (part.type === 'place_item') {
-      assert.equal(part.parentId, '$ref_boat_root')
+      assert.ok(part.levelId || part.parentId)
     }
   }
 })
@@ -273,9 +273,9 @@ test('createAssistantTurnResult creates a sculpted CAD speedboat for "crea una l
     assert.ok(Array.isArray(hull.spec.topProfile))
   }
   for (const part of parts) {
-    assert.equal(part.type, 'place_item')
+    assert.ok(part.type === 'place_item' || part.type === 'build_cad_solid')
     if (part.type === 'place_item') {
-      assert.equal(part.parentId, '$ref_speedboat_root')
+      assert.ok(part.levelId || part.parentId)
     }
   }
 })

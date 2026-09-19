@@ -16,6 +16,11 @@
       "import": "./dist/lib/cad-body-transform.js",
       "default": "./dist/lib/cad-body-transform.js"
     },
+    "./lib/primitive-geometry": {
+      "types": "./dist/lib/primitive-geometry.d.ts",
+      "import": "./dist/lib/primitive-geometry.js",
+      "default": "./dist/lib/primitive-geometry.js"
+    },
     "./schema/cad-brief": {
       "types": "./dist/schema/cad-brief.d.ts",
       "import": "./dist/schema/cad-brief.js",

@@ -35,6 +35,7 @@ import {
   useOperatorPlanStore,
 } from '../operator-plan'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
+import { checkStructure, type StructureReport } from '../structure'
 
 export const PISTOLA_API_VERSION = 1
 
@@ -75,6 +76,7 @@ const INVOKE_ALLOWLIST = new Set([
   'workspace',
   'validate',
   'run',
+  'checkStructure',
   'waitForIdle',
   'undo',
   'redo',
@@ -82,6 +84,7 @@ const INVOKE_ALLOWLIST = new Set([
   'taskPlan.get',
   'taskPlan.updateStep',
   'taskPlan.runStep',
+  'taskPlan.restoreBest',
   'taskPlan.complete',
   'taskPlan.undo',
   'taskPlan.clear',
@@ -90,6 +93,14 @@ const INVOKE_ALLOWLIST = new Set([
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const operatorPlanSnapshots = new Map<string, SceneGraph>()
+const operatorPlanBest = new Map<string, { graph: SceneGraph; errorCount: number }>()
+
+type ExecutionResult = AssistantExecutionResult & { structure: StructureReport }
+
+const withStructure = (result: AssistantExecutionResult): ExecutionResult => ({
+  ...result,
+  structure: checkStructure(),
+})
 
 const cloneCurrentSceneGraph = (): SceneGraph => ({
   nodes: structuredClone(useScene.getState().nodes) as SceneGraph['nodes'],
@@ -103,6 +114,7 @@ type RunOperatorPlanStepInput = {
   actions: unknown
   confirmDestructive?: boolean
   idleTimeoutMs?: number
+  strict?: boolean
 }
 
 export const createPistolaAgentApi = () => {
@@ -131,8 +143,8 @@ export const createPistolaAgentApi = () => {
     operatorPlan: {
       version: 1,
       owner: 'ide',
-      methods: ['create', 'get', 'updateStep', 'runStep', 'complete', 'undo', 'clear'],
-      rule: 'Create a checklist before mutation. Complete execution steps only through runStep.',
+      methods: ['create', 'get', 'updateStep', 'runStep', 'restoreBest', 'complete', 'undo', 'clear'],
+      rule: 'Create a checklist before mutation. Complete execution steps only through runStep. run and runStep embed a structure report. At most 2 typed retries, then a simpler technique.',
     },
     capabilities: getAllCapabilities().map((capability) => ({
       type: capability.type,
@@ -184,7 +196,7 @@ export const createPistolaAgentApi = () => {
     const parsed = Array.isArray(actions) ? (actions as AssistantAction[]) : []
     const hasDestructive = parsed.some((action) => isDestructiveAssistantActionType(action.type))
     if (hasDestructive && !options.confirmDestructive) {
-      return {
+      return withStructure({
         ok: false,
         completedActionCount: 0,
         createdNodeIds: [],
@@ -198,13 +210,15 @@ export const createPistolaAgentApi = () => {
         failureKind: 'plan-validation' as const,
         failedActionIndex: null,
         resolvedForwardRefs: {},
-      } satisfies AssistantExecutionResult
+      })
     }
 
-    return executeAssistantPlan(actions, {
-      reviewConfirmed: true,
-      runtime,
-    })
+    return withStructure(
+      await executeAssistantPlan(actions, {
+        reviewConfirmed: true,
+        runtime,
+      }),
+    )
   }
 
   const runRecipe = async (name: string, params: Record<string, unknown> = {}) => {
@@ -273,7 +287,10 @@ export const createPistolaAgentApi = () => {
           'An unfinished operator plan is already active. Pass replace: true to replace it.',
         )
       }
-      if (previous) operatorPlanSnapshots.delete(previous.id)
+      if (previous) {
+        operatorPlanSnapshots.delete(previous.id)
+        operatorPlanBest.delete(previous.id)
+      }
       const plan = createOperatorPlan(input)
       useOperatorPlanStore.getState().setPlan(plan)
       return plan
@@ -322,7 +339,7 @@ export const createPistolaAgentApi = () => {
           status: 'error',
           error,
         })
-        return { ok: false as const, plan, validation, result: null }
+        return { ok: false as const, plan, validation, result: null, structure: checkStructure() }
       }
 
       if (validation.destructiveActionCount > 0 && !input.confirmDestructive) {
@@ -335,7 +352,7 @@ export const createPistolaAgentApi = () => {
           status: 'error',
           error,
         })
-        return { ok: false as const, plan, validation, result }
+        return { ok: false as const, plan, validation, result, structure: result.structure }
       }
 
       if (!operatorPlanSnapshots.has(input.planId)) {
@@ -343,7 +360,7 @@ export const createPistolaAgentApi = () => {
         useOperatorPlanStore.getState().setUndoAvailable(input.planId, true)
       }
 
-      let result: AssistantExecutionResult | null = null
+      let result: ExecutionResult | null = null
       try {
         result = await run(input.actions, { confirmDestructive: input.confirmDestructive })
         if (!result.ok) {
@@ -355,7 +372,7 @@ export const createPistolaAgentApi = () => {
             status: 'error',
             error,
           })
-          return { ok: false as const, plan, validation, result }
+          return { ok: false as const, plan, validation, result, structure: result.structure }
         }
 
         await waitForIdle(input.idleTimeoutMs ?? 20_000)
@@ -368,15 +385,43 @@ export const createPistolaAgentApi = () => {
           status: 'error',
           error: message,
         })
-        return { ok: false as const, plan, validation, result }
+        return { ok: false as const, plan, validation, result, structure: result?.structure ?? checkStructure() }
+      }
+
+      const structure = result.structure
+      const best = operatorPlanBest.get(input.planId)
+      const regression = Boolean(best && structure.errorCount > best.errorCount)
+      if (!best || structure.errorCount < best.errorCount) {
+        operatorPlanBest.set(input.planId, { graph: cloneCurrentSceneGraph(), errorCount: structure.errorCount })
+      } else if (regression && input.strict) {
+        applySceneGraphToEditor(best.graph)
+        const plan = useOperatorPlanStore.getState().updateStep({
+          planId: input.planId,
+          phaseId: input.phaseId,
+          stepId: input.stepId,
+          status: 'error',
+          error: `Structure regression (${structure.errorCount} > ${best.errorCount} errors). Restored the best snapshot.`,
+        })
+        return {
+          ok: false as const,
+          plan,
+          validation,
+          result,
+          structure: checkStructure(),
+          regression: true,
+          reverted: true,
+        }
       }
 
       const evidence: OperatorPlanEvidence = {
         kind: 'execution',
-        summary: `${result.completedActionCount} action${result.completedActionCount === 1 ? '' : 's'} completed.`,
+        summary: `${result.completedActionCount} action${result.completedActionCount === 1 ? '' : 's'} completed. structure ${structure.errorCount} error(s).`,
         actionCount: result.completedActionCount,
         createdNodeIds: result.createdNodeIds,
-        warnings: result.warnings,
+        warnings: [
+          ...result.warnings,
+          ...structure.issues.filter((issue) => issue.severity === 'warning').map((issue) => issue.code),
+        ],
       }
       const plan = useOperatorPlanStore.getState().updateStep({
         planId: input.planId,
@@ -385,7 +430,15 @@ export const createPistolaAgentApi = () => {
         status: 'done',
         evidence,
       })
-      return { ok: true as const, plan, validation, result }
+      return { ok: true as const, plan, validation, result, structure, regression }
+    },
+    restoreBest: async (planId: string) => {
+      const current = useOperatorPlanStore.getState().plan
+      if (!current || current.id !== planId) throw new Error(`Operator plan "${planId}" is not active.`)
+      const best = operatorPlanBest.get(planId)
+      if (!best) return { restored: false as const, reason: 'No best snapshot is stored for this plan.' }
+      applySceneGraphToEditor(best.graph)
+      return { restored: true as const, errorCount: best.errorCount, structure: checkStructure() }
     },
     complete: async (planId: string, summary: string) => {
       if (!summary.trim()) throw new Error('A completed operator plan requires a summary.')
@@ -398,12 +451,16 @@ export const createPistolaAgentApi = () => {
       if (!snapshot) return { undone: false as const, reason: 'The pre-plan snapshot is no longer available.' }
       applySceneGraphToEditor(snapshot)
       operatorPlanSnapshots.delete(planId)
+      operatorPlanBest.delete(planId)
       useOperatorPlanStore.getState().clear(planId)
       return { undone: true as const }
     },
     clear: async (planId?: string) => {
       const current = useOperatorPlanStore.getState().plan
-      if (current && (!planId || current.id === planId)) operatorPlanSnapshots.delete(current.id)
+      if (current && (!planId || current.id === planId)) {
+        operatorPlanSnapshots.delete(current.id)
+        operatorPlanBest.delete(current.id)
+      }
       useOperatorPlanStore.getState().clear(planId)
       return { cleared: true as const }
     },
@@ -453,6 +510,7 @@ export const createPistolaAgentApi = () => {
     context: async () => getAssistantWorkspaceContext(),
     validate,
     run,
+    checkStructure: async () => checkStructure(),
     runRecipe,
     waitForIdle,
     undo,

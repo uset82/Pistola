@@ -148,8 +148,10 @@ const transformBoundsThroughParents = (node: AnyNode, bounds: NodeBounds): NodeB
     if (!parent) break
     const position = 'position' in parent && Array.isArray(parent.position) ? parent.position : [0, 0, 0]
     const scale = 'scale' in parent && Array.isArray(parent.scale) ? parent.scale : [1, 1, 1]
-    min = [position[0] + min[0] * scale[0], position[1] + min[1] * scale[1], position[2] + min[2] * scale[2]]
-    max = [position[0] + max[0] * scale[0], position[1] + max[1] * scale[1], position[2] + max[2] * scale[2]]
+    const [positionX = 0, positionY = 0, positionZ = 0] = position
+    const [scaleX = 1, scaleY = 1, scaleZ = 1] = scale
+    min = [positionX + min[0] * scaleX, positionY + min[1] * scaleY, positionZ + min[2] * scaleZ]
+    max = [positionX + max[0] * scaleX, positionY + max[1] * scaleY, positionZ + max[2] * scaleZ]
     parentId = 'parentId' in parent ? parent.parentId : null
   }
   const nextMin: [number, number, number] = [

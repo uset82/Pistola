@@ -38,6 +38,13 @@ export { useSpatialQuery } from './hooks/spatial-grid/use-spatial-query'
 // Asset storage
 export { loadAssetUrl, saveAsset } from './lib/asset-storage'
 export { getCadBodyTransform } from './lib/cad-body-transform'
+export {
+  boxMeshFromSize,
+  meshBounds,
+  primitiveMesh,
+  transformMesh,
+  type TriangleMesh,
+} from './lib/primitive-geometry'
 export { ensureProjectWorlds, type WorldMigrationResult } from './lib/worlds'
 export {
   getNodeBimMetadata,

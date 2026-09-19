@@ -39,13 +39,13 @@ Other env vars:
 
 Session: `pistola_status`, `pistola_open`, `pistola_manual`
 
-Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`
+Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`, `pistola_check`
 
 Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to false), deprecated `pistola_execute` (same check)
 
 View / history: `pistola_screenshot`, `pistola_undo`, `pistola_redo`, `pistola_wait_idle`, `pistola_camera`
 
-Tasks: `pistola_task_create`, `pistola_task_get`, `pistola_task_run_step`, `pistola_task_update_step`, `pistola_task_complete`, `pistola_task_undo`, `pistola_task_clear`
+Tasks: `pistola_task_create`, `pistola_task_get`, `pistola_task_run_step`, `pistola_task_update_step`, `pistola_task_restore_best`, `pistola_task_complete`, `pistola_task_undo`, `pistola_task_clear`
 
 Never use a `pistola_plan*` name. That prefix is reserved for the hidden AI tool.
 

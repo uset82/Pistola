@@ -1,0 +1,656 @@
+{
+  "prompt": {
+    "slug": "desk-fan",
+    "prompt": "A small desk fan: base, column, motor, and two crossing blades.",
+    "overall_m": [
+      0.2,
+      0.32,
+      0.2
+    ],
+    "anchor": "floor",
+    "parts": [
+      "base",
+      "column",
+      "motor",
+      "blade-h",
+      "blade-v"
+    ],
+    "relations": [
+      {
+        "a": "base",
+        "rel": "on_floor"
+      },
+      {
+        "a": "column",
+        "rel": "on_top_of",
+        "b": "base"
+      },
+      {
+        "a": "motor",
+        "rel": "on_top_of",
+        "b": "column"
+      }
+    ],
+    "set": "heldOut"
+  },
+  "gold": {
+    "slug": "desk-fan",
+    "partCount": 5
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "base",
+        "role": "base",
+        "assetId": "primitive-cylinder",
+        "color": "#44403c",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.2,
+          0.03,
+          0.2
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.2,
+          0.03,
+          0.2
+        ],
+        "box": {
+          "min": [
+            -0.1,
+            0,
+            -0.1
+          ],
+          "max": [
+            0.1,
+            0.03,
+            0.1
+          ],
+          "size": [
+            0.2,
+            0.03,
+            0.2
+          ],
+          "center": [
+            0,
+            0.015,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "column",
+        "role": "stem",
+        "assetId": "primitive-cylinder",
+        "color": "#78716c",
+        "parentId": null,
+        "position": [
+          0,
+          0.03,
+          0
+        ],
+        "scale": [
+          0.04,
+          0.18,
+          0.04
+        ],
+        "localPosition": [
+          0,
+          0.03,
+          0
+        ],
+        "localScale": [
+          0.04,
+          0.18,
+          0.04
+        ],
+        "box": {
+          "min": [
+            -0.02,
+            0.03,
+            -0.02
+          ],
+          "max": [
+            0.02,
+            0.21,
+            0.02
+          ],
+          "size": [
+            0.04,
+            0.18,
+            0.04
+          ],
+          "center": [
+            0,
+            0.12,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "motor",
+        "role": "motor",
+        "assetId": "primitive-box",
+        "color": "#a8a29e",
+        "parentId": null,
+        "position": [
+          0,
+          0.17,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.08,
+          0.08
+        ],
+        "localPosition": [
+          0,
+          0.17,
+          0
+        ],
+        "localScale": [
+          0.08,
+          0.08,
+          0.08
+        ],
+        "box": {
+          "min": [
+            -0.04,
+            0.17,
+            -0.04
+          ],
+          "max": [
+            0.04,
+            0.25,
+            0.04
+          ],
+          "size": [
+            0.08,
+            0.08,
+            0.08
+          ],
+          "center": [
+            0,
+            0.21000000000000002,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "blade-h",
+        "role": "blade",
+        "assetId": "primitive-box",
+        "color": "#e7e5e4",
+        "parentId": null,
+        "position": [
+          0,
+          0.2,
+          0.06
+        ],
+        "scale": [
+          0.2,
+          0.02,
+          0.04
+        ],
+        "localPosition": [
+          0,
+          0.2,
+          0.06
+        ],
+        "localScale": [
+          0.2,
+          0.02,
+          0.04
+        ],
+        "box": {
+          "min": [
+            -0.1,
+            0.2,
+            0.039999999999999994
+          ],
+          "max": [
+            0.1,
+            0.22,
+            0.08
+          ],
+          "size": [
+            0.2,
+            0.02,
+            0.04
+          ],
+          "center": [
+            0,
+            0.21000000000000002,
+            0.06
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "blade-v",
+        "role": "blade",
+        "assetId": "primitive-box",
+        "color": "#e7e5e4",
+        "parentId": null,
+        "position": [
+          0,
+          0.13,
+          0.06
+        ],
+        "scale": [
+          0.04,
+          0.16,
+          0.02
+        ],
+        "localPosition": [
+          0,
+          0.13,
+          0.06
+        ],
+        "localScale": [
+          0.04,
+          0.16,
+          0.02
+        ],
+        "box": {
+          "min": [
+            -0.02,
+            0.13,
+            0.049999999999999996
+          ],
+          "max": [
+            0.02,
+            0.29000000000000004,
+            0.06999999999999999
+          ],
+          "size": [
+            0.04,
+            0.16,
+            0.02
+          ],
+          "center": [
+            0,
+            0.21000000000000002,
+            0.06
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "base",
+        "role": "base",
+        "assetId": "primitive-cylinder",
+        "color": "#44403c",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.2,
+          0.03,
+          0.2
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.2,
+          0.03,
+          0.2
+        ],
+        "box": {
+          "min": [
+            -0.1,
+            0,
+            -0.1
+          ],
+          "max": [
+            0.1,
+            0.03,
+            0.1
+          ],
+          "size": [
+            0.2,
+            0.03,
+            0.2
+          ],
+          "center": [
+            0,
+            0.015,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "column",
+        "role": "stem",
+        "assetId": "primitive-cylinder",
+        "color": "#78716c",
+        "parentId": null,
+        "position": [
+          0,
+          0.03,
+          0
+        ],
+        "scale": [
+          0.04,
+          0.18,
+          0.04
+        ],
+        "localPosition": [
+          0,
+          0.03,
+          0
+        ],
+        "localScale": [
+          0.04,
+          0.18,
+          0.04
+        ],
+        "box": {
+          "min": [
+            -0.02,
+            0.03,
+            -0.02
+          ],
+          "max": [
+            0.02,
+            0.21,
+            0.02
+          ],
+          "size": [
+            0.04,
+            0.18,
+            0.04
+          ],
+          "center": [
+            0,
+            0.12,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "motor",
+        "role": "motor",
+        "assetId": "primitive-box",
+        "color": "#a8a29e",
+        "parentId": null,
+        "position": [
+          0,
+          0.17,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.08,
+          0.08
+        ],
+        "localPosition": [
+          0,
+          0.17,
+          0
+        ],
+        "localScale": [
+          0.08,
+          0.08,
+          0.08
+        ],
+        "box": {
+          "min": [
+            -0.04,
+            0.17,
+            -0.04
+          ],
+          "max": [
+            0.04,
+            0.25,
+            0.04
+          ],
+          "size": [
+            0.08,
+            0.08,
+            0.08
+          ],
+          "center": [
+            0,
+            0.21000000000000002,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "blade-h",
+        "role": "blade",
+        "assetId": "primitive-box",
+        "color": "#e7e5e4",
+        "parentId": null,
+        "position": [
+          0,
+          0.2,
+          0.06
+        ],
+        "scale": [
+          0.2,
+          0.02,
+          0.04
+        ],
+        "localPosition": [
+          0,
+          0.2,
+          0.06
+        ],
+        "localScale": [
+          0.2,
+          0.02,
+          0.04
+        ],
+        "box": {
+          "min": [
+            -0.1,
+            0.2,
+            0.039999999999999994
+          ],
+          "max": [
+            0.1,
+            0.22,
+            0.08
+          ],
+          "size": [
+            0.2,
+            0.02,
+            0.04
+          ],
+          "center": [
+            0,
+            0.21000000000000002,
+            0.06
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "blade-v",
+        "role": "blade",
+        "assetId": "primitive-box",
+        "color": "#e7e5e4",
+        "parentId": null,
+        "position": [
+          0,
+          0.13,
+          0.06
+        ],
+        "scale": [
+          0.04,
+          0.16,
+          0.02
+        ],
+        "localPosition": [
+          0,
+          0.13,
+          0.06
+        ],
+        "localScale": [
+          0.04,
+          0.16,
+          0.02
+        ],
+        "box": {
+          "min": [
+            -0.02,
+            0.13,
+            0.049999999999999996
+          ],
+          "max": [
+            0.02,
+            0.29000000000000004,
+            0.06999999999999999
+          ],
+          "size": [
+            0.04,
+            0.16,
+            0.02
+          ],
+          "center": [
+            0,
+            0.21000000000000002,
+            0.06
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "desk-fan",
+    "set": "heldOut",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        0.0937499999999999,
+        0
+      ],
+      "mean": 0.03124999999999997
+    },
+    "perPartDimensionError": [
+      {
+        "name": "base",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "column",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "motor",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "blade-h",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "blade-v",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 5,
+      "found": 5,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 1,
+    "actualOverall_m": [
+      0.2,
+      0.29000000000000004,
+      0.2
+    ],
+    "partCount": 5
+  }
+}

@@ -122,6 +122,7 @@ const ProceduralItemRenderer = ({ node }: { node: ItemNode }) => {
     return () => useInteractive.getState().removeItem(node.id)
   }, [node.id])
 
+  // Keep these args aligned with @pascal-app/core primitiveMesh (bottom-center, +Y up).
   const primitive = node.asset.primitive || 'box'
   const [w, h, d] = node.asset.dimensions
 
