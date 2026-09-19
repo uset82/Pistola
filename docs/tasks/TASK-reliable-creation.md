@@ -236,21 +236,24 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 - [x] A prompt pack for IDEs that generate images (one image holding all three views, black on white,
   orthographic), plus a user guide for making sheets on free sites (`docs/`).
   — evidence: `.agents/skills/pistola-direct-control/references/ortho-sheet-prompt.md`; `docs/reference-sheets.md`
-- [x] Tracer, in a Worker, built on `silhouette-tracer.ts`:
+- [x] Worker-ready tracer job, built on `silhouette-tracer.ts`:
   - threshold for clean sheets; background removal (BiRefNet ONNX, MIT) only later, for photos;
   - components sorted left to right;
   - Moore contour tracing, then Douglas-Peucker simplification;
   - output in meters, in the `views.ts` frame;
   - cross-view consistency within ±5%.
-  — evidence: same suite → `traceReferenceSheet scales three left-to-right views into the views.ts frame` (`consistent: true`, planes XY/ZY/XZ); `jobs.ts` `runReferenceJob`
+  — evidence: same suite → `traceReferenceSheet scales three left-to-right views into the views.ts frame` (`consistent: true`, planes XY/ZY/XZ); `jobs.ts` keeps the trace body free of scene-store access
 - [x] Uses: the IoU target for renders, and an optional 3-view hull blockout for prismatic main bodies.
   — evidence: same suite → hull `intersect_profiles` validates; `render-views.ts` compares framed masks when a reference is active
 - [x] Minimal fitter:
-  - coordinate descent, about 300 evaluations, in a Worker;
+  - coordinate descent, about 300 evaluations, in a worker-ready job body;
   - only translate and scale on at most 10 parts;
   - objective: IoU minus a relation-violation penalty;
   - returns a patch plus before/after IoU.
   — evidence: same suite → `the fitter proposes unapplied patches` (`applied: false`, negative X `move_target`, scene unchanged)
+- [ ] Schedule tracing and fitting in a real browser Worker before enabling them for large reference sheets or assemblies.
+  — current status: `runReferenceJob` executes the worker-safe job body inline so the deterministic, bounded workflow is
+  usable now, but it does not yet move compute off the UI thread.
 - [x] Vertical guide planes (a `create_guide` action) show the reference behind the build.
   — evidence: same suite → `create_guide` writes `metadata.pistolaPlane: front`; `GuideRenderer` stands front/side planes up
 
