@@ -17,7 +17,8 @@ plan → examples → build per part → check → fix (≤2) → render → cri
 3. Search examples with `examples.search` / `pistola_examples`, then `examples.get({id, params, at})`. Inspect, then validate each batch.
 4. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
 5. After each part, inspect. If a checker report exists, apply at most two typed fixes, then fall back to a simpler primitive.
-6. Complete the plan only with evidence.
+6. Call `renderViews` / `pistola_render_views` (2×2 FRONT/SIDE/TOP/ISO). At most two critique rounds; keep the best.
+7. Complete the plan only with evidence.
 
 ## Output
 

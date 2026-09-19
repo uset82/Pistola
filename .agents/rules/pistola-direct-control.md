@@ -34,9 +34,9 @@ plan → examples → build per part → check → fix (≤2) → render → cri
 3. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`). If a blueprint exists, run `plan.check` / `pistola_blueprint_check` first, then `taskPlan.create({blueprint})` (one step per part, parents first).
 4. Search examples with `examples.search` / `pistola_examples` (`action: search|get`). Instantiate with `{id, params, at}`. Otherwise skip.
 5. For each part: `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `exportScene` / `pistola_check`. `run` and `runStep` already embed `{structure}`.
-6. At each assembly milestone, call `pistola_render_views` and inspect all eight labels before marking the plan's render/review step complete. It has no camera side effects. Fix structural errors first, then the largest visible placement/proportion error.
+6. At each assembly milestone, call `pistola_render_views` and inspect the 2×2 FRONT/SIDE/TOP/ISO sheet. It is CPU-rasterized and has no camera side effects. Fix structural errors first, then the largest visible placement/proportion error.
 7. At most **2 retries per step** from the issue list (`fix.patch` when present). Then fall back to a simpler technique. Do not retry the same failing action. Opt-in `strict: true` reverts a regression; `taskPlan.restoreBest` / `pistola_task_restore_best` reloads the best snapshot.
-8. If a render/critique tool exists, at most two rounds. Keep the best snapshot. Report remaining gaps honestly.
+8. Call `renderViews` / `pistola_render_views` and answer the fixed checklist with `{score, ≤3 fixes (partId + numeric change)}`. At most two rounds; keep the best; stop when there is no gain.
 9. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
 10. Complete the plan only after every step has evidence.
 

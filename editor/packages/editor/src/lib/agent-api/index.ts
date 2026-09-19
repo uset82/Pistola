@@ -45,6 +45,7 @@ import {
   type BlueprintV2,
 } from '../blueprint'
 import { getExample, searchExamples } from '../agent-examples'
+import { renderViews as renderSceneViews } from '../render'
 
 export const PISTOLA_API_VERSION = 1
 
@@ -91,6 +92,7 @@ const INVOKE_ALLOWLIST = new Set([
   'plan.snap',
   'examples.search',
   'examples.get',
+  'renderViews',
   'waitForIdle',
   'undo',
   'redo',
@@ -164,6 +166,10 @@ export const createPistolaAgentApi = () => {
     exampleLibrary: {
       methods: ['search', 'get'],
       rule: 'examples.search(query) then examples.get({id, params, at}). Returns editable actions with partIds and a blueprint fragment. Placeholders: $ref_* and LEVEL.',
+    },
+    visualReview: {
+      method: 'renderViews',
+      output: 'A deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) with a fixed critique checklist. At most 2 rounds; keep the best.',
     },
     capabilities: getAllCapabilities().map((capability) => ({
       type: capability.type,
@@ -555,6 +561,7 @@ export const createPistolaAgentApi = () => {
     validate,
     run,
     checkStructure: async () => checkStructure(),
+    renderViews: async (input?: { planned?: [number, number, number] }) => renderSceneViews(input),
     examples: {
       search: async (query?: string | { query?: string; kind?: string }) => {
         if (query && typeof query === 'object') return searchExamples(query.query ?? '', query.kind as never)

@@ -172,7 +172,8 @@ export const createBrowserDriver = async (): Promise<PageDriver> => {
         () => Boolean(document.querySelector('canvas')),
         { timeout: 20_000 },
       )
-      const data = await next.screenshot({ type: 'png', timeout: 20_000 })
+      const canvas = next.locator('canvas').first()
+      const data = await canvas.screenshot({ type: 'png', timeout: 20_000 })
       return { mime: 'image/png', data: data.toString('base64') }
     },
     close: async () => {

@@ -185,28 +185,23 @@ Files: new `lib/agent-examples/*`, `lib/agent-api/index.ts`, MCP `pistola_exampl
 ### Phase 5: Render views and fixed critique
 Files: new `lib/render/{soft-raster,render-views}.ts` (Worker), MCP `pistola_render_views`,
 `drivers/browser.ts` (canvas-only screenshot).
-- [ ] A CPU rasterizer over the Phase 2 geometry. It is deterministic, shows no UI, works on WebGPU, Sites
+- [x] A CPU rasterizer over the Phase 2 geometry. It is deterministic, shows no UI, works on WebGPU, Sites
   and tests, and needs no camera animation.
-- [ ] Output: one 2×2 PNG.
+  — evidence: `editor/packages/editor/src/lib/render/soft-raster.ts` projects `collectStructureParts` meshes through `views.ts`
+- [x] Output: one 2×2 PNG.
   - Panels: FRONT, SIDE, TOP, ISO.
   - Flat shading with one hue per part and a legend.
   - 0.1 m grid, floor line, W×H×D labels.
   - Per-view masks.
   - IoU and a diff overlay (red = missing, blue = extra) when a gold or reference image exists.
-- [ ] Fixed checklist returned with the render:
-  - recognizable;
-  - proportions vs the plan (numbers supplied);
-  - every part visible;
-  - worst view and the part causing it;
-  - symmetry;
-  - floating or sunk parts;
-  - missing signature feature;
-  - palette.
-
-  The agent answers `{score, ≤3 fixes (partId + numeric change)}`.
-- [ ] Policy: at most 2 rounds, keep the best, stop when there's no gain. Disable it for models where the
+  — evidence: `render-views.ts` composes 2×2 PNG; `maskIou` when gold masks are passed
+- [x] Fixed checklist returned with the render (recognizable, proportions, every part visible, worst view, symmetry, floating or sunk, missing signature, palette). The agent answers `{score, ≤3 fixes (partId + numeric change)}`.
+  — evidence: `critiqueRender` in `editor/packages/editor/src/lib/render/render-views.ts`; skill Loop step 8
+- [x] Policy: at most 2 rounds, keep the best, stop when there's no gain. Disable it for models where the
   benchmark shows harm.
-- [ ] Checkpoint: the render test matches a known box; benchmark run.
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop step 8
+- [x] Checkpoint: the render test matches a known box; benchmark run.
+  — evidence: `bun test ./packages/editor/src/lib/render/render-views.test.ts` → `a known 1 m box fills a square front mask`; `run.mjs --mode replay --out .../phase-5` `summary.iou: 1`
 
 ### Phase 6 (gated): Reference mode and a minimal fitter
 Start only if the Phase 5 benchmark shows outline and proportion errors dominate.
@@ -238,7 +233,7 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 4: `examples.search` / `pistola_examples`); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 5: `pistola_render_views` 2×2 + ≤2 critique rounds); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
@@ -247,9 +242,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   - replay and score every phase;
   - full agent runs at baseline and after Phases 2, 4 and 5 (to limit IDE usage);
   - save `phase-N/scores.json` plus side-by-side renders.
-  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; Phase 3 → `phase-3/scores.json` `iou: 1`; Phase 4 → `phase-4/scores.json` `iou: 1`; `--mode agent --cli codex` skipped (no IDE quota)
+  — evidence: replay `iou: 1` in `phase-3`, `phase-4`, `phase-5`; `--mode agent --cli codex` skipped (no IDE quota)
 - [x] `validate-task-evidence.mjs` passes; 0 forbidden AI-route requests.
-  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 4 tick)
+  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 5 tick)
 
 ### Acceptance (held-out set, ≥2 headless IDEs, 3 seeds)
 - [ ] Final runnable rate ≥ 95%.

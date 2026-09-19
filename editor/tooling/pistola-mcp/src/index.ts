@@ -240,6 +240,28 @@ const tools: McpTool[] = [
     },
   },
   {
+    name: 'pistola_render_views',
+    description:
+      'CPU-rasterize a deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) plus a fixed critique checklist. No camera motion.',
+    inputSchema: objectSchema({ planned: { type: 'array' } }),
+    handler: async (args) => {
+      try {
+        const rendered = unwrap(await invoke('renderViews', args.planned ? { planned: args.planned } : undefined)) as {
+          dataUrl?: unknown
+          mime?: unknown
+          [key: string]: unknown
+        }
+        const dataUrl = typeof rendered.dataUrl === 'string' ? rendered.dataUrl : ''
+        const base64 = dataUrl.includes(',') ? dataUrl.slice(dataUrl.indexOf(',') + 1) : dataUrl
+        if (!base64) throw new Error('The Pistola page did not return a PNG visual review.')
+        const { dataUrl: _ignored, mime, ...metadata } = rendered
+        return imageResult(base64, typeof mime === 'string' ? mime : 'image/png', metadata)
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
     name: 'pistola_check',
     description:
       'Run the structural checker on the live scene. Returns {ok, errorCount, warningCount, issues[]}. Also embedded on pistola_run and pistola_task_run_step.',
