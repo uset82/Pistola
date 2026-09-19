@@ -1,5 +1,7 @@
 # Pascal Editor V2 — Architecture
 
+> Building objects or scenes *with* Pistola (not changing its code)? Use the concept-first `$pistola-studio` skill and the sub-agents described in the repo-root `agents.md` ("Studio loop").
+
 ## Project Structure
 
 Monorepo managed with Turborepo. Packages are shared libraries; apps are deployable applications.

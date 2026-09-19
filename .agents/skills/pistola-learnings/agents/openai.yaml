@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pistola Learnings"
+  short_description: "Save lessons and reusable blueprints after a Pistola build"
+  default_prompt: "Use $pistola-learnings to record what we learned from this Pistola build."
+policy:
+  allow_implicit_invocation: true

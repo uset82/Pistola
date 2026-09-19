@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pistola Features"
+  short_description: "Which Pistola tool builds each part, and how to run actions"
+  default_prompt: "Use $pistola-features to turn this into valid Pistola actions: "
+policy:
+  allow_implicit_invocation: true

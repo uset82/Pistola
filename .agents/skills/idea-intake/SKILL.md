@@ -1,6 +1,6 @@
 ---
 name: idea-intake
-description: Structure a natural-language modeling request or rough sketch into a clear 3D scene brief with assumptions, ambiguities, constraints, and acceptance criteria. Use when a user describes a model, scene, object, or simple design reference and the request must be made buildable before implementation.
+description: Structure a natural-language modeling request or rough sketch into a clear 3D scene brief with assumptions, ambiguities, constraints, and acceptance criteria. Use when a request must be turned into a written brief or spec (planning, handoff, product work). To actually create an object or scene in Pistola, use pistola-studio, which runs this intake as its first step.
 ---
 
 # Idea Intake

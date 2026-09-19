@@ -172,6 +172,25 @@ Does not own:
 - initial ideation
 - broad product strategy
 
+## Studio loop (Codex runtime)
+
+When someone asks for a new object or scene ("genera un barco de juguete", "make a 3D chair"), Codex runs the concept-first loop in `$pistola-studio`. The roles above map onto Codex's main thread and the project sub-agents in `.codex/agents/`:
+
+| Role | Codex runtime | Skill |
+|---|---|---|
+| Orchestrator | Main thread: talks to the user, runs `image_gen`, and drives the Pistola page | `pistola-studio` |
+| Scene Planning | `pistola_blueprint` sub-agent: approved image to measured blueprint | `pistola-image-to-blueprint` |
+| Pascal Integration | `pistola_feature_guide` sub-agent: blueprint to validated action batches for this host | `pistola-features` |
+| Quality and Governance | `pistola_critic` sub-agent, optionally two in parallel: render vs concept | `pistola-visual-critique` |
+| Learning | `pistola_librarian` sub-agent: lessons and reusable blueprints in `.agents/library/` | `pistola-learnings` |
+
+Loop rules:
+
+- **Two user gates:** approve a concept image before building, and review the concept and the render side by side before finishing.
+- **One driver:** only the main thread talks to the user or touches the live editor. Sub-agents return JSON.
+- **Bounded critique:** at most 3 critic rounds, then report what remains and why.
+- **Shared memory:** read `.agents/library/LEARNINGS.md` and `INDEX.md` before planning. Write lessons back after delivery.
+
 ## Handoff rules
 
 - Every task starts with the Orchestrator Agent.

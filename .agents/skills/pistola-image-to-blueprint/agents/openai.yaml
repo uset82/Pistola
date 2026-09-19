@@ -1,0 +1,6 @@
+interface:
+  display_name: "Image to Blueprint"
+  short_description: "Trace an approved image into a measured parts blueprint"
+  default_prompt: "Use $pistola-image-to-blueprint to turn this image into a Pistola blueprint: "
+policy:
+  allow_implicit_invocation: true

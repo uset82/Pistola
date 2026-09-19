@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pistola Visual Critique"
+  short_description: "Compare a render with its concept and list concrete fixes"
+  default_prompt: "Use $pistola-visual-critique to compare this render with the concept: "
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,120 @@
+{
+  "slug": "barco-de-juguete",
+  "title": "Toy sailboat",
+  "style": "toy",
+  "concept": ".pistola/studio/barco-de-juguete/concept.png",
+  "scale": { "anchor": "overall length", "axis": "z", "value_m": 0.4 },
+  "views": {
+    "side": {
+      "origin": "bottom-center",
+      "width_m": 0.4,
+      "height_m": 0.08,
+      "points": [[-0.2, 0.08], [-0.17, 0.02], [-0.12, 0.0], [0.13, 0.0], [0.2, 0.08]]
+    },
+    "top": {
+      "origin": "center",
+      "width_m": 0.4,
+      "height_m": 0.16,
+      "points": [[-0.2, -0.07], [0.08, -0.08], [0.2, 0.0], [0.08, 0.08], [-0.2, 0.07]]
+    }
+  },
+  "palette": {
+    "hull": "#c8322d",
+    "deck": "#d9b48f",
+    "cabin": "#f5f1e8",
+    "roof": "#2f6fb5",
+    "mast": "#8a5a2b",
+    "sail": "#fbfaf5"
+  },
+  "parts": [
+    {
+      "id": "hull",
+      "name": "Hull",
+      "role": "body",
+      "shape": "silhouette-intersection",
+      "intersect": { "views": ["side", "top"] },
+      "dims_m": [0.16, 0.08, 0.4],
+      "position_m": [0, 0, 0],
+      "color": "#c8322d",
+      "parent": null,
+      "source_view": "side",
+      "notes": "Fallback: profile-extrude of the side view across the full 0.16 m width."
+    },
+    {
+      "id": "deck",
+      "name": "Deck",
+      "role": "deck",
+      "shape": "primitive",
+      "primitive": "box",
+      "dims_m": [0.13, 0.01, 0.3],
+      "position_m": [0, 0.08, -0.02],
+      "color": "#d9b48f",
+      "parent": "hull",
+      "source_view": "top"
+    },
+    {
+      "id": "cabin",
+      "name": "Cabin",
+      "role": "cabin",
+      "shape": "primitive",
+      "primitive": "box",
+      "dims_m": [0.09, 0.06, 0.1],
+      "position_m": [0, 0.09, -0.07],
+      "color": "#f5f1e8",
+      "parent": "deck",
+      "source_view": "side"
+    },
+    {
+      "id": "cabin_roof",
+      "name": "Cabin Roof",
+      "role": "roof",
+      "shape": "primitive",
+      "primitive": "box",
+      "dims_m": [0.1, 0.012, 0.11],
+      "position_m": [0, 0.15, -0.07],
+      "color": "#2f6fb5",
+      "parent": "cabin",
+      "source_view": "side"
+    },
+    {
+      "id": "mast",
+      "name": "Mast",
+      "role": "mast",
+      "shape": "primitive",
+      "primitive": "cylinder",
+      "dims_m": [0.012, 0.22, 0.012],
+      "position_m": [0, 0.09, 0.06],
+      "color": "#8a5a2b",
+      "parent": "deck",
+      "source_view": "side"
+    },
+    {
+      "id": "sail",
+      "name": "Sail",
+      "role": "sail",
+      "shape": "profile-extrude",
+      "profile": {
+        "plane": "YZ",
+        "points": [[0, 0], [0, 0.18], [-0.12, 0]],
+        "depth_m": 0.004,
+        "source": "side"
+      },
+      "dims_m": [0.004, 0.18, 0.12],
+      "position_m": [0, 0.11, 0.055],
+      "color": "#fbfaf5",
+      "parent": "mast",
+      "source_view": "side",
+      "notes": "YZ plane points are [z, y]; the sail hangs behind the mast."
+    }
+  ],
+  "acceptance": [
+    "hull length is about 2.5x the hull width",
+    "the cabin sits on the rear half of the deck",
+    "mast height is about 55% of the hull length",
+    "the hull tapers to a point at the bow in the top view"
+  ],
+  "assumptions": [
+    "Scale anchored to a 0.40 m overall length for a tabletop toy.",
+    "Colors rounded from the concept palette to six flat colors."
+  ]
+}

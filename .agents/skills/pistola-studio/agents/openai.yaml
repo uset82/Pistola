@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pistola Studio"
+  short_description: "Concept image first, then build the approved design in 3D"
+  default_prompt: "Use $pistola-studio to design and build this in Pistola: "
+policy:
+  allow_implicit_invocation: true

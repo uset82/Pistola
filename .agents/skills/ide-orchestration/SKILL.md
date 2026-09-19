@@ -36,6 +36,10 @@ Use [references/prompt-contract-template.md](references/prompt-contract-template
 - If the experience depends on hidden state, define that state explicitly.
 - Do not let IDE-specific details contaminate core scene logic.
 
+## Building objects from Codex
+
+For "create/generate X" requests, use `$pistola-studio`, the concept-first loop with the `.codex/agents/` sub-agents. For the ranked list of execution surfaces Codex can use (in-page API, chat `/run`, local MCP, WebMCP, plain chat), see `.agents/skills/pistola-features/references/execution-surfaces.md`.
+
 ## IDE control (MCP + workspace bridge)
 
 Pistola can be driven from Cursor, VS Code, or Codex through the `pistola` MCP server:

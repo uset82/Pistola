@@ -30,7 +30,7 @@ Use Multi-Agent-CAD for advanced text-to-CAD. Keep FreeCAD for interactive sketc
 - V1 is single-part only (no assembly/URDF).
 - Free-router models are slower, non-vision, and rate-limited. Jobs can take minutes.
 - Mock runtime (`PISTOLA_MAC_HELPER_RUNTIME=mock`) only validates the plumbing.
-- ChatGPT Sites and Canner auto-start the bundled MAC/FreeCAD preview helpers when the real runtimes are missing, so CAD features stay available on the hosted editor.
+- On hosted deploys (pistola.canner.app and the ChatGPT Sites export, which calls it), the MAC and FreeCAD helpers are **in-process mocks**. MAC returns an empty STEP and a placeholder box, extrude returns a bounding box, and revolve returns a cylinder. Check `/api/mac/health` (`runtime: "mock"`) and follow `$pistola-features` to build real geometry another way.
 
 ## Output
 
