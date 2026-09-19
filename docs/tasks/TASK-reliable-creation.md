@@ -295,7 +295,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 - [ ] Part coverage ≥ 90%.
 - [ ] Rubric score beats the baseline on ≥ 5 of 6 objects.
 - [ ] IoU vs gold reported (no hard threshold).
-- [ ] `bun run check-types`, the targeted `bun test` suites, `build:sites` and `smoke:sites` all pass.
+- [x] `bun run check-types`, the targeted `bun test` suites, `build:sites` and `smoke:sites` all pass.
+  — evidence: `bun run check-types` → 6/6 packages; targeted creation suite → 42 pass; `bun run build:sites` → exit 0;
+  `bun run smoke:sites` → 19/19 checks, including the browser Worker trace.
 
 ## Research notes
 
