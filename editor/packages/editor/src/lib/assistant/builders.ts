@@ -662,6 +662,15 @@ const resolveItemPlacement = (
     }
   }
 
+  if (explicitTarget?.type === 'item') {
+    return {
+      position: action.position ?? [0, 0, 0],
+      parentId: explicitTarget.id,
+      levelId: resolvedLevel.id,
+      side: action.side,
+    }
+  }
+
   return {
     position: action.position ?? [0, 0, 0],
     parentId: resolvedLevel.id,
@@ -760,7 +769,13 @@ export const placeItem = (action: Extract<AssistantAction, { type: 'place_item' 
     return item.id
   }
 
-  if (!action.allowOverlap) {
+  const parentNode = useScene.getState().nodes[placement.parentId as AnyNodeId]
+  const stackedPrimitive =
+    parentNode?.type === 'item' ||
+    (Boolean(asset.id?.startsWith('primitive-')) &&
+      Boolean(action.position) &&
+      (action.position?.[1] ?? 0) > 0)
+  if (!action.allowOverlap && !stackedPrimitive) {
     const validation = spatialGridManager.canPlaceOnFloor(
       placement.levelId,
       [placement.position[0], 0, placement.position[2]],

@@ -1,0 +1,98 @@
+# Pistola agent manual
+
+Use window.pistola on /workspace after data-pistola-agent=ready.
+Loop: manual() → inspect() → validate() → run() → waitForIdle() → screenshot().
+Create objects with $pistola-studio. Prefer build_cad_solid on hosted mocks.
+
+- reset_workspace_selection: Clear all active node, zone, or element selections across the workspace
+- set_workspace: Switch between the architecture world and the CAD world before phase tools
+- set_phase: Switch the editor phase to site, structure, furnish, or cad
+- set_mode: Switch editor interaction mode (select, edit, delete, build)
+- reparent_node: Move a node to a different parent container in the scene hierarchy
+- set_node_metadata: Set a custom metadata key-value pair on a scene node
+- place_cad_body_in_architecture: Place a CAD body definition into the architecture world as a level instance
+- set_camera_mode: Set camera projection mode to perspective or orthographic
+- set_theme: Switch the workspace theme between light and dark mode
+- set_level_view_mode: Configure how building levels are displayed (manual, stacked, exploded, solo)
+- set_wall_view_mode: Set the wall display mode (up, cutaway, down)
+- set_preview_mode: Toggle presentation / preview mode on or off
+- set_scans_visibility: Toggle visibility of 3D scanned point clouds or meshes
+- set_guides_visibility: Toggle visibility of visual alignment guides
+- set_grid_visibility: Toggle floor grid visibility
+- camera_top_view: Orient the camera directly above the scene facing downwards
+- orbit_camera: Rotate the camera around the scene center or selected target
+- capture_camera_snapshot: Save the current camera angle and position to a target node
+- view_camera_snapshot: Restore the camera to a saved snapshot position
+- clear_camera_snapshot: Delete a saved camera snapshot from a target node
+- focus_camera_on_nodes: Frame and focus the camera on specified scene nodes
+- set_structure_layer: Switch the active structure sub-layer to zones or elements
+- focus_building: Focus active view and selection on a specific building
+- focus_level: Focus active view and selection on a specific level
+- select_nodes: Set workspace selection to specific node IDs or a zone
+- create_level: Create a new vertical level/floor in the building
+- rename_level: Rename an existing level
+- rename_node: Rename any scene node (wall, room, item, zone, reference)
+- set_node_visibility: Show or hide specified scene nodes
+- update_zone_color: Update the fill color of a spatial zone/room
+- update_polygon_node: Update the 2D boundary polygon of a slab, ceiling, or zone
+- update_polygon_holes: Update interior void openings/holes in a slab or ceiling
+- create_wall: Create a linear architectural wall on the active or specified level
+- create_zone: Create a spatial zone/room bounded by a 2D polygon
+- create_slab: Create a horizontal floor slab bounded by a polygon
+- create_ceiling: Create a ceiling surface at a given height above the level floor
+- create_roof: Create a gable or flat roof covering the specified bounding rectangle
+- place_door: Insert a door opening into an existing wall
+- place_window: Insert a window opening into an existing wall
+- update_door_properties: Update door dimensions, frame, handle, or swing configuration
+- update_window_properties: Update window dimensions, mullions, dividers, or sill
+- update_wall_properties: Update thickness or height of an existing wall
+- update_slab_properties: Update floor slab elevation or openings
+- update_ceiling_properties: Update ceiling height clearance or openings
+- update_roof_properties: Update roof dimensions, pitch height, and overhangs
+- update_reference_properties: Update 2D reference plan overlay scale, position, and opacity
+- update_site_properties: Update site property line boundary polygon
+- create_site: Create a new root site container for the project
+- create_building: Create a new building container under the active site
+- activate_tool: Activate an interactive drawing or placement tool in the editor
+- place_item: Place a catalog item or asset in the scene with position, rotation, and parenting
+- update_item_properties: Update the position, rotation, or scale of an existing item in the scene
+- set_transform_mode: Activate move, rotate, or scale gizmo transform mode
+- set_transform_pivot: Toggle transform pivot between bounds-center and asset-origin
+- reposition_target: Enter interactive repositioning mode for the selected target
+- move_target: Move target node to an absolute position or by an offset delta
+- rotate_target: Rotate target node around Y axis or 3D Euler angles
+- scale_target: Scale target node by 3D factor vector [x, y, z]
+- duplicate_target: Create an exact duplicate of the target node in place
+- duplicate_reposition_target: Duplicate target and immediately enter placement drag mode
+- delete_target: Delete the selected or target node from the scene
+- delete_nodes: Batch delete multiple specified scene nodes
+- clear_level_contents: Remove all architectural elements, zones, and furniture on the level
+- set_cad_workplane: Set the active CAD drawing workplane (XY, XZ, YZ, or level)
+- close_cad_sketch: Finish editing and close the active 2D CAD sketch
+- delete_cad_sketch_constraint: Remove a geometric constraint from a 2D CAD sketch
+- update_cad_sketch_dimension: Change a dimension value on a 2D CAD sketch entity
+- execute_cad_brief: Execute a structured CAD brief containing sketches and operation graphs
+- run_cad_prompt: Run a natural language prompt against the CAD reasoning pipeline
+- generate_mac_part: Invoke Multi-Agent-CAD (MAC) generation for complex mechanical solid geometry
+- build_cad_solid: Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)
+- create_default_cad_sketch: Create a new default 2D CAD sketch centered on the workplane
+- extrude_cad_sketch: Extrude a closed 2D sketch profile into a 3D solid body
+- revolve_cad_sketch: Revolve a 2D sketch profile around an axis to create a solid of revolution
+- regenerate_cad_body: Recompute the solid B-rep geometry of an existing CAD body
+- retry_cad_body: Retry a failed CAD body operation graph execution
+- set_cad_body_operation_suppressed: Suppress or unsuppress an operation in a CAD body feature tree
+- apply_cad_boolean: Apply a boolean union, cut/difference, or intersect between two CAD solid bodies
+- apply_cad_fillet: Round sharp edges of a CAD body with a constant radius fillet
+- apply_cad_chamfer: Bevel sharp edges of a CAD body with a chamfer cut
+- add_cad_box_ears: Attach bilateral decorative or functional cylindrical/box ear bosses to a CAD body
+- extrude_cad_body_face: Extend a planar face of a CAD solid body outward or inward
+- shell_cad_body: Hollow out a solid CAD body leaving a thin shell wall of specified thickness
+- export_cad_body_step: Export the solid CAD body to a standard STEP (ISO 10303) CAD exchange file
+- add_cad_sketch_entities: Add 2D sketch entities (lines, rectangles, circles, arcs) directly into a CAD sketch
+- set_cad_sketch_plane: Change the projection plane orientation for a CAD sketch
+- set_fullscreen: Toggle full screen mode for the editor canvas
+- undo_history: Undo the previous user action in the editor history stack
+- redo_history: Redo the previously undone action in the editor history stack
+- export_scene: Export the complete 3D scene in JSON, IFC, or GLB format
+- copy_share_link: Copy the shareable link for this project to the clipboard
+- take_screenshot: Capture and download a high-resolution viewport screenshot

@@ -116,7 +116,12 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const getCadHelperUnavailableMessage = (error: unknown) => {
   if (error instanceof Error && error.message) {
-    if (error.message === 'fetch failed' || error.message.includes('fetch failed')) {
+    if (
+      error.message === 'fetch failed' ||
+      error.message.includes('fetch failed') ||
+      error.message === 'Failed to fetch' ||
+      error.message.includes('Failed to fetch')
+    ) {
       return cadHelperUnavailableMessage
     }
     return error.message

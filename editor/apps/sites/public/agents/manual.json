@@ -1,0 +1,1013 @@
+{
+  "workflow": {
+    "alwaysPassExplicitIds": true,
+    "useForwardRefs": "$ref_<name> for new nodes in the same batch",
+    "maxActionsPerBatch": 25
+  },
+  "capabilities": [
+    {
+      "type": "reset_workspace_selection",
+      "domain": "workspace",
+      "describe": "Clear all active node, zone, or element selections across the workspace",
+      "examples": [
+        "deselect all",
+        "clear selection"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_workspace",
+      "domain": "workspace",
+      "describe": "Switch between the architecture world and the CAD world before phase tools",
+      "examples": [
+        "switch to CAD",
+        "open architecture",
+        "go to the part workspace"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_phase",
+      "domain": "workspace",
+      "describe": "Switch the editor phase to site, structure, furnish, or cad",
+      "examples": [
+        "switch to structure",
+        "go to furnish mode"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_mode",
+      "domain": "workspace",
+      "describe": "Switch editor interaction mode (select, edit, delete, build)",
+      "examples": [
+        "switch to select mode",
+        "enable edit mode"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "reparent_node",
+      "domain": "workspace",
+      "describe": "Move a node to a different parent container in the scene hierarchy",
+      "examples": [
+        "move this item into room A",
+        "reparent to building 1"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "set_node_metadata",
+      "domain": "workspace",
+      "describe": "Set a custom metadata key-value pair on a scene node",
+      "examples": [
+        "tag this sofa as priority",
+        "mark level as approved"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "place_cad_body_in_architecture",
+      "domain": "workspace",
+      "describe": "Place a CAD body definition into the architecture world as a level instance",
+      "examples": [
+        "put this bracket on the kitchen wall",
+        "place the CAD part in the building"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "set_camera_mode",
+      "domain": "viewer",
+      "describe": "Set camera projection mode to perspective or orthographic",
+      "examples": [
+        "switch to 2D orthographic view",
+        "use perspective camera"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_theme",
+      "domain": "viewer",
+      "describe": "Switch the workspace theme between light and dark mode",
+      "examples": [
+        "switch to dark mode",
+        "enable light theme"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_level_view_mode",
+      "domain": "viewer",
+      "describe": "Configure how building levels are displayed (manual, stacked, exploded, solo)",
+      "examples": [
+        "explode levels",
+        "solo this floor",
+        "stack levels"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_wall_view_mode",
+      "domain": "viewer",
+      "describe": "Set the wall display mode (up, cutaway, down)",
+      "examples": [
+        "cutaway walls",
+        "show walls full height",
+        "hide walls down"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_preview_mode",
+      "domain": "viewer",
+      "describe": "Toggle presentation / preview mode on or off",
+      "examples": [
+        "enable preview mode",
+        "exit preview"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_scans_visibility",
+      "domain": "viewer",
+      "describe": "Toggle visibility of 3D scanned point clouds or meshes",
+      "examples": [
+        "show scans",
+        "hide point clouds"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_guides_visibility",
+      "domain": "viewer",
+      "describe": "Toggle visibility of visual alignment guides",
+      "examples": [
+        "show guides",
+        "hide alignment lines"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_grid_visibility",
+      "domain": "viewer",
+      "describe": "Toggle floor grid visibility",
+      "examples": [
+        "turn on grid",
+        "hide grid"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "camera_top_view",
+      "domain": "viewer",
+      "describe": "Orient the camera directly above the scene facing downwards",
+      "examples": [
+        "top down view",
+        "look from above"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "orbit_camera",
+      "domain": "viewer",
+      "describe": "Rotate the camera around the scene center or selected target",
+      "examples": [
+        "rotate camera 90 degrees",
+        "orbit clockwise"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "capture_camera_snapshot",
+      "domain": "viewer",
+      "describe": "Save the current camera angle and position to a target node",
+      "examples": [
+        "save camera angle",
+        "bookmark current view"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "view_camera_snapshot",
+      "domain": "viewer",
+      "describe": "Restore the camera to a saved snapshot position",
+      "examples": [
+        "go to saved view",
+        "load camera snapshot"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "clear_camera_snapshot",
+      "domain": "viewer",
+      "describe": "Delete a saved camera snapshot from a target node",
+      "examples": [
+        "remove camera bookmark",
+        "clear snapshot"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "focus_camera_on_nodes",
+      "domain": "viewer",
+      "describe": "Frame and focus the camera on specified scene nodes",
+      "examples": [
+        "focus camera on sofa",
+        "zoom in on selected wall"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_structure_layer",
+      "domain": "structure",
+      "describe": "Switch the active structure sub-layer to zones or elements",
+      "examples": [
+        "switch to zones layer",
+        "edit architectural elements"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "focus_building",
+      "domain": "structure",
+      "describe": "Focus active view and selection on a specific building",
+      "examples": [
+        "focus building 1",
+        "select main house"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "focus_level",
+      "domain": "structure",
+      "describe": "Focus active view and selection on a specific level",
+      "examples": [
+        "go to level 1",
+        "focus ground floor"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "select_nodes",
+      "domain": "structure",
+      "describe": "Set workspace selection to specific node IDs or a zone",
+      "examples": [
+        "select wall 3",
+        "select bedroom zone"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "create_level",
+      "domain": "structure",
+      "describe": "Create a new vertical level/floor in the building",
+      "examples": [
+        "add second floor",
+        "create level 2 named Bedroom Floor"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "rename_level",
+      "domain": "structure",
+      "describe": "Rename an existing level",
+      "examples": [
+        "rename level 0 to Ground Floor"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "rename_node",
+      "domain": "structure",
+      "describe": "Rename any scene node (wall, room, item, zone, reference)",
+      "examples": [
+        "rename selected room to Kitchen",
+        "name this sofa Modern Couch"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "set_node_visibility",
+      "domain": "structure",
+      "describe": "Show or hide specified scene nodes",
+      "examples": [
+        "hide all windows on level 2",
+        "show reference plan"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_zone_color",
+      "domain": "structure",
+      "describe": "Update the fill color of a spatial zone/room",
+      "examples": [
+        "make living room zone light green",
+        "change zone color to blue"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_polygon_node",
+      "domain": "structure",
+      "describe": "Update the 2D boundary polygon of a slab, ceiling, or zone",
+      "examples": [
+        "adjust room boundary polygon"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_polygon_holes",
+      "domain": "structure",
+      "describe": "Update interior void openings/holes in a slab or ceiling",
+      "examples": [
+        "cut opening in slab for stairs"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_wall",
+      "domain": "structure",
+      "describe": "Create a linear architectural wall on the active or specified level",
+      "examples": [
+        "draw wall from [0, 0] to [5, 0]",
+        "create 3m wall"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_zone",
+      "domain": "structure",
+      "describe": "Create a spatial zone/room bounded by a 2D polygon",
+      "examples": [
+        "create living room zone",
+        "define bedroom boundary"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_slab",
+      "domain": "structure",
+      "describe": "Create a horizontal floor slab bounded by a polygon",
+      "examples": [
+        "create floor slab",
+        "add foundation slab"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_ceiling",
+      "domain": "structure",
+      "describe": "Create a ceiling surface at a given height above the level floor",
+      "examples": [
+        "create ceiling 2.7m high"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_roof",
+      "domain": "structure",
+      "describe": "Create a gable or flat roof covering the specified bounding rectangle",
+      "examples": [
+        "add roof over building",
+        "create gable roof"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "place_door",
+      "domain": "structure",
+      "describe": "Insert a door opening into an existing wall",
+      "examples": [
+        "place door on wall 2",
+        "add 0.9m door in hallway"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "place_window",
+      "domain": "structure",
+      "describe": "Insert a window opening into an existing wall",
+      "examples": [
+        "place window on longest wall",
+        "add 1.2m window in living room"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_door_properties",
+      "domain": "structure",
+      "describe": "Update door dimensions, frame, handle, or swing configuration",
+      "examples": [
+        "make door 1m wide",
+        "change door swing direction"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_window_properties",
+      "domain": "structure",
+      "describe": "Update window dimensions, mullions, dividers, or sill",
+      "examples": [
+        "make windows taller",
+        "set window width to 1.5m"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_wall_properties",
+      "domain": "structure",
+      "describe": "Update thickness or height of an existing wall",
+      "examples": [
+        "make wall 0.3m thick",
+        "set wall height to 3.2m"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_slab_properties",
+      "domain": "structure",
+      "describe": "Update floor slab elevation or openings",
+      "examples": [
+        "raise slab elevation by 0.1m"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_ceiling_properties",
+      "domain": "structure",
+      "describe": "Update ceiling height clearance or openings",
+      "examples": [
+        "lower ceiling to 2.5m"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_roof_properties",
+      "domain": "structure",
+      "describe": "Update roof dimensions, pitch height, and overhangs",
+      "examples": [
+        "adjust roof pitch height to 2m"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_reference_properties",
+      "domain": "structure",
+      "describe": "Update 2D reference plan overlay scale, position, and opacity",
+      "examples": [
+        "set reference opacity to 50%",
+        "scale reference by 1.5"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_site_properties",
+      "domain": "structure",
+      "describe": "Update site property line boundary polygon",
+      "examples": [
+        "adjust property boundary line"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_site",
+      "domain": "structure",
+      "describe": "Create a new root site container for the project",
+      "examples": [
+        "create site named Project Alpha",
+        "new site"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_building",
+      "domain": "structure",
+      "describe": "Create a new building container under the active site",
+      "examples": [
+        "create building named Main House",
+        "add secondary building"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "activate_tool",
+      "domain": "furnish",
+      "describe": "Activate an interactive drawing or placement tool in the editor",
+      "examples": [
+        "select the item tool",
+        "switch to wall drawing tool"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "place_item",
+      "domain": "furnish",
+      "describe": "Place a catalog item or asset in the scene with position, rotation, and parenting",
+      "examples": [
+        "place sofa in the living room",
+        "add dining chair at [2, 0, 1]"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_item_properties",
+      "domain": "furnish",
+      "describe": "Update the position, rotation, or scale of an existing item in the scene",
+      "examples": [
+        "scale the table by 1.2",
+        "rotate the chair 45 degrees"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "set_transform_mode",
+      "domain": "transform",
+      "describe": "Activate move, rotate, or scale gizmo transform mode",
+      "examples": [
+        "switch to move tool",
+        "enable rotate gizmo"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_transform_pivot",
+      "domain": "transform",
+      "describe": "Toggle transform pivot between bounds-center and asset-origin",
+      "examples": [
+        "use center pivot",
+        "transform from origin"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "reposition_target",
+      "domain": "transform",
+      "describe": "Enter interactive repositioning mode for the selected target",
+      "examples": [
+        "reposition this sofa",
+        "move selected object interactively"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "move_target",
+      "domain": "transform",
+      "describe": "Move target node to an absolute position or by an offset delta",
+      "examples": [
+        "move sofa left 1 meter",
+        "set position to [0, 0, 2]"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "rotate_target",
+      "domain": "transform",
+      "describe": "Rotate target node around Y axis or 3D Euler angles",
+      "examples": [
+        "rotate table 45 degrees",
+        "turn sofa to face desk"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "scale_target",
+      "domain": "transform",
+      "describe": "Scale target node by 3D factor vector [x, y, z]",
+      "examples": [
+        "scale by [1.5, 1.5, 1.5]",
+        "double the size"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "duplicate_target",
+      "domain": "transform",
+      "describe": "Create an exact duplicate of the target node in place",
+      "examples": [
+        "duplicate sofa",
+        "copy selected element"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "duplicate_reposition_target",
+      "domain": "transform",
+      "describe": "Duplicate target and immediately enter placement drag mode",
+      "examples": [
+        "duplicate and place next to it"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "delete_target",
+      "domain": "transform",
+      "describe": "Delete the selected or target node from the scene",
+      "examples": [
+        "delete this wall",
+        "remove selected sofa"
+      ],
+      "safeImmediate": false,
+      "destructive": true
+    },
+    {
+      "type": "delete_nodes",
+      "domain": "transform",
+      "describe": "Batch delete multiple specified scene nodes",
+      "examples": [
+        "delete selected items",
+        "remove highlighted walls"
+      ],
+      "safeImmediate": false,
+      "destructive": true
+    },
+    {
+      "type": "clear_level_contents",
+      "domain": "transform",
+      "describe": "Remove all architectural elements, zones, and furniture on the level",
+      "examples": [
+        "clean current level",
+        "clear all contents on floor 1"
+      ],
+      "safeImmediate": false,
+      "destructive": true
+    },
+    {
+      "type": "set_cad_workplane",
+      "domain": "cad",
+      "describe": "Set the active CAD drawing workplane (XY, XZ, YZ, or level)",
+      "examples": [
+        "work on XZ plane",
+        "set CAD plane to XY"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "close_cad_sketch",
+      "domain": "cad",
+      "describe": "Finish editing and close the active 2D CAD sketch",
+      "examples": [
+        "close active sketch",
+        "finish sketch"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "delete_cad_sketch_constraint",
+      "domain": "cad",
+      "describe": "Remove a geometric constraint from a 2D CAD sketch",
+      "examples": [
+        "remove horizontal constraint",
+        "delete constraint c_1"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "update_cad_sketch_dimension",
+      "domain": "cad",
+      "describe": "Change a dimension value on a 2D CAD sketch entity",
+      "examples": [
+        "change dimension to 50mm",
+        "update length to 2.5m"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "execute_cad_brief",
+      "domain": "cad",
+      "describe": "Execute a structured CAD brief containing sketches and operation graphs",
+      "examples": [
+        "execute CAD parametric brief"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "run_cad_prompt",
+      "domain": "cad",
+      "describe": "Run a natural language prompt against the CAD reasoning pipeline",
+      "examples": [
+        "generate a mounting bracket with 4 screw holes"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "generate_mac_part",
+      "domain": "cad",
+      "describe": "Invoke Multi-Agent-CAD (MAC) generation for complex mechanical solid geometry",
+      "examples": [
+        "generate spur gear with 24 teeth",
+        "create printable camera mount"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "build_cad_solid",
+      "domain": "cad",
+      "describe": "Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)",
+      "examples": [
+        "build a holed bracket",
+        "intersect two silhouettes into a hull"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "create_default_cad_sketch",
+      "domain": "cad",
+      "describe": "Create a new default 2D CAD sketch centered on the workplane",
+      "examples": [
+        "start new sketch",
+        "create sketch at origin"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "extrude_cad_sketch",
+      "domain": "cad",
+      "describe": "Extrude a closed 2D sketch profile into a 3D solid body",
+      "examples": [
+        "extrude sketch 10mm",
+        "extrude 0.5m symmetric"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "revolve_cad_sketch",
+      "domain": "cad",
+      "describe": "Revolve a 2D sketch profile around an axis to create a solid of revolution",
+      "examples": [
+        "revolve sketch 360 degrees around Z",
+        "lathe profile"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "regenerate_cad_body",
+      "domain": "cad",
+      "describe": "Recompute the solid B-rep geometry of an existing CAD body",
+      "examples": [
+        "regenerate selected CAD body",
+        "rebuild solid"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "retry_cad_body",
+      "domain": "cad",
+      "describe": "Retry a failed CAD body operation graph execution",
+      "examples": [
+        "retry failed CAD body generation"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "set_cad_body_operation_suppressed",
+      "domain": "cad",
+      "describe": "Suppress or unsuppress an operation in a CAD body feature tree",
+      "examples": [
+        "suppress fillet operation op_2",
+        "unsuppress cut"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "apply_cad_boolean",
+      "domain": "cad",
+      "describe": "Apply a boolean union, cut/difference, or intersect between two CAD solid bodies",
+      "examples": [
+        "union two selected bodies",
+        "cut cylinder from box"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "apply_cad_fillet",
+      "domain": "cad",
+      "describe": "Round sharp edges of a CAD body with a constant radius fillet",
+      "examples": [
+        "fillet edges by 5mm",
+        "round top edges with 0.1m fillet"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "apply_cad_chamfer",
+      "domain": "cad",
+      "describe": "Bevel sharp edges of a CAD body with a chamfer cut",
+      "examples": [
+        "chamfer edges by 3mm",
+        "bevel edges"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "add_cad_box_ears",
+      "domain": "cad",
+      "describe": "Attach bilateral decorative or functional cylindrical/box ear bosses to a CAD body",
+      "examples": [
+        "add ears to box",
+        "attach ear lugs"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "extrude_cad_body_face",
+      "domain": "cad",
+      "describe": "Extend a planar face of a CAD solid body outward or inward",
+      "examples": [
+        "extrude top face by 0.2m",
+        "pull front face outward"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "shell_cad_body",
+      "domain": "cad",
+      "describe": "Hollow out a solid CAD body leaving a thin shell wall of specified thickness",
+      "examples": [
+        "hollow out body with 2mm shell",
+        "shell CAD box"
+      ],
+      "safeImmediate": false,
+      "destructive": true
+    },
+    {
+      "type": "export_cad_body_step",
+      "domain": "cad",
+      "describe": "Export the solid CAD body to a standard STEP (ISO 10303) CAD exchange file",
+      "examples": [
+        "export body as STEP",
+        "download STEP file"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "add_cad_sketch_entities",
+      "domain": "cad",
+      "describe": "Add 2D sketch entities (lines, rectangles, circles, arcs) directly into a CAD sketch",
+      "examples": [
+        "draw circle in active sketch",
+        "add 4 lines to sketch"
+      ],
+      "safeImmediate": false,
+      "destructive": false
+    },
+    {
+      "type": "set_cad_sketch_plane",
+      "domain": "cad",
+      "describe": "Change the projection plane orientation for a CAD sketch",
+      "examples": [
+        "set sketch workplane to XY",
+        "change sketch plane to XZ"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "set_fullscreen",
+      "domain": "history/export",
+      "describe": "Toggle full screen mode for the editor canvas",
+      "examples": [
+        "enter fullscreen",
+        "exit fullscreen"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "undo_history",
+      "domain": "history/export",
+      "describe": "Undo the previous user action in the editor history stack",
+      "examples": [
+        "undo",
+        "undo last action"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "redo_history",
+      "domain": "history/export",
+      "describe": "Redo the previously undone action in the editor history stack",
+      "examples": [
+        "redo",
+        "redo action"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "export_scene",
+      "domain": "history/export",
+      "describe": "Export the complete 3D scene in JSON, IFC, or GLB format",
+      "examples": [
+        "export as IFC",
+        "download scene as GLB",
+        "export json"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "copy_share_link",
+      "domain": "history/export",
+      "describe": "Copy the shareable link for this project to the clipboard",
+      "examples": [
+        "copy share link",
+        "get project link"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    },
+    {
+      "type": "take_screenshot",
+      "domain": "history/export",
+      "describe": "Capture and download a high-resolution viewport screenshot",
+      "examples": [
+        "take screenshot",
+        "save picture of the scene"
+      ],
+      "safeImmediate": true,
+      "destructive": false
+    }
+  ]
+}

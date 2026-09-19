@@ -1,9 +1,9 @@
 import type { AssistantAction, AssistantTurnResult } from '../../../packages/editor/src/lib/assistant/types'
 import type {
   AssistantExecutionResult,
+  AssistantExecutionRuntime,
   AssistantExecutionStatus,
 } from '@pascal-app/editor'
-import type { CadBrief } from '@pascal-app/core'
 
 type ExecuteAssistantPlan = typeof import('@pascal-app/editor').executeAssistantPlan
 
@@ -50,10 +50,7 @@ export type TaskPlanExecutionCallbacks = {
   onPlanComplete?: (plan: TaskPlan) => void
   onExecutionStatus?: (event: AssistantExecutionStatus, stepIndex: number, step: TaskPlanStep) => void
   shouldStop?: () => boolean
-  runtime?: {
-    executeCadBrief?: (brief: CadBrief) => Promise<{ bodyIds: string[]; sketchIds: string[] }>
-    runCadPrompt?: (prompt: string) => Promise<{ bodyIds: string[]; sketchIds: string[] }>
-  }
+  runtime?: AssistantExecutionRuntime
   executePlan?: ExecuteAssistantPlan
 }
 

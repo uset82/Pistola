@@ -85,6 +85,17 @@ test('AssistantActionSchema parses a MAC part generation action', () => {
   assert.equal(action.type, 'generate_mac_part')
 })
 
+test('AssistantActionSchema parses a local CAD solid action', () => {
+  const action = AssistantActionSchema.parse({
+    type: 'build_cad_solid',
+    name: 'Hull',
+    spec: { op: 'box', size: [0.16, 0.08, 0.4] },
+    color: '#c8322d',
+  })
+  assert.equal(action.type, 'build_cad_solid')
+  assert.equal((action.spec as { op?: string }).op, 'box')
+})
+
 test('AssistantActionSchema parses CAD sketch refinement actions', () => {
   const deleteConstraint = AssistantActionSchema.parse({
     type: 'delete_cad_sketch_constraint',

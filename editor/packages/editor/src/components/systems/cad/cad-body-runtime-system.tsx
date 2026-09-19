@@ -113,7 +113,7 @@ export const CadBodyRuntimeSystem = () => {
       if (!node || node.type !== 'cad-body') return
       // Local profile extrusions are valid editable browser geometry. They must
       // not be overwritten by the primitive-only helper preview.
-      if (node.preview.primitive === 'extruded-profile') {
+      if (node.preview.primitive === 'extruded-profile' || node.preview.primitive === 'mesh') {
         if (node.regenStatus !== 'idle') {
           updateNode(id as AnyNodeId, { regenStatus: 'idle', regenError: null } as Partial<CadBodyNode>)
         }

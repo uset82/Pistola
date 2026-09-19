@@ -18,3 +18,6 @@ the host details (surface, CAD and MAC runtime), and notes on what failed and ho
 
 Return the list of files you changed and a one-line summary of each lesson added or updated.
 """
+
+[[skills.config]]
+name = "pistola-learnings"

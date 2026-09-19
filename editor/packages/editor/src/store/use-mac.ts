@@ -19,7 +19,12 @@ type MacState = {
 
 const getMacUnavailableMessage = (error: unknown) => {
   if (error instanceof Error && error.message) {
-    if (error.message === 'fetch failed' || error.message.includes('fetch failed')) {
+    if (
+      error.message === 'fetch failed' ||
+      error.message.includes('fetch failed') ||
+      error.message === 'Failed to fetch' ||
+      error.message.includes('Failed to fetch')
+    ) {
       return macHelperUnavailableMessage
     }
     return error.message

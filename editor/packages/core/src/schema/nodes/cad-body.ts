@@ -22,6 +22,14 @@ export const CadBodyPreview = z.discriminatedUnion('primitive', [
     height: z.number().positive(),
     color: z.string().default('#60a5fa'),
   }),
+  z.object({
+    /** Browser-evaluated solid from a declarative spec. */
+    primitive: z.literal('mesh'),
+    spec: z.record(z.string(), z.unknown()).default({}),
+    positions: z.array(z.number()).default([]),
+    indices: z.array(z.number()).default([]),
+    color: z.string().default('#60a5fa'),
+  }),
 ])
 
 const CadOperationBase = z.object({

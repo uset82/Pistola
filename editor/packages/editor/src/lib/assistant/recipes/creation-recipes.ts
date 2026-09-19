@@ -1,4 +1,47 @@
+import { useScene } from '@pascal-app/core'
 import type { AssistantAction } from '../types'
+
+const occupiedFloorCells = () => {
+  const cells = new Set<string>()
+  for (const node of Object.values(useScene.getState().nodes)) {
+    if (node?.type !== 'item' || !Array.isArray(node.position)) continue
+    cells.add(`${Math.round(node.position[0])}:${Math.round(node.position[2])}`)
+  }
+  return cells
+}
+
+export const nextOpenRecipeOrigin = (preferred?: [number, number, number]): [number, number, number] => {
+  if (preferred) return preferred
+  const taken = occupiedFloorCells()
+  for (let radius = 0; radius < 12; radius += 1) {
+    for (let x = -radius; x <= radius; x += 1) {
+      for (const z of [-radius, radius]) {
+        if (!taken.has(`${x}:${z}`)) return [x, 0, z]
+      }
+    }
+    for (let z = -radius + 1; z <= radius - 1; z += 1) {
+      for (const x of [-radius, radius]) {
+        if (!taken.has(`${x}:${z}`)) return [x, 0, z]
+      }
+    }
+  }
+  return [0, 0, 8]
+}
+
+const boardPolyline = (width: number, length: number): [number, number][] => {
+  const hw = width / 2
+  const hl = length / 2
+  return [
+    [0, hl],
+    [hw * 0.45, hl * 0.82],
+    [hw, hl * 0.2],
+    [hw * 0.85, -hl * 0.55],
+    [0, -hl],
+    [-hw * 0.85, -hl * 0.55],
+    [-hw, hl * 0.2],
+    [-hw * 0.45, hl * 0.82],
+  ]
+}
 
 export type RecipeCategory = 'organic' | 'vehicle' | 'robotics' | 'sports' | 'furniture' | 'aerospace'
 
@@ -82,8 +125,8 @@ export const boardRecipe: CreationRecipe = {
             entities: [
               {
                 type: 'board',
-                points: [],
-                params: { width, length: height, center: [0, 0] },
+                points: boardPolyline(width, height),
+                params: { closed: true, width, length: height, center: [0, 0] },
               },
             ],
             dimensions: [
@@ -121,8 +164,8 @@ export const airplaneRecipe: CreationRecipe = {
   name: 'Airplane Assembly',
   category: 'vehicle',
   keywords: ['airplane', 'plane', 'avion', 'avión', 'aircraft', 'jet'],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_airplane_root'
     return [
       // Fuselage (Root node)
@@ -230,8 +273,8 @@ export const robotArmRecipe: CreationRecipe = {
   name: 'Articulated Robotic Arm',
   category: 'robotics',
   keywords: ['robot arm', 'arm robot', 'robotic arm', 'brazo robot', 'brazo robotico', 'brazo robótico', 'manipulator'],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_arm_root'
     return [
       // Base Pedestal (Root node)
@@ -335,8 +378,8 @@ export const humanoidRobotRecipe: CreationRecipe = {
   name: 'Humanoid Robot',
   category: 'robotics',
   keywords: ['robot', 'humanoid', 'android', 'androide', 'automaton'],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_robot_root'
     return [
       // Torso (Root node)
@@ -512,8 +555,8 @@ export const carRecipe: CreationRecipe = {
     'toy car',
     'toy',
   ],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_car_root'
     return [
       // Chassis (Root node)
@@ -655,8 +698,8 @@ export const chairRecipe: CreationRecipe = {
   name: 'Chair Assembly',
   category: 'furniture',
   keywords: ['chair', 'silla', 'seat', 'asiento', 'stool'],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_chair_root'
     return [
       // Seat (Root node)
@@ -728,8 +771,8 @@ export const droneRecipe: CreationRecipe = {
   name: 'Quadcopter Drone Assembly',
   category: 'robotics',
   keywords: ['drone', 'dron', 'quadcopter', 'cuadricoptero', 'cuadricóptero', 'uav'],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_drone_root'
     return [
       // Central Body (Root node)
@@ -835,8 +878,8 @@ export const rocketRecipe: CreationRecipe = {
   name: 'Space Rocket Assembly',
   category: 'aerospace',
   keywords: ['rocket', 'cohete', 'spaceship', 'nave espacial', 'shuttle'],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_rocket_root'
     return [
       // Fuselage Cylinder (Root node)
@@ -935,8 +978,8 @@ export const boatRecipe: CreationRecipe = {
     'navío',
     'buque',
   ],
-  generateActions: ({ position = [0, 0, 0] }) => {
-    const [x, y, z] = position
+  generateActions: ({ position }) => {
+    const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_boat_root'
     return [
       // Boat Hull (Root node)

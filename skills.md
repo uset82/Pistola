@@ -40,6 +40,16 @@ Recommended repository layout:
       SKILL.md
     mac-cad-generation/
       SKILL.md
+    pistola-studio/
+      SKILL.md
+    pistola-image-to-blueprint/
+      SKILL.md
+    pistola-features/
+      SKILL.md
+    pistola-visual-critique/
+      SKILL.md
+    pistola-learnings/
+      SKILL.md
 ```
 
 Current status:
@@ -52,6 +62,11 @@ Current status:
 - `scene-validation` implemented
 - `export-readiness` implemented
 - `mac-cad-generation` implemented
+- `pistola-studio` implemented
+- `pistola-image-to-blueprint` implemented
+- `pistola-features` implemented
+- `pistola-visual-critique` implemented
+- `pistola-learnings` implemented
 
 ## Foundational skill catalog
 
@@ -163,6 +178,65 @@ Expected outputs:
 - MAC job + STEP/GLB artifacts
 - `cad-body` import with `metadata.cadEngine = 'mac'`
 - QA / repair summary when available
+
+### 9. `pistola-studio`
+
+Use when:
+
+- the user asks to generate, create, make, or build a 3D object or scene
+- a concept image should be approved before modeling
+
+Expected outputs:
+
+- approved concept and ortho sheet
+- built scene that matches the concept
+- side-by-side review and library lesson
+
+### 10. `pistola-image-to-blueprint`
+
+Use when:
+
+- an approved concept or reference image must become measured parts
+
+Expected outputs:
+
+- schema-valid blueprint JSON
+- traced silhouettes in meters
+
+### 11. `pistola-features`
+
+Use when:
+
+- a blueprint must become Pistola actions
+- the host's CAD/MAC limits or execution surface must be chosen
+
+Expected outputs:
+
+- action batches
+- fallbacks and host limits
+
+### 12. `pistola-visual-critique`
+
+Use when:
+
+- a viewport screenshot must be compared with the approved concept
+
+Expected outputs:
+
+- pass/fail
+- ranked fix list mapped to blueprint parts
+
+### 13. `pistola-learnings`
+
+Use when:
+
+- a delivered build should be saved for reuse
+- a non-obvious Pistola workaround should be recorded
+
+Expected outputs:
+
+- `.agents/library/objects/<slug>.json`
+- updated `INDEX.md` and `LEARNINGS.md`
 
 ## Skill governance
 

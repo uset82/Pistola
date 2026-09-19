@@ -5,18 +5,11 @@ import { useEffect, useMemo, useRef } from 'react'
 import type { Group } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { useNodeEvents } from '../../../hooks/use-node-events'
+import { getCadBodyPlaceholderDimensions } from '../cad-body/cad-body-preview'
 
 const getSourceDimensions = (body: CadBodyNode | undefined): [number, number, number] => {
   if (!body) return [0.4, 0.4, 0.4]
-  if (body.preview.primitive === 'box') return body.preview.dimensions
-  if (body.preview.primitive === 'cylinder') {
-    return [body.preview.radius * 2, body.preview.height, body.preview.radius * 2]
-  }
-  return [
-    Math.max(...body.preview.points.map((point) => point[0])) - Math.min(...body.preview.points.map((point) => point[0])),
-    body.preview.height,
-    Math.max(...body.preview.points.map((point) => point[1])) - Math.min(...body.preview.points.map((point) => point[1])),
-  ]
+  return getCadBodyPlaceholderDimensions(body.preview)
 }
 
 export const CadInstanceRenderer = ({ node }: { node: CadInstanceNode }) => {

@@ -17,3 +17,6 @@ fallbacks list, and optionally a focus ("silhouette" or "details").
 
 Return only the JSON described in the skill. Do not touch the browser and do not talk to the user.
 """
+
+[[skills.config]]
+name = "pistola-visual-critique"

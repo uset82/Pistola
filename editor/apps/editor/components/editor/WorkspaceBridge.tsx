@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { type CadBrief, useScene } from '@pascal-app/core'
 import {
+  createAssistantRuntime,
   executeAssistantPlan,
   getAssistantWorkspaceContext,
   useCad,
@@ -127,6 +128,7 @@ export function WorkspaceBridge() {
           const result = await executeAssistantPlan(command.actions as AssistantAction[], {
             reviewConfirmed: true,
             runtime: {
+              ...createAssistantRuntime(),
               executeCadBrief: executeCadBriefAction,
               generateMacPart: generateMacPartAction,
             },

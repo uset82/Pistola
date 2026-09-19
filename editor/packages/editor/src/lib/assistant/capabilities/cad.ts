@@ -125,6 +125,26 @@ export const generateMacPartCapability = defineCapability({
   },
 })
 
+export const buildCadSolidCapability = defineCapability({
+  type: 'build_cad_solid',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('build_cad_solid'),
+    name: z.string().optional(),
+    spec: z.record(z.string(), z.unknown()),
+    position: AssistantPoint3Schema.optional(),
+    color: z.string().optional(),
+    parentId: z.string().optional(),
+  }),
+  safeImmediate: false,
+  describe: 'Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)',
+  examples: ['build a holed bracket', 'intersect two silhouettes into a hull'],
+  aliases: {
+    en: ['build CAD solid', 'local solid'],
+    es: ['construir solido CAD', 'solido local'],
+  },
+})
+
 export const createDefaultCadSketchCapability = defineCapability({
   type: 'create_default_cad_sketch',
   domain: 'cad',
@@ -393,6 +413,7 @@ export const cadCapabilities = [
   executeCadBriefCapability,
   runCadPromptCapability,
   generateMacPartCapability,
+  buildCadSolidCapability,
   createDefaultCadSketchCapability,
   extrudeCadSketchCapability,
   revolveCadSketchCapability,

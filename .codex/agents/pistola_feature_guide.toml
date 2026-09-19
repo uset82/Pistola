@@ -24,3 +24,6 @@ real), the active level id, and, for fixes, the failing batch with its error.
 Return JSON: { "surface": "...", "batches": [[...]], "fallbacks": [{ "part", "wanted", "used",
 "reason" }], "post_run": ["focus_camera_on_nodes ...", ...] }. Do not execute anything yourself.
 """
+
+[[skills.config]]
+name = "pistola-features"

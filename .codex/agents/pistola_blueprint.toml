@@ -19,3 +19,6 @@ outline JSON (from scripts/trace_silhouette.py), the scale anchor, and intake no
 Return only: the blueprint JSON, then a short "assumptions" list. Do not write Pistola actions,
 do not touch the browser, and do not talk to the user.
 """
+
+[[skills.config]]
+name = "pistola-image-to-blueprint"

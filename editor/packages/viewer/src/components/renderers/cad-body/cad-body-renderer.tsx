@@ -2,10 +2,20 @@ import { getCadBodyTransform, type CadBodyNode, useRegistry } from '@pascal-app/
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { Component, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { Box3, ExtrudeGeometry, type Group, type Material, type Mesh, Shape, Vector3 } from 'three'
+import {
+  Box3,
+  BufferAttribute,
+  BufferGeometry,
+  ExtrudeGeometry,
+  type Group,
+  type Material,
+  type Mesh,
+  Shape,
+  Vector3,
+} from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { useNodeEvents } from '../../../hooks/use-node-events'
-import { shouldUseCadBodyAssetPreview } from './cad-body-preview'
+import { getCadBodyPlaceholderDimensions, shouldUseCadBodyAssetPreview } from './cad-body-preview'
 
 const getBodyColor = (node: CadBodyNode) => {
   if (node.regenStatus === 'error') return '#f87171'
@@ -15,17 +25,32 @@ const getBodyColor = (node: CadBodyNode) => {
 }
 
 const getPlaceholderDimensions = (node: CadBodyNode): [number, number, number] =>
-  node.preview.primitive === 'box'
-    ? node.preview.dimensions
-    : node.preview.primitive === 'cylinder'
-      ? [node.preview.radius * 2, node.preview.height, node.preview.radius * 2]
-      : [
-          Math.max(...node.preview.points.map((point) => point[0])) -
-            Math.min(...node.preview.points.map((point) => point[0])),
-          node.preview.height,
-          Math.max(...node.preview.points.map((point) => point[1])) -
-            Math.min(...node.preview.points.map((point) => point[1])),
-        ]
+  getCadBodyPlaceholderDimensions(node.preview)
+
+const CadBodyMeshPreview = ({
+  node,
+  material,
+  handlers,
+}: {
+  node: CadBodyNode
+  material: MeshStandardNodeMaterial
+  handlers: ReturnType<typeof useNodeEvents>
+}) => {
+  const geometry = useMemo(() => {
+    if (node.preview.primitive !== 'mesh' || node.preview.positions.length < 9) return null
+    const next = new BufferGeometry()
+    next.setAttribute('position', new BufferAttribute(new Float32Array(node.preview.positions), 3))
+    if (node.preview.indices.length > 0) {
+      next.setIndex(node.preview.indices)
+    }
+    next.computeVertexNormals()
+    return next
+  }, [node.preview])
+
+  useEffect(() => () => geometry?.dispose(), [geometry])
+  if (!geometry) return null
+  return <mesh castShadow geometry={geometry} material={material} receiveShadow {...handlers} />
+}
 
 const CadBodyExtrudedProfileMesh = ({
   node,
@@ -99,7 +124,9 @@ const CadBodyPrimitiveMesh = ({
 
   return (
     <>
-      {node.preview.primitive === 'extruded-profile' ? (
+      {node.preview.primitive === 'mesh' ? (
+        <CadBodyMeshPreview handlers={handlers} material={material} node={node} />
+      ) : node.preview.primitive === 'extruded-profile' ? (
         <CadBodyExtrudedProfileMesh handlers={handlers} material={material} node={node} />
       ) : node.preview.primitive === 'box' ? (
         <mesh
@@ -132,7 +159,9 @@ const CadBodyPrimitiveMesh = ({
           />
         </mesh>
       )}
-      {!node.artifacts.previewUrl && node.preview.primitive !== 'extruded-profile' && (
+      {!node.artifacts.previewUrl &&
+        node.preview.primitive !== 'extruded-profile' &&
+        node.preview.primitive !== 'mesh' && (
         <mesh position-y={placeholderDimensions[1] / 2} renderOrder={3}>
           <boxGeometry args={placeholderDimensions} />
           <meshBasicMaterial color="#93c5fd" opacity={0.35} transparent wireframe />

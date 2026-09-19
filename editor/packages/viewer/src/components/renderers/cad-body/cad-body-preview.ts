@@ -22,6 +22,52 @@ const readMacEngine = (metadata: unknown) => {
   return typeof engine === 'string' ? engine : null
 }
 
+type CadBodyPreviewGeometry = {
+  primitive: 'box' | 'cylinder' | 'extruded-profile' | 'mesh'
+  dimensions?: [number, number, number]
+  radius?: number
+  height?: number
+  points?: [number, number][]
+  positions?: number[]
+}
+
+const meshBounds = (positions: number[]): [number, number, number] => {
+  if (positions.length < 3) return [1, 1, 1]
+  let minX = Infinity
+  let minY = Infinity
+  let minZ = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let maxZ = -Infinity
+  for (let i = 0; i < positions.length; i += 3) {
+    const x = positions[i] ?? 0
+    const y = positions[i + 1] ?? 0
+    const z = positions[i + 2] ?? 0
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    minZ = Math.min(minZ, z)
+    maxX = Math.max(maxX, x)
+    maxY = Math.max(maxY, y)
+    maxZ = Math.max(maxZ, z)
+  }
+  return [Math.max(0.2, maxX - minX), Math.max(0.2, maxY - minY), Math.max(0.2, maxZ - minZ)]
+}
+
+export const getCadBodyPlaceholderDimensions = (preview: CadBodyPreviewGeometry): [number, number, number] => {
+  if (preview.primitive === 'box' && preview.dimensions) return preview.dimensions
+  if (preview.primitive === 'cylinder') {
+    return [(preview.radius ?? 0.5) * 2, preview.height ?? 1, (preview.radius ?? 0.5) * 2]
+  }
+  if (preview.primitive === 'mesh') return meshBounds(preview.positions ?? [])
+  const points = preview.points ?? []
+  if (points.length === 0) return [1, preview.height ?? 1, 1]
+  return [
+    Math.max(...points.map((point) => point[0])) - Math.min(...points.map((point) => point[0])),
+    preview.height ?? 1,
+    Math.max(...points.map((point) => point[1])) - Math.min(...points.map((point) => point[1])),
+  ]
+}
+
 export const shouldUseCadBodyAssetPreview = (node: CadBodyPreviewSource) => {
   const warnings = node.warnings.join(' ').toLowerCase()
   if (

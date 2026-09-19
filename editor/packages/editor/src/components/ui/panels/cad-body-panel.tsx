@@ -30,7 +30,9 @@ const getPreviewSummary = (node: CadBodyNode) =>
     ? `${node.preview.dimensions[0].toFixed(2)} × ${node.preview.dimensions[1].toFixed(2)} × ${node.preview.dimensions[2].toFixed(2)} m`
     : node.preview.primitive === 'cylinder'
       ? `Cylinder r ${node.preview.radius.toFixed(2)} • h ${node.preview.height.toFixed(2)} m`
-      : `Profile extrusion • ${node.preview.points.length} points • h ${node.preview.height.toFixed(2)} m`
+      : node.preview.primitive === 'mesh'
+        ? `Local solid • ${Math.round(node.preview.positions.length / 3)} verts`
+        : `Profile extrusion • ${node.preview.points.length} points • h ${node.preview.height.toFixed(2)} m`
 
 const getBodyOperations = (node: CadBodyNode) =>
   normalizeCadBodyOperations(node.operationHistory.length > 0 ? node.operationHistory : node.operations)

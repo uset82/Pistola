@@ -88,6 +88,12 @@ export async function generateMacPart(prompt: string): Promise<GenerateMacPartRe
     throw new Error(completed.error || 'MAC helper failed to generate a part.')
   }
 
+  if (isMockMacJob(completed)) {
+    throw new Error(
+      'MAC runtime unavailable here; use build_cad_solid for real geometry on this host.',
+    )
+  }
+
   const body = buildMacBodyFromJob(completed, parentId)
   useScene.getState().createNode(body, parentId)
   useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })

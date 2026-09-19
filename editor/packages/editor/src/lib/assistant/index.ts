@@ -16,6 +16,9 @@ export {
   isDestructiveAssistantActionType,
   isSafeImmediateAssistantActionType,
 } from './types'
+export { createAssistantRuntime } from './runtime'
+export { createPistolaAgentApi } from '../agent-api'
+export { executeCadBrief } from '../cad/execute-cad-brief'
 export {
   executeAssistantPlan,
   type AssistantExecutionOptions,

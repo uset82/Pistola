@@ -103,6 +103,7 @@ export const assistantActionTypeValues = [
   'execute_cad_brief',
   'run_cad_prompt',
   'generate_mac_part',
+  'build_cad_solid',
   'place_cad_body_in_architecture',
   'create_default_cad_sketch',
   'extrude_cad_sketch',
@@ -713,6 +714,14 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('generate_mac_part'),
     prompt: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('build_cad_solid'),
+    name: z.string().optional(),
+    spec: z.record(z.string(), z.unknown()),
+    position: AssistantPoint3Schema.optional(),
+    color: z.string().optional(),
+    parentId: z.string().optional(),
   }),
   z.object({
     type: z.literal('place_cad_body_in_architecture'),

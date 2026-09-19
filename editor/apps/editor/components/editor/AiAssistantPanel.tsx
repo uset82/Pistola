@@ -9,6 +9,8 @@ import {
   type AssistantExecutionResult,
   type AssistantExecutionStatus,
   type AssistantTurnResult,
+  createAssistantRuntime,
+  createPistolaAgentApi,
   executeAssistantPlan,
   getAssistantWorkspaceContext,
   summarizeAssistantNode,
@@ -65,6 +67,7 @@ import {
   isAssistantComposerLocked,
   validateAssistantPromptForSubmission,
 } from '../../lib/assistant-panel-prompt'
+import { parseAssistantAgentCommand } from '../../lib/assistant-agent-commands'
 import { executeCadBrief } from '../../lib/cad-brief-executor'
 import { generateMacPart } from '../../lib/mac-part-executor'
 import { executeLocalCadIntent } from '../../lib/cad-local-intent'
@@ -1270,8 +1273,8 @@ export function AiAssistantPanel() {
   }
 
   const assistantRuntime = {
+    ...createAssistantRuntime({ runCadPrompt }),
     executeCadBrief: executeCadBriefAction,
-    runCadPrompt,
     generateMacPart: generateMacPartAction,
   }
 
@@ -1788,6 +1791,48 @@ export function AiAssistantPanel() {
 
     const trimmed = prompt.trim()
     const lower = trimmed.toLowerCase()
+
+    try {
+      const agentCommand = parseAssistantAgentCommand(trimmed)
+      if (agentCommand) {
+        const api =
+          typeof window !== 'undefined' && 'pistola' in window && window.pistola
+            ? window.pistola
+            : createPistolaAgentApi()
+        let payload: unknown
+        if (agentCommand.kind === 'manual') payload = await api.manual()
+        else if (agentCommand.kind === 'inspect') {
+          payload = await api.inspect(
+            agentCommand.query as { levelId?: string; type?: string; nameQuery?: string; limit?: number },
+          )
+        }
+        else if (agentCommand.kind === 'validate') payload = await api.validate(agentCommand.actions)
+        else if (agentCommand.kind === 'run') payload = await api.run(agentCommand.actions)
+        else if (agentCommand.kind === 'recipe') payload = await api.runRecipe(agentCommand.name, agentCommand.params)
+        else payload = await api.run([{ type: 'build_cad_solid', spec: agentCommand.spec }])
+
+        setMessages((current) => [
+          ...current,
+          { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+          {
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            text: JSON.stringify(payload, null, 2),
+          },
+        ])
+        setInput('')
+        return
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Agent command failed.'
+      setMessages((current) => [
+        ...current,
+        { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
+        { id: `${Date.now()}-assistant`, role: 'assistant', text: message },
+      ])
+      setInput('')
+      return
+    }
 
     // 1. Model Switching commands (supports /model <name> and natural language "Switch model to Claude 3.7 Sonnet")
     const modelSwitchMatch =
@@ -2665,6 +2710,7 @@ export function AiAssistantPanel() {
             <div
               className={`rounded-2xl px-3 py-2 text-[12px] leading-5 flex flex-col gap-2 ${message.role === 'user' ? 'self-end bg-cyan-300 text-black' : 'bg-black/25 text-white/85'
                 }`}
+              data-testid={message.role === 'assistant' && idx === messages.length - 1 ? 'assistant-last-result' : undefined}
               key={message.id}
             >
               {message.imageUrl && (

@@ -4,7 +4,7 @@ Use the first surface that is available. Detect it once per session and tell the
 
 | # | Surface | Detect | Planner | Works on |
 |---|---|---|---|---|
-| 1 | `window.pistola` (in-page agent API) | Browser eval: `typeof window.pistola?.run === 'function'` | You | Every deploy once it ships (see "Platform status") |
+| 1 | `window.pistola` (in-page agent API) | Browser eval: `typeof window.pistola?.run === 'function'` | You | Local editor, pistola.canner.app, and the Sites export once published |
 | 2 | Chat command `/run <json>` | `/manual` in the assistant panel replies with the command list | You | Same as 1 |
 | 3 | Local MCP `pistola` (`pistola_execute`, `pistola_get_workspace`, `pistola_inspect_scene`, `pistola_camera`) | The MCP tool list contains `pistola_execute` | You | A local dev editor at `http://127.0.0.1:3002` with a workspace tab open |
 | 4 | WebMCP tools `apply_pistola_scene_actions` / `get_pistola_scene_context` | Your tool list shows them, or `'modelContext' in navigator` | You | ChatGPT Sites export, in browsers with WebMCP |
@@ -31,7 +31,7 @@ Wait for `document.documentElement.dataset.pistolaAgent === 'ready'` before the 
 Type in the assistant input and press Send. The reply is a JSON block, which you can read from the element with `data-testid="assistant-last-result"`:
 
 - `/run` followed by a JSON array or a fenced json block: validate, then execute locally with no LLM
-- `/validate <json>`, `/inspect`, `/recipe <name> {params}`, `/manual`
+- `/validate <json>`, `/inspect`, `/recipe <name> {params}`, `/cad {spec}`, `/manual`
 
 ## 3. Local MCP
 
@@ -52,4 +52,4 @@ For work on this repository with a local editor:
 
 ## Platform status
 
-`window.pistola`, the `/run` family, and the `build_cad_solid` local CAD kernel are planned (the "Codex agent access" work) and may not exist on the host yet. Always detect them before use. When they are missing on a hosted deploy, tell the user that the build will go through surface 5 and will be less precise. Offer to run the build against a local editor through surface 3 instead.
+`window.pistola`, the `/run` family, and `build_cad_solid` ship in this repo. Always detect them before use (`dataset.pistolaAgent === 'ready'`). If a published host is still on an older snapshot, fall back to surface 5 and tell the user.

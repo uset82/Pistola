@@ -11,6 +11,8 @@ import {
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
 import { placeCadBodyInArchitecture } from '../place-cad-instance'
+import { resolveCadSpaceParentId } from '../cad-parent'
+import { evaluateCadSolidSpec } from '../cad/local-kernel'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { cadHelperUnavailableMessage } from '../../store/use-cad'
 import useCad from '../../store/use-cad'
@@ -618,12 +620,15 @@ const getValidationError = (action: AssistantAction) => {
         .rootNodeIds.some((rootId) => useScene.getState().nodes[rootId]?.type === 'site')
       return level || siteExists ? null : 'Create or select a site or level before starting a CAD sketch.'
     }
-    case 'execute_cad_brief': {
+    case 'execute_cad_brief':
+    case 'build_cad_solid': {
       const level = useViewer.getState().selection.levelId
       const siteExists = useScene
         .getState()
         .rootNodeIds.some((rootId) => useScene.getState().nodes[rootId]?.type === 'site')
-      return level || siteExists ? null : 'Create or select a site or level before creating CAD geometry.'
+      return level || siteExists || resolveCadSpaceParentId()
+        ? null
+        : 'Create or select a site or level before creating CAD geometry.'
     }
     case 'extrude_cad_sketch':
     case 'revolve_cad_sketch': {
@@ -1139,6 +1144,38 @@ const executeAction = async (
         bodyIds: result.bodyIds ?? [],
         nodeId: result.bodyIds?.[0] ?? null,
       }
+    }
+    case 'build_cad_solid': {
+      useEditor.getState().setWorkspace('cad')
+      const parentId = action.parentId ?? resolveCadSpaceParentId()
+      if (!parentId) throw new Error('CAD space is unavailable for local solids.')
+      const mesh = evaluateCadSolidSpec(action.spec)
+      const body = CadBodyNodeSchema.parse({
+        name: action.name ?? 'CAD Solid',
+        parentId,
+        position: action.position ?? [0, 0, 0],
+        regenStatus: 'idle',
+        preview: {
+          primitive: 'mesh',
+          spec: action.spec,
+          positions: mesh.positions,
+          indices: mesh.indices,
+          color: action.color ?? '#60a5fa',
+        },
+        operations: [],
+        operationHistory: [],
+        sourceSketchIds: [],
+        artifacts: {},
+        warnings: [],
+        metadata: {
+          cadEngine: 'local-kernel',
+          volume: mesh.volume,
+          bbox: mesh.bbox,
+        },
+      })
+      useScene.getState().createNode(body, parentId as AnyNodeId)
+      useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })
+      return { bodyIds: [body.id], nodeId: body.id }
     }
     case 'place_cad_body_in_architecture': {
       const nodeId = placeCadBodyInArchitecture(action.bodyId, action.levelId)
