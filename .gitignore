@@ -58,6 +58,7 @@ supabase/.temp/
 
 # Local Sites packaging leftovers
 pistola-cad-sites-*.tgz
+pistola-cad-studio-*.tgz
 sites-package-*/
 
 # OS / Editor
