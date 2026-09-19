@@ -379,25 +379,39 @@ const intersectProfilesMesh = (
   spec: Extract<CadSolidSpec, { op: 'intersect_profiles' }>,
   path = 'spec',
 ): KernelMesh => {
-  const xy = spec.profileXY ?? spec.sideProfile
-  const xz = spec.profileXZ ?? spec.topProfile
-  const zy = spec.profileZY
+  const sourceXY = spec.profileXY ?? spec.sideProfile
+  const sourceXZ = spec.profileXZ ?? spec.topProfile
+  const sourceZY = spec.profileZY
+  const profiles = {
+    xy: sourceXY ? cleanPolygon(sourceXY, `${path}.profileXY`) : undefined,
+    xz: sourceXZ ? cleanPolygon(sourceXZ, `${path}.profileXZ`) : undefined,
+    zy: sourceZY ? cleanPolygon(sourceZY, `${path}.profileZY`) : undefined,
+  }
   const margin = Math.max(0.05, spec.depthMargin ?? 0.1)
   const solids: KernelMesh[] = []
-  if (xy) {
-    const cleaned = cleanPolygon(xy, `${path}.profileXY`)
-    const z = xz ? rangeOf(cleanPolygon(xz, `${path}.profileXZ`), 1) : { min: -1, max: 1 }
-    solids.push(extrudeProfileXy(cleaned, z.min - margin, z.max + margin, `${path}.profileXY`))
+  if (profiles.xy) {
+    const z = profiles.xz
+      ? rangeOf(profiles.xz, 1)
+      : profiles.zy
+        ? rangeOf(profiles.zy, 0)
+        : { min: -1, max: 1 }
+    solids.push(extrudeProfileXy(profiles.xy, z.min - margin, z.max + margin, `${path}.profileXY`))
   }
-  if (xz) {
-    const cleaned = cleanPolygon(xz, `${path}.profileXZ`)
-    const y = xy ? rangeOf(cleanPolygon(xy, `${path}.profileXY`), 1) : { min: -1, max: 1 }
-    solids.push(extrudeProfileXz(cleaned, y.min - margin, y.max + margin, `${path}.profileXZ`))
+  if (profiles.xz) {
+    const y = profiles.xy
+      ? rangeOf(profiles.xy, 1)
+      : profiles.zy
+        ? rangeOf(profiles.zy, 1)
+        : { min: -1, max: 1 }
+    solids.push(extrudeProfileXz(profiles.xz, y.min - margin, y.max + margin, `${path}.profileXZ`))
   }
-  if (zy) {
-    const cleaned = cleanPolygon(zy, `${path}.profileZY`)
-    const x = xy ? rangeOf(cleanPolygon(xy, `${path}.profileXY`), 0) : xz ? rangeOf(cleanPolygon(xz, `${path}.profileXZ`), 0) : { min: -1, max: 1 }
-    solids.push(extrudeProfileZy(cleaned, x.min - margin, x.max + margin, `${path}.profileZY`))
+  if (profiles.zy) {
+    const x = profiles.xy
+      ? rangeOf(profiles.xy, 0)
+      : profiles.xz
+        ? rangeOf(profiles.xz, 0)
+        : { min: -1, max: 1 }
+    solids.push(extrudeProfileZy(profiles.zy, x.min - margin, x.max + margin, `${path}.profileZY`))
   }
   const [first, ...rest] = solids
   if (!first) throw new CadSpecError(path, 'intersect_profiles needs at least two profiles')

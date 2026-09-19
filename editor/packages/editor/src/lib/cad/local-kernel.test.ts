@@ -126,6 +126,41 @@ test('build_cad_solid intersect_profiles generates a smooth 3D hull from orthogo
   assert.ok(Math.abs(aliased.volume - hull.volume) < 0.05)
 })
 
+test('intersect_profiles derives each missing extrusion axis from the other supplied profiles', () => {
+  const profileXY: [number, number][] = [
+    [10, 20],
+    [14, 20],
+    [14, 23],
+    [10, 23],
+  ]
+  const profileXZ: [number, number][] = [
+    [10, 30],
+    [14, 30],
+    [14, 35],
+    [10, 35],
+  ]
+  const profileZY: [number, number][] = [
+    [30, 20],
+    [35, 20],
+    [35, 23],
+    [30, 23],
+  ]
+
+  const assertOffOriginHull = (name: string, spec: object) => {
+    const mesh = evaluateCadSolidSpec(spec)
+    const [min, max] = mesh.bbox
+    assert.ok(mesh.volume > 1, `${name} should produce a non-empty solid`)
+    assert.ok(Math.abs(min[0] - 10) < 0.15 && Math.abs(max[0] - 14) < 0.15, `${name} should keep the X range`)
+    assert.ok(Math.abs(min[1] - 20) < 0.15 && Math.abs(max[1] - 23) < 0.15, `${name} should keep the Y range`)
+    assert.ok(Math.abs(min[2] - 30) < 0.15 && Math.abs(max[2] - 35) < 0.15, `${name} should keep the Z range`)
+  }
+
+  assertOffOriginHull('XY + XZ', { op: 'intersect_profiles', profileXY, profileXZ })
+  assertOffOriginHull('XY + ZY', { op: 'intersect_profiles', profileXY, profileZY })
+  assertOffOriginHull('XZ + ZY', { op: 'intersect_profiles', profileXZ, profileZY })
+  assertOffOriginHull('XY + XZ + ZY', { op: 'intersect_profiles', profileXY, profileXZ, profileZY })
+})
+
 test('revolve closes and reports 0 open edges', () => {
   const mesh = evaluateCadSolidSpec({
     op: 'revolve',
