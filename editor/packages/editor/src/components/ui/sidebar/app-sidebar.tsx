@@ -50,7 +50,7 @@ export function AppSidebar({
 
   return (
     <>
-      <Sidebar className={cn('dark text-white')} variant="floating">
+      <Sidebar className={cn('dark text-white top-9 h-[calc(100svh-2.25rem)]')} variant="floating">
         <div className="flex h-full">
           {/* Icon Rail */}
           <IconRail
@@ -95,7 +95,7 @@ export function AppSidebar({
       {projectHidden ? (
         <button
           aria-label="Show project"
-          className="pointer-events-auto fixed top-3 left-3 z-30 rounded-full border border-white/15 bg-neutral-950/92 px-3 py-2 text-xs text-white shadow-lg"
+          className="pointer-events-auto fixed top-12 left-3 z-30 rounded-full border border-white/15 bg-neutral-950/92 px-3 py-2 text-xs text-white shadow-lg"
           data-testid="show-project"
           onClick={toggleSidebar}
           type="button"

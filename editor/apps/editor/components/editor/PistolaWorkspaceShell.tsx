@@ -7,8 +7,10 @@ import { AccountBadge } from './AccountBadge'
 import { AgentApiBridge } from './AgentApiBridge'
 import { AiAssistantPanel } from './AiAssistantPanel'
 import { DevStoreBridge } from './DevStoreBridge'
+import { ProjectModals } from './ProjectModals'
 import { WebMcpSceneTools } from './WebMcpSceneTools'
 import { WorkspaceBridge } from './WorkspaceBridge'
+import { WorkspaceMenuBar } from './WorkspaceMenuBar'
 
 type PistolaWorkspaceShellProps = {
   userEmail?: string
@@ -17,11 +19,13 @@ type PistolaWorkspaceShellProps = {
 
 export function PistolaWorkspaceShell({ userEmail, children }: PistolaWorkspaceShellProps = {}) {
   return (
-    <div className="relative h-screen w-screen">
+    <div className="relative h-screen w-screen overflow-hidden">
       <DevStoreBridge />
       <WorkspaceBridge />
       <AgentApiBridge />
       <WebMcpSceneTools />
+      <WorkspaceMenuBar />
+      <ProjectModals />
       <AiAssistantPanel />
       {userEmail ? <AccountBadge email={userEmail} /> : null}
       {children}

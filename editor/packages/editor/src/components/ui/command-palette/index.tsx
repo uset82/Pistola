@@ -30,7 +30,9 @@ import {
   Plus,
   Redo2,
   RotateCw,
+  Save,
   Search,
+  Share2,
   Square,
   SquareStack,
   Sun,
@@ -508,6 +510,67 @@ export function CommandPalette() {
             {/* ── Root view ─────────────────────────────────────────────── */}
             {!page && (
               <>
+                <Command.Group heading="Project">
+                  <Item
+                    icon={<Plus className="h-4 w-4" />}
+                    keywords={['project', 'new', 'create', 'reset', 'clear']}
+                    label="New Project..."
+                    onSelect={() => {
+                      setOpen(false)
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('pistola:modal', { detail: 'new-project' }))
+                      }
+                    }}
+                    shortcut={['⌘N']}
+                  />
+                  <Item
+                    icon={<Save className="h-4 w-4" />}
+                    keywords={['project', 'save', 'store', 'disk']}
+                    label="Save Project"
+                    onSelect={() => {
+                      setOpen(false)
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('pistola:action', { detail: 'save' }))
+                      }
+                    }}
+                    shortcut={['⌘S']}
+                  />
+                  <Item
+                    icon={<FileJson className="h-4 w-4" />}
+                    keywords={['project', 'export', 'backup', 'json', 'download']}
+                    label="Export Project Scene (JSON)"
+                    onSelect={() => {
+                      setOpen(false)
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('pistola:action', { detail: 'export-json' }))
+                      }
+                    }}
+                  />
+                  <Item
+                    icon={<Share2 className="h-4 w-4" />}
+                    keywords={['share', 'link', 'url', 'collaborate', 'copy']}
+                    label="Share Project Link"
+                    onSelect={() => {
+                      setOpen(false)
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('pistola:modal', { detail: 'share' }))
+                      }
+                    }}
+                  />
+                  <Item
+                    icon={<Camera className="h-4 w-4" />}
+                    keywords={['screenshot', 'render', 'image', 'capture', 'png']}
+                    label="Take Canvas Screenshot"
+                    onSelect={() => {
+                      setOpen(false)
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('pistola:action', { detail: 'screenshot' }))
+                      }
+                    }}
+                    shortcut={['⇧⌘S']}
+                  />
+                </Command.Group>
+
                 <Command.Group heading="CAD">
                   <Item
                     icon={<Square className="h-4 w-4" />}

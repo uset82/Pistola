@@ -25,11 +25,11 @@ function Solid({ spinning }: { spinning: boolean }) {
     <group ref={group}>
       <mesh position={[0, 0.38, 0]}>
         <boxGeometry args={[1.2, 0.62, 1.75]} />
-        <meshStandardMaterial color="#67e8f9" metalness={0.08} roughness={0.42} />
+        <meshStandardMaterial color="#b7b3aa" metalness={0.18} roughness={0.38} />
       </mesh>
       <mesh position={[0.08, 0.92, -0.18]}>
         <boxGeometry args={[0.52, 0.38, 0.62]} />
-        <meshStandardMaterial color="#e4e4e7" metalness={0.04} roughness={0.55} />
+        <meshStandardMaterial color="#6f6c66" metalness={0.12} roughness={0.48} />
       </mesh>
     </group>
   )
@@ -49,16 +49,16 @@ export function LandingViewport({ caption }: { caption?: string }) {
   }, [])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-[#18181b]">
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-[var(--steel)]">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
-        <p className="mono text-[11px] text-zinc-400">
-          <span className="text-[#67e8f9]">Architecture</span>
-          <span className="px-1.5 text-zinc-600">|</span>
+        <p className="mono text-[11px] text-[var(--paper)]">
+          Architecture
+          <span className="px-1.5 text-[var(--mute)]">|</span>
           CAD
         </p>
-        <p className="mono text-[10px] tracking-wide text-zinc-500">workspace</p>
+        <p className="mono text-[10px] tracking-wide text-[var(--mute)]">workspace</p>
       </div>
-      <div className="relative h-[260px] bg-[#09090b] sm:h-[320px]">
+      <div className="relative h-[260px] bg-[var(--void)] sm:h-[320px]">
         {webgl ? (
           <Canvas
             camera={{ fov: 42, position: [2.7, 1.7, 3.05] }}
@@ -66,11 +66,11 @@ export function LandingViewport({ caption }: { caption?: string }) {
             frameloop={spinning ? 'always' : 'demand'}
             gl={{ antialias: true, alpha: false }}
           >
-            <color args={['#09090b']} attach="background" />
+            <color args={['#0c0c0b']} attach="background" />
             <ambientLight intensity={0.62} />
             <directionalLight intensity={1.35} position={[4, 6, 3]} />
             <Solid spinning={spinning} />
-            <gridHelper args={[10, 20, '#52525b', '#27272a']} />
+            <gridHelper args={[10, 20, '#5a564e', '#2a2824']} />
           </Canvas>
         ) : (
           <div
@@ -84,7 +84,7 @@ export function LandingViewport({ caption }: { caption?: string }) {
           />
         )}
       </div>
-      <p className="mono truncate border-t border-white/10 px-3 py-2 text-[11px] text-zinc-400">
+      <p className="mono truncate border-t border-white/10 px-3 py-2 text-[11px] text-[var(--mute)]">
         {caption ?? 'prompt → editable scene'}
       </p>
     </div>
