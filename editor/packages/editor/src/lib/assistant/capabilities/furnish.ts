@@ -42,6 +42,7 @@ export const placeItemCapability = defineCapability({
     rotation: AssistantPoint3Schema.optional(),
     scale: AssistantPoint3Schema.optional(),
     side: AssistantSideSchema.optional(),
+    color: z.string().optional(),
   }),
   safeImmediate: false,
   describe: 'Place a catalog item or asset in the scene with position, rotation, and parenting',
@@ -62,8 +63,9 @@ export const updateItemPropertiesCapability = defineCapability({
       position: AssistantPoint3Schema.optional(),
       rotation: AssistantPoint3Schema.optional(),
       scale: AssistantPoint3Schema.optional(),
+      color: z.string().optional(),
     })
-    .refine((value) => value.position || value.rotation || value.scale, {
+    .refine((value) => value.position || value.rotation || value.scale || value.color, {
       message: 'update_item_properties requires at least one property update.',
       path: ['position'],
     }),

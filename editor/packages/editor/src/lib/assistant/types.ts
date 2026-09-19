@@ -435,6 +435,7 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     side: AssistantSideSchema.optional(),
     /** Assembly subparts may intentionally occupy the parent object's footprint. */
     allowOverlap: z.boolean().optional(),
+    color: z.string().optional(),
   }),
   z.object({
     type: z.literal('place_door'),
@@ -462,8 +463,9 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
       position: AssistantPoint3Schema.optional(),
       rotation: AssistantPoint3Schema.optional(),
       scale: AssistantPoint3Schema.optional(),
+      color: z.string().optional(),
     })
-    .refine((value) => value.position || value.rotation || value.scale, {
+    .refine((value) => value.position || value.rotation || value.scale || value.color, {
       message: 'update_item_properties requires at least one property update.',
       path: ['position'],
     }),

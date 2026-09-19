@@ -1127,6 +1127,34 @@ export const boatDetailActions = ({
   ]
 }
 
+export const relativizeParentedRecipeActions = (actions: AssistantAction[]): AssistantAction[] => {
+  const parentWorld = new Map<string, [number, number, number]>()
+  return actions.map((action) => {
+    if (action.type !== 'place_item') return action
+    if (action.refId && action.position) {
+      parentWorld.set(action.refId, action.position)
+    }
+    if (action.parentId && action.position && parentWorld.has(action.parentId)) {
+      const parent = parentWorld.get(action.parentId)
+      if (!parent) return action
+      return {
+        ...action,
+        position: [
+          action.position[0] - parent[0],
+          action.position[1] - parent[1],
+          action.position[2] - parent[2],
+        ],
+      }
+    }
+    return action
+  })
+}
+
+const withRelativeParents = (recipe: CreationRecipe): CreationRecipe => ({
+  ...recipe,
+  generateActions: (params) => relativizeParentedRecipeActions(recipe.generateActions(params)),
+})
+
 export const CREATION_RECIPES: CreationRecipe[] = [
   heartRecipe,
   boardRecipe,
@@ -1139,7 +1167,7 @@ export const CREATION_RECIPES: CreationRecipe[] = [
   droneRecipe,
   rocketRecipe,
   boatRecipe,
-]
+].map(withRelativeParents)
 
 export const findMatchingRecipe = (prompt: string): CreationRecipe | null => {
   const normalized = prompt.trim().toLowerCase()

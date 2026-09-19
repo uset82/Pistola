@@ -261,7 +261,11 @@ export function WorkspaceMenuBar() {
       {
         label: 'Duplicate Selected',
         shortcut: 'D',
-        action: () => void executeAssistantPlan([{ type: 'duplicate_selected' }]),
+        action: () => {
+          const selectedIds = useViewer.getState().selection.selectedIds
+          if (!selectedIds[0]) return
+          void executeAssistantPlan([{ type: 'duplicate_target', nodeId: selectedIds[0] }])
+        },
       },
       {
         label: 'Delete Selected',
@@ -306,7 +310,11 @@ export function WorkspaceMenuBar() {
       {
         label: 'Focus Selection',
         shortcut: 'F',
-        action: () => void executeAssistantPlan([{ type: 'focus_selection' }]),
+        action: () => {
+          const selectedIds = useViewer.getState().selection.selectedIds
+          if (selectedIds.length === 0) return
+          void executeAssistantPlan([{ type: 'focus_camera_on_nodes', nodeIds: [...selectedIds] }])
+        },
       },
       { separator: true, label: '' },
       {
@@ -391,7 +399,7 @@ export function WorkspaceMenuBar() {
       },
       {
         label: 'Add New Level',
-        action: () => void executeAssistantPlan([{ type: 'add_level' }]),
+        action: () => void executeAssistantPlan([{ type: 'create_level' }]),
       },
       { separator: true, label: '' },
       {
@@ -401,7 +409,7 @@ export function WorkspaceMenuBar() {
       {
         label: 'Reset 3D Camera to Center',
         shortcut: '0',
-        action: () => void executeAssistantPlan([{ type: 'reset_camera' }]),
+        action: () => void executeAssistantPlan([{ type: 'camera_top_view' }]),
       },
     ],
     run: [

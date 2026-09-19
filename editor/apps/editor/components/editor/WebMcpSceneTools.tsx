@@ -36,7 +36,7 @@ const applyPistolaSceneActions = defineTool<{ actions: unknown[] }>({
       actions: {
         type: 'array',
         minItems: 1,
-        maxItems: 50,
+        maxItems: 25,
         items: { type: 'object', additionalProperties: true },
       },
     },

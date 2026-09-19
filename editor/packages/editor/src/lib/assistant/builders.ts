@@ -682,11 +682,12 @@ const resolveItemPlacement = (
 }
 
 export const placeItem = (action: Extract<AssistantAction, { type: 'place_item' }>) => {
-  const asset = findCatalogItem(action.assetId)
-  if (!asset) {
+  const catalogAsset = findCatalogItem(action.assetId)
+  if (!catalogAsset) {
     console.warn(`[assistant] Skipping place_item: asset "${action.assetId}" was not found in the catalog.`)
     return null
   }
+  const asset = action.color ? { ...catalogAsset, color: action.color } : catalogAsset
 
   const placement = resolveItemPlacement(asset, action)
   if (!placement.levelId) throw new Error(`Unable to resolve a level for asset "${asset.name}".`)
@@ -878,6 +879,7 @@ export const updateItemProperties = (
   if (action.position) updates.position = action.position
   if (action.rotation) updates.rotation = action.rotation
   if (action.scale) updates.scale = action.scale
+  if (action.color) updates.asset = { ...item.asset, color: action.color }
 
   useScene.getState().updateNode(item.id, updates)
   if (item.asset.attachTo === 'wall' && item.parentId) {
