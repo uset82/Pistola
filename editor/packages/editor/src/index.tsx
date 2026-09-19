@@ -48,6 +48,25 @@ export {
 } from './lib/assistant'
 export type { SceneGraph } from './lib/scene'
 export { applySceneGraphToEditor } from './lib/scene'
+export {
+  createOperatorPlan,
+  getOperatorPhaseStatus,
+  getOperatorPlanProgress,
+  recoverInterruptedOperatorPlan,
+  updateOperatorPlanStep,
+  useOperatorPlanStore,
+  type OperatorPlan,
+  type OperatorPlanEvidence,
+  type OperatorPlanInput,
+  type OperatorPlanPhase,
+  type OperatorPlanProgress,
+  type OperatorPlanSource,
+  type OperatorPlanStatus,
+  type OperatorPlanStep,
+  type OperatorPlanStepKind,
+  type OperatorPlanStepStatus,
+  type OperatorPlanStepUpdate,
+} from './lib/operator-plan'
 export { createMacJob, fetchMacHealth, fetchMacJob, waitForMacJob } from './lib/mac/client'
 export { generateMacPart, type GenerateMacPartResult } from './lib/mac/generate-part'
 export { default as useCad } from './store/use-cad'

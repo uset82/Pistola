@@ -165,9 +165,86 @@ try {
   const assistant = page.getByRole('button', { name: /New Chat/i }).first()
   const assistantVisible = await assistant.isVisible().catch(() => false)
   record('AI Assistant is mounted', assistantVisible)
+  if (assistantVisible) {
+    await page.getByRole('button', { name: 'Minimize assistant' }).click()
+  }
+  const assistantCollapsed = await page.getByTestId('assistant-toggle').isVisible().catch(() => false)
+  record('AI Assistant can be collapsed before direct IDE work', assistantCollapsed)
 
   const sitesBanner = await page.getByText(/Pistola CAD on Sites|Pistola browser preview/i).count()
   record('no Sites-only banner', sitesBanner === 0)
+
+  await page.waitForFunction(
+    () => document.documentElement.dataset.pistolaAgent === 'ready',
+    undefined,
+    { timeout: 15000 },
+  )
+  const operatorResult = await page.evaluate(async () => {
+    const api = window.pistola
+    if (!api?.taskPlan || api.taskPlan.version !== 1) return { available: false }
+    const inspection = await api.inspect({ type: 'level', limit: 1 })
+    const levelId = inspection.nodes[0]?.id
+    if (!levelId) return { available: true, ok: false, error: 'No level was available.' }
+    const plan = await api.taskPlan.create({
+      id: 'sites-smoke-direct-plan',
+      title: 'Static Sites direct control smoke',
+      source: 'codex',
+      phases: [
+        {
+          id: 'build',
+          title: 'Build',
+          steps: [{ id: 'box', title: 'Place a provider-free box', kind: 'execution' }],
+        },
+      ],
+    })
+    const outcome = await api.taskPlan.runStep({
+      planId: plan.id,
+      phaseId: 'build',
+      stepId: 'box',
+      actions: [
+        {
+          type: 'place_item',
+          assetId: 'primitive-box',
+          name: 'Static smoke box',
+          levelId,
+          placement: 'explicit',
+          position: [0, 0, 0],
+          scale: [0.25, 0.25, 0.25],
+        },
+      ],
+    })
+    return {
+      available: true,
+      ok: outcome.ok,
+      planId: plan.id,
+      status: outcome.plan.status,
+      createdNodeIds: outcome.result?.createdNodeIds ?? [],
+    }
+  })
+  record('provider-free IDE operator bridge is available', operatorResult.available === true)
+  record(
+    'static Sites executes a direct typed action plan',
+    operatorResult.ok === true &&
+      operatorResult.status === 'done' &&
+      operatorResult.createdNodeIds?.length === 1,
+    operatorResult.error ?? '',
+  )
+
+  const operatorPanel = page.getByTestId('operator-plan-panel')
+  const operatorPanelVisible = await operatorPanel.isVisible().catch(() => false)
+  const operatorPanelText = operatorPanelVisible ? await operatorPanel.textContent() : ''
+  record(
+    'IDE plan mirror is visible and provider-free',
+    operatorPanelVisible &&
+      /IDE plan/i.test(operatorPanelText ?? '') &&
+      /Provider-free/i.test(operatorPanelText ?? '') &&
+      /Verified/i.test(operatorPanelText ?? '') &&
+      !/model provider|What should we build/i.test(operatorPanelText ?? ''),
+  )
+
+  if (operatorResult.planId) {
+    await page.evaluate(async (planId) => window.pistola?.taskPlan.undo(planId), operatorResult.planId)
+  }
 
   if (cadTabVisible) {
     await cadTab.click()

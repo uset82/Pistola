@@ -4,6 +4,12 @@
     "useForwardRefs": "$ref_<name> for new nodes in the same batch",
     "maxActionsPerBatch": 25
   },
+  "operatorPlan": {
+    "version": 1,
+    "owner": "ide",
+    "methods": ["create", "get", "updateStep", "runStep", "complete", "undo", "clear"],
+    "rule": "Create a checklist before mutation. Complete execution steps only through runStep. Never fall back to an AI planning route."
+  },
   "capabilities": [
     {
       "type": "reset_workspace_selection",

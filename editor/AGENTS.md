@@ -65,6 +65,13 @@ Next.js 16 app. Composes `@pascal-app/viewer` and `@pascal-app/core` into a full
 - `packages/core` and `packages/viewer` stay assistant-agnostic; they should not import app-level assistant planning code.
 - Specific, non-destructive assistant requests should default to immediate execution with a short operator-style summary; review is reserved for destructive plans or genuinely ambiguous geometry/targeting.
 
+### IDE Operator Boundary
+
+- Codex and other capable IDE agents own natural-language interpretation and action planning; they execute through the provider-free `window.pistola`, WebMCP action, or local MCP execute surfaces.
+- `packages/editor` owns the versioned external task-plan state and direct execution contract. `apps/editor` may render a read-only progress mirror but must not re-plan external IDE requests.
+- Do not forward an IDE-originated prompt to the in-app Assistant, `pistola_chat`, `pistola_plan`, `/api/assistant/plan`, or `/api/assistant/agent/step` as an automatic fallback.
+- If no deterministic control surface is available, fail visibly and request a compatible host/redeploy instead of silently using a weaker provider.
+
 ---
 
 ## Data Flow

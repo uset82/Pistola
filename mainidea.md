@@ -72,6 +72,8 @@ Pistola builds on that foundation by adding AI interpretation, planning, and orc
 ## Initial Product Principles
 
 - Chat first, but not chat only: every prompt should lead toward an actual editable scene.
+- Keep model authority with the surface the user addressed: IDE agents such as Codex plan and execute typed Pistola actions directly; they do not relay their prompts through the in-app Assistant or its provider.
+- Mirror IDE work as a verified phase-and-step checklist beside the viewport so progress is visible without making the Pistola Assistant the planner.
 - Keep the assistant available in every editor phase, not just one modeling mode.
 - Keep the assistant explicitly mode-aware: `Ask` for explanation, `Create` for build-first behavior, and `Refine` for editing the current or recent result.
 - Prefer operator behavior over chatbot behavior: execute clear requests immediately, summarize briefly, and only ask for clarification when geometry or targeting is genuinely missing.

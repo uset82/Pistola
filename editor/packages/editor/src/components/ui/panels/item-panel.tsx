@@ -65,7 +65,7 @@ export function ItemPanel() {
 
   return (
     <PanelWrapper
-      icon={node.asset.thumbnail || '/icons/furniture.png'}
+      icon={node.asset.thumbnail || '/icons/item.png'}
       onClose={handleClose}
       title={node.name || node.asset.name}
       width={300}

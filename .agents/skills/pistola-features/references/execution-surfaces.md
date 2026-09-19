@@ -4,13 +4,12 @@ Use the first surface that is available. Detect it once per session and tell the
 
 | # | Surface | Detect | Planner | Works on |
 |---|---|---|---|---|
-| 1 | `window.pistola` (in-page agent API) | Browser eval: `typeof window.pistola?.run === 'function'` | You | Local editor, pistola.canner.app, and the Sites export once published |
-| 2 | Chat command `/run <json>` | `/manual` in the assistant panel replies with the command list | You | Same as 1 |
+| 1 | `window.pistola` (in-page operator API) | Browser eval: `typeof window.pistola?.taskPlan?.runStep === 'function'` | You | Local editor, pistola.canner.app, and published Sites exports |
+| 2 | WebMCP tools `apply_pistola_scene_actions` / `get_pistola_scene_context` | Your tool list shows them, or `'modelContext' in navigator` | You | ChatGPT Sites export, in browsers with WebMCP |
 | 3 | Local MCP `pistola` (`pistola_execute`, `pistola_get_workspace`, `pistola_inspect_scene`, `pistola_camera`) | The MCP tool list contains `pistola_execute` | You | A local dev editor at `http://127.0.0.1:3002` with a workspace tab open |
-| 4 | WebMCP tools `apply_pistola_scene_actions` / `get_pistola_scene_context` | Your tool list shows them, or `'modelContext' in navigator` | You | ChatGPT Sites export, in browsers with WebMCP |
-| 5 | Natural-language prompt in the assistant chat, with the concept image attached | Always | In-app model (free OpenRouter by default) | Everywhere, but slow and unreliable |
+| 4 | Chat command `/run <json>` | `/manual` in the assistant panel replies with the command list | You | Manual recovery only; do not use as the Codex/IDE route |
 
-Surfaces 1 to 4 run your actions exactly as written. Surface 5 re-plans them with a weaker model, so use it only when nothing else exists. Even then, write short, explicit prompts ("place a primitive-box named Hull 0.16 x 0.08 x 0.40 m at the origin") and send one part per message.
+All listed surfaces run actions exactly as written, but IDE agents use surfaces 1 to 3. Never automatically fall back to a natural-language Assistant prompt, `pistola_chat`, `pistola_plan`, `/api/assistant/plan`, or `/api/assistant/agent/step`. If surfaces 1 to 3 are unavailable, stop and tell the user that the host does not expose direct control.
 
 ## 1. `window.pistola`
 
@@ -22,6 +21,38 @@ await window.pistola.run(actions)          // { ok, createdNodeIds, refMap, erro
 await window.pistola.waitForIdle(60000)    // CAD/MAC regeneration finished
 await window.pistola.screenshot()          // PNG data URL of the viewport
 await window.pistola.undo()
+```
+
+For a Codex-owned build, publish the checklist and execute through the versioned plan namespace:
+
+```js
+const plan = await window.pistola.taskPlan.create({
+  title: 'Build the requested object',
+  source: 'codex',
+  phases: [{
+    id: 'model',
+    title: 'Model',
+    steps: [
+      { id: 'inspect', title: 'Inspect the current scene', kind: 'observation' },
+      { id: 'build', title: 'Create the geometry', kind: 'execution' },
+    ],
+  }],
+})
+
+await window.pistola.taskPlan.updateStep({
+  planId: plan.id,
+  phaseId: 'model',
+  stepId: 'inspect',
+  status: 'done',
+  evidence: { kind: 'observation', summary: 'Level and target ids verified.' },
+})
+
+await window.pistola.taskPlan.runStep({
+  planId: plan.id,
+  phaseId: 'model',
+  stepId: 'build',
+  actions,
+})
 ```
 
 Wait for `document.documentElement.dataset.pistolaAgent === 'ready'` before the first call.
@@ -52,4 +83,4 @@ For work on this repository with a local editor:
 
 ## Platform status
 
-`window.pistola`, the `/run` family, and `build_cad_solid` ship in this repo. Always detect them before use (`dataset.pistolaAgent === 'ready'`). If a published host is still on an older snapshot, fall back to surface 5 and tell the user.
+`window.pistola`, the `/run` family, and `build_cad_solid` ship in this repo. Always detect direct control before use (`dataset.pistolaAgent === 'ready'`). If a published host is on an older snapshot, report that it must be redeployed; do not route the request through the Assistant model.

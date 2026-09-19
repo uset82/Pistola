@@ -1,7 +1,8 @@
 # Pistola agent manual
 
 Use window.pistola on /workspace after data-pistola-agent=ready.
-Loop: manual() → inspect() → validate() → run() → waitForIdle() → screenshot().
+IDE agents own planning. Loop: taskPlan.create() → inspect() → taskPlan.updateStep() → taskPlan.runStep() → inspect()/screenshot() → taskPlan.complete().
+Never relay an IDE request through the Pistola Assistant, pistola_chat, pistola_plan, /api/assistant/plan, or /api/assistant/agent/step.
 Create objects with $pistola-studio. Prefer build_cad_solid on hosted mocks.
 
 - reset_workspace_selection: Clear all active node, zone, or element selections across the workspace

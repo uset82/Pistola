@@ -7,6 +7,7 @@ import { AccountBadge } from './AccountBadge'
 import { AgentApiBridge } from './AgentApiBridge'
 import { AiAssistantPanel } from './AiAssistantPanel'
 import { DevStoreBridge } from './DevStoreBridge'
+import { OperatorPlanPanel } from './OperatorPlanPanel'
 import { ProjectModals } from './ProjectModals'
 import { WebMcpSceneTools } from './WebMcpSceneTools'
 import { WorkspaceBridge } from './WorkspaceBridge'
@@ -24,6 +25,7 @@ export function PistolaWorkspaceShell({ userEmail, children }: PistolaWorkspaceS
       <WorkspaceBridge />
       <AgentApiBridge />
       <WebMcpSceneTools />
+      <OperatorPlanPanel />
       <WorkspaceMenuBar />
       <ProjectModals />
       <AiAssistantPanel />
