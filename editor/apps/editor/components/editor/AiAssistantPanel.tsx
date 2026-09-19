@@ -26,6 +26,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { assistantToolPhaseMap, assistantToolValues } from '../../../../packages/editor/src/lib/assistant/tool-surface'
+import { findMatchingRecipe } from '../../../../packages/editor/src/lib/assistant/recipes/creation-recipes'
 import { shouldRequestAssistantContinuation } from '../../lib/assistant-continuation'
 import {
   applyAssistantComposerSuggestion,
@@ -157,6 +158,32 @@ const getCadParentId = (
   // CAD definitions live in their own project world. Attaching them to a
   // building level makes them disappear as soon as the CAD world is active.
   return rootNodeIds.find((rootId) => nodes[rootId as AnyNodeId]?.type === 'cad-space') ?? null
+}
+
+const buildLocalCreationRecipeTurn = (prompt: string): AssistantTurnResult | null => {
+  const recipe = findMatchingRecipe(prompt)
+  if (!recipe) return null
+
+  // Architecture assemblies use item nodes, while the CAD world renders only
+  // sketches and CAD bodies. Keep those assemblies in the visible world.
+  if (useEditor.getState().workspace === 'cad' && recipe.id !== 'heart' && recipe.id !== 'board') {
+    return null
+  }
+
+  const actions = recipe.generateActions({ position: [0, 0, 0] })
+  return {
+    reply: `I have prepared the plan to build ${recipe.name}.`,
+    mode: 'plan',
+    assumptions: [
+      `Generated editable 3D elements for ${recipe.name}.`,
+      'Positioned at workspace origin.',
+    ],
+    ambiguities: [],
+    actions,
+    requiresReview: false,
+    destructiveActionCount: 0,
+    continuation: null,
+  }
 }
 
 const formatAction = (action: AssistantAction) => {
@@ -1277,6 +1304,13 @@ export function AiAssistantPanel() {
   }) => {
     const workspaceContext = getAssistantWorkspaceContext()
     assistantRequestWorkspaceContextRef.current = workspaceContext
+
+    // Deterministic built-in recipes must remain usable in the statically
+    // hosted editor, where the optional planning API may not be available.
+    if (!continuation) {
+      const localRecipeTurn = buildLocalCreationRecipeTurn(prompt)
+      if (localRecipeTurn) return localRecipeTurn
+    }
 
     const response = await pistolaFetch('/api/assistant/plan', {
       method: 'POST',
