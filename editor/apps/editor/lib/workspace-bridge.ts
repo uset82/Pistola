@@ -5,11 +5,19 @@ export type WorkspaceCommand =
       id: string
       type: 'actions'
       actions: unknown[]
+      confirmDestructive?: boolean
       createdAt: number
     }
   | {
       id: string
-      type: 'prompt'
+      type: 'api'
+      method: string
+      args?: unknown
+      createdAt: number
+    }
+  | {
+      id: string
+      type: 'assistant_prompt'
       prompt: string
       chatMode?: string
       createdAt: number
@@ -39,9 +47,15 @@ export type WorkspaceCommandInput =
   | {
       type: 'actions'
       actions: unknown[]
+      confirmDestructive?: boolean
     }
   | {
-      type: 'prompt'
+      type: 'api'
+      method: string
+      args?: unknown
+    }
+  | {
+      type: 'assistant_prompt'
       prompt: string
       chatMode?: string
     }
@@ -227,6 +241,21 @@ export const getWorkspaceSession = (access: WorkspaceSessionAccess, sessionId: s
   return session && canAccessWorkspaceSession(session, access) ? session.snapshot : null
 }
 
+export const WORKSPACE_COMMAND_TYPES = [
+  'actions',
+  'api',
+  'assistant_prompt',
+  'generate_mac',
+  'read',
+  'agent',
+] as const
+
+export const assertWorkspaceCommandType = (type: string) => {
+  if (!WORKSPACE_COMMAND_TYPES.includes(type as (typeof WORKSPACE_COMMAND_TYPES)[number])) {
+    throw new Error(`Unknown workspace command type "${type}".`)
+  }
+}
+
 export const enqueueWorkspaceCommand = (
   access: WorkspaceSessionAccess,
   command: WorkspaceCommandInput & { sessionId?: string },
@@ -245,6 +274,7 @@ export const enqueueWorkspaceCommand = (
   }
 
   const { sessionId: _ignored, ...rest } = command as typeof command & { sessionId?: string }
+  assertWorkspaceCommandType(rest.type)
   const fullCommand = {
     ...rest,
     id: randomUUID(),

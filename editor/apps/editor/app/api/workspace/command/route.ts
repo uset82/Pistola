@@ -20,11 +20,29 @@ export async function POST(request: Request) {
     const body = (await request.json()) as Record<string, unknown>
     const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined
 
+    if (body.type === 'api' || typeof body.method === 'string') {
+      const method = String(body.method || '')
+      if (!method) {
+        return NextResponse.json({ error: 'api commands require method.' }, { status: 400 })
+      }
+      const enqueued = enqueueWorkspaceCommand(access, {
+        sessionId,
+        type: 'api',
+        method,
+        args: body.args,
+      })
+      return NextResponse.json(
+        { ok: true, sessionId: enqueued.sessionId, command: enqueued.command },
+        { headers: { 'Cache-Control': 'no-store' } },
+      )
+    }
+
     if (Array.isArray(body.actions)) {
       const enqueued = enqueueWorkspaceCommand(access, {
         sessionId,
         type: 'actions',
         actions: body.actions,
+        confirmDestructive: body.confirmDestructive === true,
       })
       return NextResponse.json(
         { ok: true, sessionId: enqueued.sessionId, command: enqueued.command },
@@ -66,7 +84,7 @@ export async function POST(request: Request) {
               })
             : enqueueWorkspaceCommand(access, {
                 sessionId,
-                type: 'prompt',
+                type: 'assistant_prompt',
                 prompt,
                 ...(typeof body.chatMode === 'string' ? { chatMode: body.chatMode } : {}),
               })

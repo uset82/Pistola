@@ -1,30 +1,15 @@
 import { createReadStream } from 'node:fs'
-import { readdir, stat } from 'node:fs/promises'
+import { stat } from 'node:fs/promises'
 import http from 'node:http'
 import path from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
+import { loadChromium } from './load-chromium.mjs'
 
 // Smoke-checks the static export that Sites publishes. It serves the export
 // directory over plain HTTP (no Next server, no API routes) and drives the
 // hosted editor the way a visitor would.
 const scriptsRoot = path.dirname(fileURLToPath(import.meta.url))
 const editorRoot = path.resolve(scriptsRoot, '..')
-
-// Bun's isolated node_modules layout can leave `playwright`'s nested
-// `playwright-core` link empty, which breaks resolution under Node. Fall back
-// to the hoisted store entry so the check runs with plain `node`.
-const loadChromium = async () => {
-  try {
-    return (await import('playwright')).chromium
-  } catch (error) {
-    const storeRoot = path.join(editorRoot, 'node_modules', '.bun')
-    const entries = await readdir(storeRoot).catch(() => [])
-    const coreEntry = entries.find((entry) => entry.startsWith('playwright-core@'))
-    if (!coreEntry) throw error
-    const coreIndex = path.join(storeRoot, coreEntry, 'node_modules', 'playwright-core', 'index.mjs')
-    return (await import(pathToFileURL(coreIndex).href)).chromium
-  }
-}
 
 const chromium = await loadChromium()
 const exportDirectory = path.resolve(

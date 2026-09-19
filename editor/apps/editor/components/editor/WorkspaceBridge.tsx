@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { type CadBrief, useScene } from '@pascal-app/core'
 import {
   createAssistantRuntime,
+  createPistolaAgentApi,
   executeAssistantPlan,
   getAssistantWorkspaceContext,
   useCad,
@@ -114,6 +115,19 @@ export function WorkspaceBridge() {
 
     const handleCommand = async (command: WorkspaceCommand) => {
       try {
+        const api = window.pistola ?? createPistolaAgentApi()
+
+        if (command.type === 'api') {
+          const data = await api.invoke(command.method, command.args)
+          await reportResult(sessionId, command.id, {
+            ok: true,
+            data,
+            output: data,
+            message: `invoke ${command.method}`,
+          })
+          return
+        }
+
         if (command.type === 'generate_mac') {
           const result = await generateMacPart(command.prompt)
           await reportResult(sessionId, command.id, {
@@ -125,13 +139,8 @@ export function WorkspaceBridge() {
         }
 
         if (command.type === 'actions') {
-          const result = await executeAssistantPlan(command.actions as AssistantAction[], {
-            reviewConfirmed: true,
-            runtime: {
-              ...createAssistantRuntime(),
-              executeCadBrief: executeCadBriefAction,
-              generateMacPart: generateMacPartAction,
-            },
+          const result = await api.run(command.actions as AssistantAction[], {
+            confirmDestructive: command.confirmDestructive === true,
           })
           await reportResult(sessionId, command.id, {
             ok: result.ok,
@@ -181,7 +190,10 @@ export function WorkspaceBridge() {
           return
         }
 
-        // Prompt: plan via assistant API then execute.
+        if (command.type !== 'assistant_prompt') {
+          throw new Error(`Unknown workspace command type "${(command as { type?: string }).type}".`)
+        }
+
         const planResponse = await pistolaFetch('/api/assistant/plan', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -212,6 +224,7 @@ export function WorkspaceBridge() {
         const result = await executeAssistantPlan(actions as AssistantAction[], {
           reviewConfirmed: true,
           runtime: {
+            ...createAssistantRuntime(),
             executeCadBrief: executeCadBriefAction,
             generateMacPart: generateMacPartAction,
           },
