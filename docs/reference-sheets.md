@@ -26,7 +26,7 @@ Call:
 
 ```
 pistola_reference_sheet_add({
-  dataUrl,                 // or path
+  dataUrl,                 // or a browser-accessible http(s) URL in path
   layout: 'front|side|top',
   knownDimension: 0.4,     // meters, or { axis: 'width'|'height'|'depth', meters }
   blueprint,               // required text plan
@@ -44,7 +44,8 @@ optional `build_cad_solid` hull and `create_guide` actions. It does not apply th
 2. Set the background to white.
 3. Draw three filled black outlines in a row: front, side, top.
 4. Export PNG.
-5. Upload that PNG in the IDE, or pass its data URL to `pistola_reference_sheet_add`.
+5. Upload that PNG in the IDE, then pass its data URL (or a browser-accessible asset URL) to
+   `pistola_reference_sheet_add`. A local filesystem path is not accessible to the browser runtime.
 
 Photos and sketched perspective views are the wrong input. Use a clean sheet or skip
 reference mode.

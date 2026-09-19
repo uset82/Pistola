@@ -125,14 +125,7 @@ const inflateStore = (zlib: Uint8Array) => {
   return Uint8Array.from(out)
 }
 
-const inflateIdat = (idat: Uint8Array) => {
-  try {
-    const zlib = require('node:zlib') as { inflateSync: (input: Uint8Array) => Uint8Array }
-    return zlib.inflateSync(idat)
-  } catch {
-    return inflateStore(idat)
-  }
-}
+const inflateIdat = (idat: Uint8Array) => inflateStore(idat)
 
 const paeth = (a: number, b: number, c: number) => {
   const p = a + b - c

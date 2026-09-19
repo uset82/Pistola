@@ -26,16 +26,7 @@ const readPathBytes = async (filePath: string): Promise<Uint8Array> => {
     if (!response.ok) throw new Error(`Could not fetch reference image "${filePath}".`)
     return new Uint8Array(await response.arrayBuffer())
   }
-  try {
-    const fs = require('node:fs') as { readFileSync: (path: string) => Uint8Array }
-    return fs.readFileSync(filePath)
-  } catch (error) {
-    throw new Error(
-      `Could not read reference path "${filePath}". Pass a dataUrl in the browser. ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    )
-  }
+  throw new Error(`Could not read reference path "${filePath}". Pass a dataUrl in the browser.`)
 }
 
 export const loadReferenceGrid = async (input: {
@@ -51,6 +42,11 @@ export const loadReferenceGrid = async (input: {
     if (input.path.startsWith('data:')) {
       return loadReferenceGrid({ dataUrl: input.path })
     }
+    // Browser decoding handles ordinary PNG compression and other image
+    // formats. If CORS makes the canvas unreadable, retain the deterministic
+    // PNG fallback below for host-served assets.
+    const fromImage = await decodeViaImage(input.path)
+    if (fromImage) return { grid: fromImage, dataUrl: input.path }
     const bytes = await readPathBytes(input.path)
     const grid = decodePng(bytes)
     let binary = ''

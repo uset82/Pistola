@@ -43,7 +43,7 @@ Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_
 
 Reference pack: `pistola_reference_validate`, `pistola_reference_set`, `pistola_reference_get`, `pistola_reference_clear`. The selected concept must be user-approved and the pack must contain exactly eight labeled, opaque image references; image pixels remain owned by the IDE or asset store.
 
-Optional three-view tracing: `pistola_reference_sheet_add({path|dataUrl, layout: 'front|side|top', knownDimension, blueprint})`, `pistola_reference_sheet_fit`, `pistola_reference_sheet_hull`, `pistola_reference_sheet_get`, `pistola_reference_sheet_clear`. It supplements—not replaces—the approved eight-view review. A sheet is always paired with a text blueprint and only proposes hull, guide, or fitter changes.
+Optional three-view tracing: `pistola_reference_sheet_add({path|dataUrl, layout: 'front|side|top', knownDimension, blueprint})`, `pistola_reference_sheet_fit`, `pistola_reference_sheet_hull`, `pistola_reference_sheet_get`, `pistola_reference_sheet_clear`. `path` must be a browser-accessible HTTP(S) asset URL; upload local files first or use `dataUrl`. It supplements—not replaces—the approved eight-view review. A sheet is always paired with a text blueprint and only proposes hull, guide, or fitter changes.
 
 Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to false), deprecated `pistola_execute` (same check)
 

@@ -164,6 +164,57 @@ try {
     undefined,
     { timeout: 15000 },
   )
+  const referenceWorkerResult = await page.evaluate(async () => {
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = 180
+      canvas.height = 60
+      const context = canvas.getContext('2d')
+      if (!context) return { ok: false, error: '2D canvas was unavailable.' }
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.fillStyle = '#141414'
+      context.fillRect(10, 15, 40, 30)
+      context.fillRect(70, 15, 20, 30)
+      context.fillRect(130, 20, 40, 20)
+      const blueprint = {
+        title: 'Static worker reference',
+        overall_m: [2, 1.5, 1],
+        anchor: 'floor',
+        parts: [
+          {
+            id: 'body',
+            name: 'Body',
+            technique: 'primitive',
+            primitive: 'box',
+            dims_m: [2, 1.5, 1],
+            position_m: [0, 0, 0],
+          },
+        ],
+      }
+      const added = await window.pistola?.invoke('reference.add', {
+        dataUrl: canvas.toDataURL('image/png'),
+        layout: 'front|side|top',
+        knownDimension: 2,
+        blueprint,
+      })
+      const active = await window.pistola?.invoke('reference.get')
+      const cleared = await window.pistola?.invoke('reference.clear')
+      return {
+        ok: Boolean(added?.consistent && added?.hasLocalImage && active?.consistent && cleared?.cleared),
+        consistent: added?.consistent,
+        hasLocalImage: added?.hasLocalImage,
+        cleared: cleared?.cleared,
+      }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+  record(
+    'static Sites executes the three-view tracer in a module Worker',
+    referenceWorkerResult.ok === true,
+    referenceWorkerResult.error ?? '',
+  )
   const operatorResult = await page.evaluate(async () => {
     const api = window.pistola
     if (!api?.taskPlan || api.taskPlan.version !== 1) return { available: false }

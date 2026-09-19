@@ -1,62 +1,90 @@
 /**
- * Worker-ready job body. This module stays free of the scene store so it can
- * run on the main thread (tests, Sites) or inside a Worker.
+ * Dispatches the store-free reference-job body to a module Worker in the
+ * browser. SSR, tests, and browsers without Worker support retain a
+ * deterministic inline fallback.
  */
-import type { BlueprintV2 } from '../blueprint'
-import type { PixelGrid } from '../cad/silhouette-tracer'
-import type { StructurePart } from '../structure'
-import { fitPartsToReference, type FitResult } from './fitter'
-import { goldMasksFromTraces, traceReferenceSheet, worldFramesFromOverall } from './tracer'
-import type { KnownDimension, ReferenceFrames, ReferenceGoldMasks, ReferenceTraceResult } from './types'
+import { executeFitJob, executeReferenceJob, executeTraceJob } from './job-core'
+import type { ReferenceJob, ReferenceJobResult } from './job-types'
 
-export type TraceJob = {
-  kind: 'trace'
-  grid: PixelGrid
-  knownDimension: number | KnownDimension
-  threshold?: number
+export { executeFitJob, executeReferenceJob, executeTraceJob }
+export type { FitJob, ReferenceJob, ReferenceJobResult, TraceJob, TraceJobResult } from './job-types'
+
+type ReferenceWorkerRequest = {
+  id: number
+  job: ReferenceJob
 }
 
-export type FitJob = {
-  kind: 'fit'
-  parts: StructurePart[]
-  goldMasks: ReferenceGoldMasks
-  frames: ReferenceFrames
-  blueprint: BlueprintV2
+type ReferenceWorkerResponse =
+  | { id: number; ok: true; result: ReferenceJobResult }
+  | { id: number; ok: false; error: { message: string } }
+
+export type ReferenceJobRunOptions = {
+  /** A test seam, or a host-specific Worker constructor. */
+  workerFactory?: () => Worker
+  timeoutMs?: number
 }
 
-export type ReferenceJob = TraceJob | FitJob
+export const REFERENCE_JOB_TIMEOUT_MS = 30_000
 
-export type TraceJobResult = {
-  kind: 'trace'
-  trace: ReferenceTraceResult
-  goldMasks: ReferenceGoldMasks
-  frames: ReferenceFrames
-}
+let nextJobId = 0
 
-export const executeTraceJob = (job: TraceJob): TraceJobResult => {
-  const trace = traceReferenceSheet(job.grid, job.knownDimension, { threshold: job.threshold })
-  const frames = worldFramesFromOverall(trace.overall_m)
-  return {
-    kind: 'trace',
-    trace,
-    frames,
-    goldMasks: goldMasksFromTraces(trace.views, frames),
+const messageFor = (error: unknown) => (error instanceof Error ? error.message : 'Reference job failed.')
+
+const createBrowserWorker = (): Worker | null => {
+  if (typeof window === 'undefined' || typeof Worker === 'undefined') return null
+  try {
+    return new Worker(new URL('./reference-worker.ts', import.meta.url), { type: 'module' })
+  } catch (error) {
+    throw new Error(`Could not start the reference Worker: ${messageFor(error)}`)
   }
 }
 
-export const executeFitJob = (job: FitJob): FitResult =>
-  fitPartsToReference({
-    parts: job.parts,
-    goldMasks: job.goldMasks,
-    frames: job.frames,
-    blueprint: job.blueprint,
+const runInWorker = <T>(worker: Worker, job: ReferenceJob, timeoutMs: number): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const id = ++nextJobId
+    let settled = false
+    const cleanup = () => {
+      worker.onmessage = null
+      worker.onerror = null
+      worker.onmessageerror = null
+      worker.terminate()
+      clearTimeout(timeout)
+    }
+    const settle = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      callback()
+    }
+    const timeout = setTimeout(() => {
+      settle(() => reject(new Error(`Reference job exceeded ${timeoutMs}ms.`)))
+    }, timeoutMs)
+
+    worker.onmessage = (event: MessageEvent<ReferenceWorkerResponse>) => {
+      const response = event.data
+      if (!response || response.id !== id) return
+      if (response.ok) {
+        settle(() => resolve(response.result as T))
+      } else {
+        settle(() => reject(new Error(response.error.message)))
+      }
+    }
+    worker.onerror = (event) => {
+      settle(() => reject(new Error(event.message || 'Reference Worker failed.')))
+    }
+    worker.onmessageerror = () => {
+      settle(() => reject(new Error('Reference Worker could not deserialize a job response.')))
+    }
+
+    try {
+      worker.postMessage({ id, job } satisfies ReferenceWorkerRequest)
+    } catch (error) {
+      settle(() => reject(new Error(messageFor(error))))
+    }
   })
 
-export const executeReferenceJob = (job: ReferenceJob) => {
-  if (job.kind === 'trace') return executeTraceJob(job)
-  return executeFitJob(job)
-}
-
-export const runReferenceJob = async <T>(job: ReferenceJob): Promise<T> => {
-  return executeReferenceJob(job) as T
+export const runReferenceJob = async <T>(job: ReferenceJob, options: ReferenceJobRunOptions = {}): Promise<T> => {
+  const worker = options.workerFactory?.() ?? createBrowserWorker()
+  if (!worker) return executeReferenceJob(job) as T
+  return runInWorker<T>(worker, job, options.timeoutMs ?? REFERENCE_JOB_TIMEOUT_MS)
 }
