@@ -210,9 +210,12 @@ test('manual sections and runRecipe are allowlisted', async () => {
   const api = createPistolaAgentApi()
   const frame = (await api.invoke('manual', { section: 'frame' })) as { value: { up: string } }
   assert.equal(frame.value.up, '+Y')
-  const examples = (await api.manual({ section: 'examples' })) as { value: Record<string, { op: string }> }
-  const box = examples.value.box
-  assert.ok(box)
+  const examples = await api.manual({ section: 'examples' })
+  assert.ok('value' in examples)
+  if (!('value' in examples)) throw new Error('Expected a manual section result.')
+  const values = examples.value as Record<string, unknown>
+  const box = values.box
+  assert.ok(box && typeof box === 'object' && 'op' in box)
   assert.equal(box.op, 'box')
   await assert.rejects(() => api.runRecipe('missing-recipe'), /not found/)
 })

@@ -240,6 +240,56 @@ const tools: McpTool[] = [
     },
   },
   {
+    name: 'pistola_reference_validate',
+    description:
+      'Validate a provider-neutral approved eight-view reference pack without storing it. Pass opaque asset references only; image bytes remain in the IDE or asset store.',
+    inputSchema: objectSchema({ pack: { type: 'object' } }, ['pack']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.validate', args.pack)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_set',
+    description:
+      'Validate and store the user-approved eight-view reference metadata for this Pistola session. Use only after the user selects one of the 2–3 IDE concepts.',
+    inputSchema: objectSchema({ pack: { type: 'object' } }, ['pack']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.set', args.pack)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_get',
+    description: 'Read active approved eight-view reference metadata, or null when reference mode is not active.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.get')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_reference_clear',
+    description: 'Clear active reference metadata without deleting host-owned image assets.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('referencePack.clear')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
     name: 'pistola_render_views',
     description:
       'CPU-rasterize a deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) plus a fixed critique checklist. No camera motion.',
@@ -256,6 +306,32 @@ const tools: McpTool[] = [
         if (!base64) throw new Error('The Pistola page did not return a PNG visual review.')
         const { dataUrl: _ignored, mime, ...metadata } = rendered
         return imageResult(base64, typeof mime === 'string' ? mime : 'image/png', metadata)
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_render_eight_views',
+    description:
+      'Render a side-effect-free 4×2 SVG contact sheet of the live scene: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom. Includes the current structural report.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        const rendered = unwrap(await invoke('renderEightViews')) as {
+          mime?: unknown
+          svg?: unknown
+          [key: string]: unknown
+        }
+        if (typeof rendered.svg !== 'string') {
+          throw new Error('The Pistola page did not return an eight-view SVG review.')
+        }
+        const { svg, mime, ...metadata } = rendered
+        return imageResult(
+          Buffer.from(svg, 'utf8').toString('base64'),
+          typeof mime === 'string' ? mime : 'image/svg+xml',
+          metadata,
+        )
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }

@@ -3,8 +3,9 @@
 import {
   getOperatorPhaseStatus,
   getOperatorPlanProgress,
-  useOperatorPlanStore,
   type OperatorPlanStepStatus,
+  useOperatorPlanStore,
+  useReferencePackStore,
 } from '@pascal-app/editor'
 import { useState } from 'react'
 import {
@@ -23,6 +24,24 @@ const statusLabel: Record<OperatorPlanStepStatus, string> = {
   error: 'Failed',
   interrupted: 'Interrupted',
 }
+
+type RenderViewsResult = {
+  mime?: string
+  svg?: string
+  partCount?: number
+  structure?: {
+    errorCount?: number
+    warningCount?: number
+  }
+}
+
+type VisualReview = {
+  previewUrl: string
+  partCount: number | null
+  errorCount: number | null
+  warningCount: number | null
+}
+
 function StatusIcon({ status }: { status: OperatorPlanStepStatus }) {
   if (status === 'done') return <CheckIcon className="text-emerald-300" size={14} />
   if (status === 'running') return <SpinnerIcon className="text-as-accent" size={14} />
@@ -33,9 +52,13 @@ function StatusIcon({ status }: { status: OperatorPlanStepStatus }) {
 
 export function OperatorPlanPanel() {
   const plan = useOperatorPlanStore((state) => state.plan)
+  const referencePack = useReferencePackStore((state) => state.pack)
   const [collapsed, setCollapsed] = useState(false)
   const [undoing, setUndoing] = useState(false)
   const [panelError, setPanelError] = useState<string | null>(null)
+  const [renderingViews, setRenderingViews] = useState(false)
+  const [visualReview, setVisualReview] = useState<VisualReview | null>(null)
+  const [visualReviewError, setVisualReviewError] = useState<string | null>(null)
 
   if (!plan) return null
 
@@ -70,6 +93,50 @@ export function OperatorPlanPanel() {
       setPanelError(error instanceof Error ? error.message : 'The plan could not be undone.')
     } finally {
       setUndoing(false)
+    }
+  }
+
+  const renderEightViews = async () => {
+    if (renderingViews || !referencePack) return
+
+    const api = window.pistola as
+      | (typeof window.pistola & { renderEightViews?: () => Promise<RenderViewsResult> })
+      | undefined
+
+    if (!api?.renderEightViews) {
+      setVisualReviewError('Visual review is not available in this editor session yet.')
+      return
+    }
+
+    setRenderingViews(true)
+    setVisualReviewError(null)
+    try {
+      const result = await api.renderEightViews()
+      const svg = typeof result?.svg === 'string' ? result.svg.trim() : ''
+      if (result?.mime !== 'image/svg+xml' || !svg) {
+        setVisualReviewError('The editor did not return a usable eight-view preview.')
+        return
+      }
+
+      const errorCount = result.structure?.errorCount
+      const warningCount = result.structure?.warningCount
+      setVisualReview({
+        previewUrl: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+        partCount:
+          typeof result.partCount === 'number' && Number.isFinite(result.partCount)
+            ? result.partCount
+            : null,
+        errorCount:
+          typeof errorCount === 'number' && Number.isFinite(errorCount) ? errorCount : null,
+        warningCount:
+          typeof warningCount === 'number' && Number.isFinite(warningCount) ? warningCount : null,
+      })
+    } catch (error) {
+      setVisualReviewError(
+        error instanceof Error ? error.message : 'The eight-view preview could not be rendered.',
+      )
+    } finally {
+      setRenderingViews(false)
     }
   }
 
@@ -151,7 +218,9 @@ export function OperatorPlanPanel() {
                           </p>
                         ) : null}
                         {step.error ? (
-                          <p className="mt-0.5 text-[10px] text-as-danger leading-[15px]">{step.error}</p>
+                          <p className="mt-0.5 text-[10px] text-as-danger leading-[15px]">
+                            {step.error}
+                          </p>
                         ) : null}
                       </div>
                     </div>
@@ -161,6 +230,79 @@ export function OperatorPlanPanel() {
             </section>
           )
         })}
+
+        <section
+          aria-label="Visual review"
+          className="mt-2 overflow-hidden rounded-lg border border-as-line-soft"
+          data-testid="operator-plan-visual-review"
+        >
+          <div className="flex items-center gap-2 bg-as-surface px-2.5 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[11px] text-as-text">Visual review</p>
+              <p className="mt-0.5 truncate text-[10px] text-as-muted">
+                {referencePack
+                  ? `${referencePack.assets.length}/8 approved reference views`
+                  : 'An approved eight-view reference pack is required'}
+              </p>
+            </div>
+            <button
+              aria-busy={renderingViews}
+              className="inline-flex h-7 shrink-0 items-center rounded-md border border-as-line px-2.5 font-medium text-[11px] text-as-text transition-colors hover:bg-as-raised disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="operator-plan-render-views"
+              disabled={!referencePack || renderingViews}
+              onClick={() => void renderEightViews()}
+              type="button"
+            >
+              {renderingViews ? 'Rendering…' : 'Render 8 views'}
+            </button>
+          </div>
+
+          {visualReview ? (
+            <div className="border-as-line-soft border-t px-2.5 py-2">
+              <img
+                alt="Eight canonical scene views for visual review"
+                className="block max-h-44 w-full rounded-md border border-as-line-soft bg-as-raised object-contain"
+                src={visualReview.previewUrl}
+              />
+              <p
+                aria-live="polite"
+                className={`mt-2 text-[10px] leading-[15px] ${
+                  visualReview.errorCount === null
+                    ? 'text-as-muted'
+                    : visualReview.errorCount > 0
+                      ? 'text-as-danger'
+                      : visualReview.warningCount !== null && visualReview.warningCount > 0
+                        ? 'text-amber-300'
+                        : 'text-emerald-200/75'
+                }`}
+              >
+                {visualReview.partCount === null
+                  ? 'Scene summary unavailable'
+                  : `${visualReview.partCount} parts`}
+                {visualReview.errorCount === null
+                  ? ' · Structural summary unavailable'
+                  : ` · ${visualReview.errorCount} ${
+                      visualReview.errorCount === 1 ? 'error' : 'errors'
+                    }${
+                      visualReview.warningCount === null
+                        ? ''
+                        : ` · ${visualReview.warningCount} ${
+                            visualReview.warningCount === 1 ? 'warning' : 'warnings'
+                          }`
+                    }`}
+              </p>
+            </div>
+          ) : null}
+
+          {visualReviewError ? (
+            <p
+              aria-live="polite"
+              className="border-as-line-soft border-t px-2.5 py-2 text-[10px] text-as-danger"
+            >
+              {visualReviewError}
+            </p>
+          ) : null}
+        </section>
       </div>
 
       <footer className="flex items-center gap-2 border-as-line-soft border-t px-3 py-2">
@@ -180,7 +322,11 @@ export function OperatorPlanPanel() {
           </button>
         ) : null}
       </footer>
-      {panelError ? <p className="border-as-line-soft border-t px-3 py-2 text-[10px] text-as-danger">{panelError}</p> : null}
+      {panelError ? (
+        <p className="border-as-line-soft border-t px-3 py-2 text-[10px] text-as-danger">
+          {panelError}
+        </p>
+      ) : null}
     </section>
   )
 }

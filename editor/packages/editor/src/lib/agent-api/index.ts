@@ -46,6 +46,14 @@ import {
 } from '../blueprint'
 import { getExample, searchExamples } from '../agent-examples'
 import { renderViews as renderSceneViews } from '../render'
+import {
+  CANONICAL_CONTACT_SHEET_LAYOUT,
+  CANONICAL_VIEW_CAMERAS,
+  PISTOLA_CANONICAL_FRAME,
+  renderSceneContactSheet,
+} from '../render-views'
+import { useReferencePackStore, validateReferencePack } from '../reference-pack'
+import { collectStructureParts } from '../structure'
 
 export const PISTOLA_API_VERSION = 1
 
@@ -93,6 +101,11 @@ const INVOKE_ALLOWLIST = new Set([
   'examples.search',
   'examples.get',
   'renderViews',
+  'renderEightViews',
+  'referencePack.validate',
+  'referencePack.set',
+  'referencePack.get',
+  'referencePack.clear',
   'waitForIdle',
   'undo',
   'redo',
@@ -170,6 +183,29 @@ export const createPistolaAgentApi = () => {
     visualReview: {
       method: 'renderViews',
       output: 'A deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) with a fixed critique checklist. At most 2 rounds; keep the best.',
+    },
+    eightViewReview: {
+      method: 'renderEightViews',
+      output:
+        'A deterministic 4×2 SVG contact sheet: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom.',
+      policy:
+        'Use after each assembly milestone without moving the active viewport. Address structural errors first, then the largest visible placement or proportion mismatch.',
+      layout: CANONICAL_CONTACT_SHEET_LAYOUT,
+      frame: PISTOLA_CANONICAL_FRAME,
+    },
+    referencePack: {
+      version: 1,
+      source:
+        'IDE-native image generation or a user upload. Pistola accepts metadata only; image pixels remain in the IDE or asset store.',
+      conceptGate:
+        'Generate 2–3 concepts, obtain the user-selected approval, then set one exactly-eight-view reference pack.',
+      requiredViews: CANONICAL_VIEW_CAMERAS.map((camera) => ({
+        id: camera.id,
+        label: camera.label,
+        projection: camera.projection,
+      })),
+      requiredScale: 'One named positive real-world measurement in meters.',
+      methods: ['validate', 'set', 'get', 'clear'],
     },
     capabilities: getAllCapabilities().map((capability) => ({
       type: capability.type,
@@ -301,6 +337,49 @@ export const createPistolaAgentApi = () => {
       throw new Error('Viewer canvas is not available.')
     }
     return { mime: 'image/png', dataUrl: canvas.toDataURL('image/png') }
+  }
+
+  const referencePack = {
+    validate: async (input: unknown) => validateReferencePack(input),
+    set: async (input: unknown) => {
+      const validation = validateReferencePack(input)
+      if (!validation.valid) return { ...validation, stored: false as const }
+      useReferencePackStore.getState().setPack(validation.data)
+      return { ...validation, stored: true as const }
+    },
+    get: async () => useReferencePackStore.getState().pack,
+    clear: async () => {
+      const cleared = useReferencePackStore.getState().pack !== null
+      useReferencePackStore.getState().clearPack()
+      return { cleared }
+    },
+  }
+
+  /**
+   * A renderer-agnostic review surface: it projects real world-space AABBs and
+   * never changes the user's camera, selection, or editor state.
+   */
+  const renderEightViews = async () => {
+    const parts = collectStructureParts()
+    const sheet = renderSceneContactSheet(
+      parts.map((part) => ({
+        id: part.id,
+        name: part.name,
+        bounds: { min: part.box.min, max: part.box.max },
+      })),
+    )
+    return {
+      mime: 'image/svg+xml' as const,
+      svg: sheet.svg,
+      width: sheet.width,
+      height: sheet.height,
+      columns: sheet.columns,
+      rows: sheet.rows,
+      partCount: parts.length,
+      views: sheet.views,
+      partColors: sheet.partColors,
+      structure: checkStructure(),
+    }
   }
 
   const taskPlan = {
@@ -562,6 +641,8 @@ export const createPistolaAgentApi = () => {
     run,
     checkStructure: async () => checkStructure(),
     renderViews: async (input?: { planned?: [number, number, number] }) => renderSceneViews(input),
+    renderEightViews,
+    referencePack,
     examples: {
       search: async (query?: string | { query?: string; kind?: string }) => {
         if (query && typeof query === 'object') return searchExamples(query.query ?? '', query.kind as never)
@@ -613,6 +694,14 @@ export const createPistolaAgentApi = () => {
       if (method.startsWith('examples.')) {
         const name = method.slice('examples.'.length) as keyof typeof api.examples
         const fn = api.examples[name]
+        if (typeof fn !== 'function') {
+          throw new Error(`Unknown pistola method "${method}".`)
+        }
+        return (fn as (...values: unknown[]) => unknown)(...payload)
+      }
+      if (method.startsWith('referencePack.')) {
+        const name = method.slice('referencePack.'.length) as keyof typeof referencePack
+        const fn = referencePack[name]
         if (typeof fn !== 'function') {
           throw new Error(`Unknown pistola method "${method}".`)
         }

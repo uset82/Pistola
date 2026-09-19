@@ -70,7 +70,11 @@ const unionSize = (parts: StructurePart[]): [number, number, number] => {
       max[i] = Math.max(max[i] ?? -Infinity, part.box.max[i] ?? -Infinity)
     }
   }
-  return [max[0] - min[0], max[1] - min[1], max[2] - min[2]]
+  return [
+    (max[0] ?? 0) - (min[0] ?? 0),
+    (max[1] ?? 0) - (min[1] ?? 0),
+    (max[2] ?? 0) - (min[2] ?? 0),
+  ]
 }
 
 const visibleParts = (view: RasterView, parts: StructurePart[]) => {

@@ -16,11 +16,19 @@ const unionBox = (parts: BlueprintPart[]) => {
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
   for (const box of boxes) {
     for (let i = 0; i < 3; i += 1) {
-      min[i] = Math.min(min[i], box.min[i] ?? Infinity)
-      max[i] = Math.max(max[i], box.max[i] ?? -Infinity)
+      min[i] = Math.min(min[i] ?? Infinity, box.min[i] ?? Infinity)
+      max[i] = Math.max(max[i] ?? -Infinity, box.max[i] ?? -Infinity)
     }
   }
-  return { min, max, size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]] as [number, number, number] }
+  return {
+    min,
+    max,
+    size: [
+      (max[0] ?? 0) - (min[0] ?? 0),
+      (max[1] ?? 0) - (min[1] ?? 0),
+      (max[2] ?? 0) - (min[2] ?? 0),
+    ],
+  }
 }
 
 const relok = (rel: BlueprintRelation, a: BlueprintPart, b: BlueprintPart) => {

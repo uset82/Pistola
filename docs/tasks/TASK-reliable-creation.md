@@ -203,6 +203,31 @@ Files: new `lib/render/{soft-raster,render-views}.ts` (Worker), MCP `pistola_ren
 - [x] Checkpoint: the render test matches a known box; benchmark run.
   — evidence: `bun test ./packages/editor/src/lib/render/render-views.test.ts` → `a known 1 m box fills a square front mask`; `run.mjs --mode replay --out .../phase-5` `summary.iou: 1`
 
+### Phase 5A: User-approved eight-view reference and review loop
+
+This is an additive IDE contract: it does not replace the Phase 5 numeric 2×2 diagnostic, and it
+does not claim the gated image fitter below.
+
+- [x] A reference pack requires a user-approved concept, one positive meter scale anchor, and exactly
+  these separately labeled assets: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom.
+  The six cardinal source views are orthographic; the 45° review views may be perspective.
+  — evidence: `bun test packages/editor/src/lib/reference-pack/reference-pack.test.ts` → 8 pass
+- [x] Reference metadata is provider-neutral and never accepts `data:`, `blob:`, or `file:` image
+  payloads. Stored image bytes remain in the IDE or its asset system.
+  — evidence: same suite → `opaque asset references reject inline and local-file payloads`
+- [x] The canonical review camera contract is +Y up, +Z front, +X right, bottom-center in meters;
+  a deterministic 4×2 sheet uses all eight views once.
+  — evidence: `bun test packages/editor/src/lib/render-views/canonical-views.test.ts` → 6 pass;
+  `scene-contact-sheet.test.ts` → 3 pass
+- [x] `referencePack.*` and `renderEightViews` are exposed through `window.pistola.invoke`; the latter
+  returns a side-effect-free SVG review with the current structural report.
+  — evidence: `bun test packages/editor/src/lib/agent-api/reference-pack-api.test.ts` → 2 pass
+- [x] Generic MCP surfaces are available to Codex, Cursor, Antigravity, Qoder, and other compatible
+  IDEs: `pistola_reference_{validate,set,get,clear}` and `pistola_render_eight_views`. The operator
+  plan panel shows the approved-pack state and an accessible bounded preview.
+  — evidence: `node editor/scripts/ide-direct-control-e2e.mjs --list-tools` lists all five tools;
+  `bun run check-types` → pass; `node scripts/ide-setup.mjs --check` → passed
+
 ### Phase 6 (gated): Reference mode and a minimal fitter
 Start only if the Phase 5 benchmark shows outline and proportion errors dominate.
 - [ ] `pistola_reference_add({path|dataUrl, layout: 'front|side|top' sheet, knownDimension})`. A reference
@@ -233,7 +258,8 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 5: `pistola_render_views` 2×2 + ≤2 critique rounds); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (user-approved eight-view gate,
+  `pistola_render_eight_views`, and the Phase 5 2×2 critique); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
