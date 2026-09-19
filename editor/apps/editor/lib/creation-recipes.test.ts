@@ -29,7 +29,6 @@ test('createAssistantTurnResult creates a 3D heart with parametric CAD brief', a
     assert.equal(action.brief.operationGraph[0]?.op, 'extrude')
   }
 })
-
 test('createAssistantTurnResult creates an airplane compound assembly', async () => {
   const result = await createAssistantTurnResult(
     {
@@ -280,5 +279,4 @@ test('createAssistantTurnResult creates a sculpted CAD speedboat for "crea una l
     }
   }
 })
-
 
