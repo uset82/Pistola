@@ -20,6 +20,8 @@ import {
 } from '../assistant/execute'
 import { getAssistantWorkspaceContext } from '../assistant/context'
 import { CREATION_RECIPES, listCreationRecipes } from '../assistant/recipes/creation-recipes'
+import { MANUAL_OP_EXAMPLES } from '../cad/manual-examples'
+import { ORTHO_VIEWS, PISTOLA_FRAME } from '../cad/views'
 import { createAssistantRuntime } from '../assistant/runtime'
 import useCad from '../../store/use-cad'
 import useMac from '../../store/use-mac'
@@ -48,8 +50,17 @@ const SOLID_SPEC_GRAMMAR = {
   booleans: ['union', 'difference', 'intersection'],
   arrays: ['mirror', 'linearArray', 'polarArray'],
   rotation: 'radians, applied X then Y then Z after scale and before translate',
-  extrudeAxis: 'polygon is on XY; height extrudes +Z in spec space, then rotate/translate',
+  extrudeAxis: 'polygon is XZ (x, z); height extrudes +Y (up). Bottom-center origin.',
+  intersectProfiles:
+    'profileXY / profileZY / profileXZ (2 or 3). sideProfile aliases profileXY, topProfile aliases profileXZ.',
   nesting: 'parentId is a scene node id; the solid is parent-relative, not world-absolute',
+  origins: {
+    box: 'bottom-center',
+    cylinder: 'bottom-center',
+    sphere: 'bottom-center',
+    extrude: 'polygon on XZ, bottom at y=0',
+    revolve: 'profile x = radius, y = height, closed ring',
+  },
 }
 
 const INVOKE_ALLOWLIST = new Set([
@@ -59,6 +70,7 @@ const INVOKE_ALLOWLIST = new Set([
   'measure',
   'searchCatalog',
   'listRecipes',
+  'runRecipe',
   'exportScene',
   'workspace',
   'validate',
@@ -96,10 +108,13 @@ type RunOperatorPlanStepInput = {
 export const createPistolaAgentApi = () => {
   const runtime = createAssistantRuntime()
 
-  const manual = async () => ({
+  const buildManual = () => ({
     apiVersion: PISTOLA_API_VERSION,
+    frame: PISTOLA_FRAME,
+    views: ORTHO_VIEWS,
     workflow: AGENT_WORKFLOW,
     solidSpec: SOLID_SPEC_GRAMMAR,
+    examples: MANUAL_OP_EXAMPLES,
     primitives: {
       ids: [
         'primitive-box',
@@ -129,6 +144,16 @@ export const createPistolaAgentApi = () => {
       schema: capability.schema.toJSONSchema?.() ?? { type: 'object' },
     })),
   })
+
+  const manual = async (query?: string | { section?: string }) => {
+    const full = buildManual()
+    const section = typeof query === 'string' ? query : query?.section
+    if (!section) return full
+    if (!(section in full)) {
+      throw new Error(`Unknown manual section "${section}".`)
+    }
+    return { section, value: full[section as keyof typeof full] }
+  }
 
   const inspect = async (query?: { levelId?: string; type?: string; nameQuery?: string; limit?: number }) =>
     inspectScene(query ?? {})

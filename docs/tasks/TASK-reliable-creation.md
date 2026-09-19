@@ -54,27 +54,36 @@ Copied from `docs/plans/it-seems-the-ides-composed-quasar.md`. Tick only with ev
 ### Phase 1: Truth and plumbing
 Files: `lib/cad/{local-kernel,solid-spec}.ts`, new `lib/cad/views.ts`, `lib/assistant/{execute,agent-tools}.ts`,
 `capabilities/cad.ts`, `lib/agent-api/index.ts`, `scripts/generate-agent-manual.mjs`.
-- [ ] One frame everywhere: +Y up, +Z front, +X right, meters, bottom-center origins. `views.ts` defines
+- [x] One frame everywhere: +Y up, +Z front, +X right, meters, bottom-center origins. `views.ts` defines
   each orthographic view's camera and screen axes, shared by the renderer, the tracer and the fitter.
-- [ ] `intersect_profiles` takes plane-explicit `profileXY` / `profileZY` / `profileXZ` (2 or 3 of them);
+  — evidence: `editor/packages/editor/src/lib/cad/views.ts`; `bun test ./packages/editor/src/lib/cad/local-kernel.test.ts` → asymmetric L-shape locks the view axes
+- [x] `intersect_profiles` takes plane-explicit `profileXY` / `profileZY` / `profileXZ` (2 or 3 of them);
   `side/topProfile` stay as aliases.
-- [ ] Kernel fixes:
+  — evidence: same test → aliased `profileXY`/`profileXZ` volume matches `sideProfile`/`topProfile`
+- [x] Kernel fixes:
   - revolve closes, with caps when the angle is under 360;
   - `ShapeUtils` triangulation;
   - polygon cleanup (dedupe points, fix winding, reject self-intersections);
   - errors carry the spec path (`spec.children[1].polygon[4]`).
-- [ ] `build_cad_solid` gains `rotation`, `partId` and `role`.
-- [ ] New non-destructive `update_cad_solid {bodyId, spec?, position?, rotation?, color?}` that keeps the id.
-- [ ] Fix bounds (the bbox shape) and compute world-space bounds through parents.
-- [ ] `validate` checks each action (index + path) and dry-runs the kernel. Meshes are cached by spec hash
+  — evidence: `revolve closes and reports 0 open edges`; `kernel errors carry the spec path`
+- [x] `build_cad_solid` gains `rotation`, `partId` and `role`.
+  — evidence: `bun test ./packages/editor/src/lib/agent-api/index.test.ts` → update_cad_solid keeps the body id
+- [x] New non-destructive `update_cad_solid {bodyId, spec?, position?, rotation?, color?}` that keeps the id.
+  — evidence: same test
+- [x] Fix bounds (the bbox shape) and compute world-space bounds through parents.
+  — evidence: `agent-tools.ts` accepts `{min,max}` and `[[min],[max]]`, then walks `parentId`
+- [x] `validate` checks each action (index + path) and dry-runs the kernel. Meshes are cached by spec hash
   for `run`, so validate-ok means run-ok.
-- [ ] The manual is generated from code: frame, per-op origins, one executed example per op, and
+  — evidence: `validate reports the real action index and solid-spec path`; `evaluateCadSolidSpecCached`
+- [x] The manual is generated from code: frame, per-op origins, one executed example per op, and
   `manual({section})`. Add `runRecipe` to the allowlist.
-- [ ] Checkpoint:
+  — evidence: `manual sections and runRecipe are allowlisted`; `bun editor/scripts/generate-agent-manual.mjs`
+- [x] Checkpoint:
   - tests execute every manual example;
   - an asymmetric L-shape locks the view axes;
   - revolve has 0 open edges;
   - benchmark replay.
+  — evidence: 7 pass in `local-kernel.test.ts`; `node editor/scripts/creation-benchmark/run.mjs --mode replay --out docs/tasks/evidence/creation-quality/phase-1` → `iou: 1`
 
 ### Phase 2: Structural checker and feedback (largest expected gain)
 Files: new `lib/structure/{scene-geometry,contact-graph,checks,report}.ts`, new

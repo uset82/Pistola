@@ -9,6 +9,21 @@ export type KernelMesh = {
   bbox: [[number, number, number], [number, number, number]]
 }
 
+export class CadSpecError extends Error {
+  path: string
+  constructor(path: string, message: string) {
+    super(`${path}: ${message}`)
+    this.name = 'CadSpecError'
+    this.path = path
+  }
+}
+
+const meshCache = new Map<string, KernelMesh>()
+
+export const hashCadSolidSpec = (spec: CadSolidSpec) => JSON.stringify(spec)
+
+export const clearCadSolidSpecCache = () => meshCache.clear()
+
 type Vec3 = [number, number, number]
 type Vec2 = [number, number]
 
@@ -195,36 +210,66 @@ const polygonArea = (points: Vec2[]) =>
 
 const ensureCcw = (points: Vec2[]) => (polygonArea(points) < 0 ? [...points].reverse() : points)
 
-const triangulate = (points: Vec2[]) => {
-  const verts = ensureCcw(points)
-  const remaining = verts.map((_, index) => index)
-  const tris: number[][] = []
-  let guard = 0
-  while (remaining.length > 3 && guard < verts.length * verts.length) {
-    guard += 1
-    let clipped = false
-    for (let i = 0; i < remaining.length; i += 1) {
-      const i0 = remaining[(i + remaining.length - 1) % remaining.length]
-      const i1 = remaining[i]
-      const i2 = remaining[(i + 1) % remaining.length]
-      const a = vec2(verts[num(i0)])
-      const b = vec2(verts[num(i1)])
-      const c = vec2(verts[num(i2)])
-      const cross2 = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
-      if (cross2 <= 1e-8) continue
-      const hasPoint = remaining.some((index) => {
-        if (index === i0 || index === i1 || index === i2) return false
-        return pointInTriangle(vec2(verts[index]), a, b, c)
-      })
-      if (hasPoint) continue
-      tris.push([num(i0), num(i1), num(i2)])
-      remaining.splice(i, 1)
-      clipped = true
-      break
+const nearlyEqual = (a: Vec2, b: Vec2, eps = 1e-9) => Math.hypot(a[0] - b[0], a[1] - b[1]) < eps
+
+const segmentsIntersect = (a: Vec2, b: Vec2, c: Vec2, d: Vec2) => {
+  const cross2 = (p: Vec2, q: Vec2, r: Vec2) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+  const d1 = cross2(c, d, a)
+  const d2 = cross2(c, d, b)
+  const d3 = cross2(a, b, c)
+  const d4 = cross2(a, b, d)
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true
+  return false
+}
+
+const hasSelfIntersection = (points: Vec2[]) => {
+  const count = points.length
+  for (let i = 0; i < count; i += 1) {
+    const a = vec2(points[i])
+    const b = vec2(points[(i + 1) % count])
+    for (let j = i + 1; j < count; j += 1) {
+      if (Math.abs(i - j) <= 1 || (i === 0 && j === count - 1) || (j === 0 && i === count - 1)) continue
+      if (i === 0 && j === count - 1) continue
+      const adjacent = (j + 1) % count === i || (i + 1) % count === j
+      if (adjacent) continue
+      const c = vec2(points[j])
+      const d = vec2(points[(j + 1) % count])
+      if (segmentsIntersect(a, b, c, d)) return true
     }
-    if (!clipped) break
   }
-  if (remaining.length === 3) tris.push([num(remaining[0]), num(remaining[1]), num(remaining[2])])
+  return false
+}
+
+export const cleanPolygon = (points: Vec2[], path = 'spec.polygon'): Vec2[] => {
+  if (!Array.isArray(points) || points.length < 3) {
+    throw new CadSpecError(path, 'polygon needs at least 3 points')
+  }
+  const deduped: Vec2[] = []
+  for (const raw of points) {
+    const point = vec2(raw)
+    const prev = deduped[deduped.length - 1]
+    if (prev && nearlyEqual(prev, point)) continue
+    deduped.push(point)
+  }
+  if (deduped.length >= 2 && nearlyEqual(deduped[0] ?? [0, 0], deduped[deduped.length - 1] ?? [0, 0])) {
+    deduped.pop()
+  }
+  if (deduped.length < 3) {
+    throw new CadSpecError(path, 'polygon collapsed below 3 unique points')
+  }
+  if (hasSelfIntersection(deduped)) {
+    throw new CadSpecError(path, 'polygon is self-intersecting')
+  }
+  return ensureCcw(deduped)
+}
+
+const triangulate = (points: Vec2[], path = 'spec.polygon') => {
+  const verts = cleanPolygon(points, path)
+  const contour = verts.map((point) => new THREE.Vector2(point[0], point[1]))
+  const tris = THREE.ShapeUtils.triangulateShape(contour, [])
+  if (!Array.isArray(tris) || tris.length === 0) {
+    throw new CadSpecError(path, 'polygon could not be triangulated')
+  }
   return { verts, tris }
 }
 
@@ -247,9 +292,9 @@ const pointInPolygon = (point: Vec2, polygon: Vec2[]) => {
   return inside
 }
 
-const extrudeSolid = (polygon: Vec2[], height: number): KernelMesh => {
-  const outer = ensureCcw(polygon)
-  const { verts, tris } = triangulate(outer)
+const extrudeSolid = (polygon: Vec2[], height: number, path = 'spec.polygon'): KernelMesh => {
+  const outer = cleanPolygon(polygon, path)
+  const { verts, tris } = triangulate(outer, path)
   const positions: number[] = []
   const indices: number[] = []
   for (const [i0, i1, i2] of tris) {
@@ -268,9 +313,9 @@ const extrudeSolid = (polygon: Vec2[], height: number): KernelMesh => {
   return finishMesh(positions, indices)
 }
 
-const extrudeProfileXy = (polygon: Vec2[], zMin: number, zMax: number): KernelMesh => {
-  const outer = ensureCcw(polygon)
-  const { verts, tris } = triangulate(outer)
+const extrudeProfileXy = (polygon: Vec2[], zMin: number, zMax: number, path = 'spec.profileXY'): KernelMesh => {
+  const outer = cleanPolygon(polygon, path)
+  const { verts, tris } = triangulate(outer, path)
   const positions: number[] = []
   const indices: number[] = []
   for (const [i0, i1, i2] of tris) {
@@ -289,9 +334,9 @@ const extrudeProfileXy = (polygon: Vec2[], zMin: number, zMax: number): KernelMe
   return finishMesh(positions, indices)
 }
 
-const extrudeProfileXz = (polygon: Vec2[], yMin: number, yMax: number): KernelMesh => {
+const extrudeProfileXz = (polygon: Vec2[], yMin: number, yMax: number, path = 'spec.profileXZ'): KernelMesh => {
   const height = Math.max(1e-4, yMax - yMin)
-  const solid = extrudeSolid(polygon, height)
+  const solid = extrudeSolid(polygon, height, path)
   return applyTransforms(solid, {
     op: 'box',
     size: [1, 1, 1],
@@ -299,35 +344,64 @@ const extrudeProfileXz = (polygon: Vec2[], yMin: number, yMax: number): KernelMe
   })
 }
 
+const extrudeProfileZy = (polygon: Vec2[], xMin: number, xMax: number, path = 'spec.profileZY'): KernelMesh => {
+  const outer = cleanPolygon(polygon, path)
+  const { verts, tris } = triangulate(outer, path)
+  const positions: number[] = []
+  const indices: number[] = []
+  for (const [i0, i1, i2] of tris) {
+    const a = vec2(verts[num(i0)])
+    const b = vec2(verts[num(i1)])
+    const c = vec2(verts[num(i2)])
+    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMin, c[1], c[0]], [xMin, b[1], b[0]])
+    pushTriangle(positions, indices, [xMax, a[1], a[0]], [xMax, b[1], b[0]], [xMax, c[1], c[0]])
+  }
+  for (let i = 0; i < outer.length; i += 1) {
+    const a = vec2(outer[i])
+    const b = vec2(outer[(i + 1) % outer.length])
+    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMin, b[1], b[0]], [xMax, b[1], b[0]])
+    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMax, b[1], b[0]], [xMax, a[1], a[0]])
+  }
+  return finishMesh(positions, indices)
+}
+
+const rangeOf = (points: Vec2[], axis: 0 | 1) => {
+  let min = Infinity
+  let max = -Infinity
+  for (const point of points) {
+    min = Math.min(min, point[axis])
+    max = Math.max(max, point[axis])
+  }
+  return { min, max }
+}
+
 const intersectProfilesMesh = (
-  sideProfile: Vec2[],
-  topProfile: Vec2[],
-  depthMargin = 0.1,
+  spec: Extract<CadSolidSpec, { op: 'intersect_profiles' }>,
+  path = 'spec',
 ): KernelMesh => {
-  let sideMinY = Infinity
-  let sideMaxY = -Infinity
-  for (const pt of sideProfile) {
-    sideMinY = Math.min(sideMinY, pt[1])
-    sideMaxY = Math.max(sideMaxY, pt[1])
+  const xy = spec.profileXY ?? spec.sideProfile
+  const xz = spec.profileXZ ?? spec.topProfile
+  const zy = spec.profileZY
+  const margin = Math.max(0.05, spec.depthMargin ?? 0.1)
+  const solids: KernelMesh[] = []
+  if (xy) {
+    const cleaned = cleanPolygon(xy, `${path}.profileXY`)
+    const z = xz ? rangeOf(cleanPolygon(xz, `${path}.profileXZ`), 1) : { min: -1, max: 1 }
+    solids.push(extrudeProfileXy(cleaned, z.min - margin, z.max + margin, `${path}.profileXY`))
   }
-
-  let topMinZ = Infinity
-  let topMaxZ = -Infinity
-  for (const pt of topProfile) {
-    topMinZ = Math.min(topMinZ, pt[1])
-    topMaxZ = Math.max(topMaxZ, pt[1])
+  if (xz) {
+    const cleaned = cleanPolygon(xz, `${path}.profileXZ`)
+    const y = xy ? rangeOf(cleanPolygon(xy, `${path}.profileXY`), 1) : { min: -1, max: 1 }
+    solids.push(extrudeProfileXz(cleaned, y.min - margin, y.max + margin, `${path}.profileXZ`))
   }
-
-  const margin = Math.max(0.05, depthMargin)
-  const zMin = topMinZ - margin
-  const zMax = topMaxZ + margin
-  const yMin = sideMinY - margin
-  const yMax = sideMaxY + margin
-
-  const sideSolid = extrudeProfileXy(sideProfile, zMin, zMax)
-  const topSolid = extrudeProfileXz(topProfile, yMin, yMax)
-
-  return evaluateBoolean(sideSolid, topSolid, 'intersection')
+  if (zy) {
+    const cleaned = cleanPolygon(zy, `${path}.profileZY`)
+    const x = xy ? rangeOf(cleanPolygon(xy, `${path}.profileXY`), 0) : xz ? rangeOf(cleanPolygon(xz, `${path}.profileXZ`), 0) : { min: -1, max: 1 }
+    solids.push(extrudeProfileZy(cleaned, x.min - margin, x.max + margin, `${path}.profileZY`))
+  }
+  const [first, ...rest] = solids
+  if (!first) throw new CadSpecError(path, 'intersect_profiles needs at least two profiles')
+  return rest.reduce((current, child) => evaluateBoolean(current, child, 'intersection'), first)
 }
 
 const extrudeMesh = (polygon: Vec2[], holes: Vec2[][] = [], height: number): KernelMesh => {
@@ -347,26 +421,62 @@ const extrudeMesh = (polygon: Vec2[], holes: Vec2[][] = [], height: number): Ker
   return holes.length > 0 ? { ...mesh, volume: Math.max(0, outer.volume - holeVolume) } : mesh
 }
 
-const revolveMesh = (profile: Vec2[], angleDeg = 360, segments = 32): KernelMesh => {
+const revolvePoint = (x: number, y: number, angle: number): Vec3 => [Math.cos(angle) * x, y, Math.sin(angle) * x]
+
+const revolveMesh = (profile: Vec2[], angleDeg = 360, segments = 32, path = 'spec.profile'): KernelMesh => {
+  const ring = cleanPolygon(profile, path)
   const positions: number[] = []
   const indices: number[] = []
-  const steps = Math.max(8, Math.round((segments * angleDeg) / 360))
-  const angle = (angleDeg * Math.PI) / 180
+  const closed = angleDeg >= 360 - 1e-3
+  const steps = Math.max(8, Math.round((segments * Math.min(angleDeg, 360)) / 360))
+  const angle = ((closed ? 360 : angleDeg) * Math.PI) / 180
   for (let i = 0; i < steps; i += 1) {
     const a0 = (i / steps) * angle
-    const a1 = ((i + 1) / steps) * angle
-    for (let p = 0; p < profile.length - 1; p += 1) {
-      const [x0, y0] = vec2(profile[p])
-      const [x1, y1] = vec2(profile[p + 1])
-      const p00: Vec3 = [Math.cos(a0) * x0, y0, Math.sin(a0) * x0]
-      const p10: Vec3 = [Math.cos(a1) * x0, y0, Math.sin(a1) * x0]
-      const p01: Vec3 = [Math.cos(a0) * x1, y1, Math.sin(a0) * x1]
-      const p11: Vec3 = [Math.cos(a1) * x1, y1, Math.sin(a1) * x1]
+    const a1 = i === steps - 1 && closed ? 0 : ((i + 1) / steps) * angle
+    for (let p = 0; p < ring.length; p += 1) {
+      const [x0, y0] = vec2(ring[p])
+      const [x1, y1] = vec2(ring[(p + 1) % ring.length])
+      const p00 = revolvePoint(x0, y0, a0)
+      const p10 = revolvePoint(x0, y0, a1)
+      const p01 = revolvePoint(x1, y1, a0)
+      const p11 = revolvePoint(x1, y1, a1)
       pushTriangle(positions, indices, p00, p10, p11)
       pushTriangle(positions, indices, p00, p11, p01)
     }
   }
+  if (!closed) {
+    const { verts, tris } = triangulate(ring, path)
+    for (const [i0, i1, i2] of tris) {
+      const a = vec2(verts[num(i0)])
+      const b = vec2(verts[num(i1)])
+      const c = vec2(verts[num(i2)])
+      pushTriangle(positions, indices, revolvePoint(a[0], a[1], 0), revolvePoint(c[0], c[1], 0), revolvePoint(b[0], b[1], 0))
+      pushTriangle(positions, indices, revolvePoint(a[0], a[1], angle), revolvePoint(b[0], b[1], angle), revolvePoint(c[0], c[1], angle))
+    }
+  }
   return finishMesh(positions, indices)
+}
+
+export const countOpenEdges = (mesh: KernelMesh) => {
+  const counts = new Map<string, number>()
+  const vertexKey = (index: number) => {
+    const [x, y, z] = vertexAt(mesh.positions, index)
+    return `${x.toFixed(5)},${y.toFixed(5)},${z.toFixed(5)}`
+  }
+  const edgeKey = (a: number, b: number) => {
+    const left = vertexKey(a)
+    const right = vertexKey(b)
+    return left < right ? `${left}|${right}` : `${right}|${left}`
+  }
+  for (let i = 0; i < mesh.indices.length; i += 3) {
+    const a = num(mesh.indices[i])
+    const b = num(mesh.indices[i + 1])
+    const c = num(mesh.indices[i + 2])
+    for (const key of [edgeKey(a, b), edgeKey(b, c), edgeKey(c, a)]) {
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+  }
+  return [...counts.values()].filter((count) => count === 1).length
 }
 
 const csgEvaluator = new Evaluator()
@@ -430,7 +540,7 @@ const mergeMeshes = (meshes: KernelMesh[]): KernelMesh => {
   return finishMesh(positions, indices)
 }
 
-const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
+const evaluateNode = (spec: CadSolidSpec, path = 'spec'): KernelMesh => {
   let mesh: KernelMesh
   switch (spec.op) {
     case 'box':
@@ -446,40 +556,43 @@ const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
       mesh = extrudeMesh(spec.polygon, spec.holes, spec.height)
       break
     case 'revolve':
-      mesh = revolveMesh(spec.profile, spec.angle)
+      mesh = revolveMesh(spec.profile, spec.angle, 32, `${path}.profile`)
       break
     case 'union': {
       const [first, ...rest] = spec.children
-      if (!first) throw new Error('union needs a base solid.')
+      if (!first) throw new CadSpecError(`${path}.children`, 'union needs a base solid.')
       mesh = rest.reduce(
-        (current: KernelMesh, child: CadSolidSpec) => evaluateBoolean(current, evaluateNode(child), 'union'),
-        evaluateNode(first),
+        (current: KernelMesh, child: CadSolidSpec, index) =>
+          evaluateBoolean(current, evaluateNode(child, `${path}.children[${index + 1}]`), 'union'),
+        evaluateNode(first, `${path}.children[0]`),
       )
       break
     }
     case 'difference': {
       const [first, ...rest] = spec.children
-      if (!first) throw new Error('difference needs a base solid.')
+      if (!first) throw new CadSpecError(`${path}.children`, 'difference needs a base solid.')
       mesh = rest.reduce(
-        (current: KernelMesh, child: CadSolidSpec) => evaluateBoolean(current, evaluateNode(child), 'difference'),
-        evaluateNode(first),
+        (current: KernelMesh, child: CadSolidSpec, index) =>
+          evaluateBoolean(current, evaluateNode(child, `${path}.children[${index + 1}]`), 'difference'),
+        evaluateNode(first, `${path}.children[0]`),
       )
       break
     }
     case 'intersection': {
       const [first, ...rest] = spec.children
-      if (!first) throw new Error('intersection needs a base solid.')
+      if (!first) throw new CadSpecError(`${path}.children`, 'intersection needs a base solid.')
       mesh = rest.reduce(
-        (current: KernelMesh, child: CadSolidSpec) => evaluateBoolean(current, evaluateNode(child), 'intersection'),
-        evaluateNode(first),
+        (current: KernelMesh, child: CadSolidSpec, index) =>
+          evaluateBoolean(current, evaluateNode(child, `${path}.children[${index + 1}]`), 'intersection'),
+        evaluateNode(first, `${path}.children[0]`),
       )
       break
     }
     case 'intersect_profiles':
-      mesh = intersectProfilesMesh(spec.sideProfile, spec.topProfile, spec.depthMargin)
+      mesh = intersectProfilesMesh(spec, path)
       break
     case 'mirror': {
-      const child = evaluateNode(spec.child)
+      const child = evaluateNode(spec.child, `${path}.child`)
       const axis = spec.axis === 'x' ? 0 : spec.axis === 'y' ? 1 : 2
       const positions = child.positions.map((value, index) => (index % 3 === axis ? -value : value))
       const indices = [...child.indices]
@@ -492,7 +605,7 @@ const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
       break
     }
     case 'linearArray': {
-      const child = evaluateNode(spec.child)
+      const child = evaluateNode(spec.child, `${path}.child`)
       mesh = mergeMeshes(
         Array.from({ length: spec.count }, (_, index) =>
           applyTransforms(child, { op: 'box', size: [1, 1, 1], translate: scale(spec.offset, index) }),
@@ -501,7 +614,7 @@ const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
       break
     }
     case 'polarArray': {
-      const child = evaluateNode(spec.child)
+      const child = evaluateNode(spec.child, `${path}.child`)
       mesh = mergeMeshes(
         Array.from({ length: spec.count }, (_, index) => {
           const angle = (index / spec.count) * Math.PI * 2
@@ -519,11 +632,34 @@ const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
 }
 
 export const evaluateCadSolidSpec = (input: unknown): KernelMesh => {
-  const spec = CadSolidSpecSchema.parse(input)
-  const mesh = evaluateNode(spec)
-  if (mesh.positions.length === 0) {
-    throw new Error('CAD solid spec produced an empty mesh.')
+  const parsed = CadSolidSpecSchema.safeParse(input)
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]
+    const path = issue ? ['spec', ...issue.path].join('.') : 'spec'
+    throw new CadSpecError(path, issue?.message ?? 'invalid solid spec')
   }
+  const mesh = evaluateNode(parsed.data, 'spec')
+  if (mesh.positions.length === 0) {
+    throw new CadSpecError('spec', 'CAD solid spec produced an empty mesh.')
+  }
+  return mesh
+}
+
+export const evaluateCadSolidSpecCached = (input: unknown): KernelMesh => {
+  const parsed = CadSolidSpecSchema.safeParse(input)
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]
+    const path = issue ? ['spec', ...issue.path].join('.') : 'spec'
+    throw new CadSpecError(path, issue?.message ?? 'invalid solid spec')
+  }
+  const key = hashCadSolidSpec(parsed.data)
+  const cached = meshCache.get(key)
+  if (cached) return cached
+  const mesh = evaluateNode(parsed.data, 'spec')
+  if (mesh.positions.length === 0) {
+    throw new CadSpecError('spec', 'CAD solid spec produced an empty mesh.')
+  }
+  meshCache.set(key, mesh)
   return mesh
 }
 

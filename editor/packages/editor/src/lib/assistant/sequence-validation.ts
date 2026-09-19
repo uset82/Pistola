@@ -49,6 +49,7 @@ const nodeCreatingActionTypes = new Set<AssistantAction['type']>([
   'extrude_cad_body_face',
   'shell_cad_body',
   'build_cad_solid',
+  'update_cad_solid',
 ])
 
 const implicitTargetDriftActionTypes = new Set<AssistantAction['type']>([
@@ -150,6 +151,7 @@ const collectReferencedIds = (action: AssistantAction): string[] => {
     case 'extrude_cad_body_face':
     case 'shell_cad_body':
     case 'export_cad_body_step':
+    case 'update_cad_solid':
       appendId(ids, action.bodyId)
       break
     case 'apply_cad_boolean':
@@ -222,6 +224,7 @@ const actionUsesImplicitTarget = (action: AssistantAction) => {
     case 'extrude_cad_body_face':
     case 'shell_cad_body':
     case 'export_cad_body_step':
+    case 'update_cad_solid':
       return !action.bodyId
     case 'apply_cad_boolean':
       return !action.targetBodyId || !action.toolBodyId

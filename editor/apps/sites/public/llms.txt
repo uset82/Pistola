@@ -1,8 +1,7 @@
 # Pistola agent manual
 
 Use window.pistola on /workspace after data-pistola-agent=ready.
-IDE agents own planning. Loop: taskPlan.create() → inspect() → taskPlan.updateStep() → taskPlan.runStep() → inspect()/screenshot() → taskPlan.complete().
-Never relay an IDE request through the Pistola Assistant, pistola_chat, pistola_plan, /api/assistant/plan, or /api/assistant/agent/step.
+Loop: manual() → inspect() → validate() → run() → waitForIdle() → screenshot().
 Create objects with $pistola-studio. Prefer build_cad_solid on hosted mocks.
 
 - reset_workspace_selection: Clear all active node, zone, or element selections across the workspace
@@ -76,6 +75,7 @@ Create objects with $pistola-studio. Prefer build_cad_solid on hosted mocks.
 - run_cad_prompt: Run a natural language prompt against the CAD reasoning pipeline
 - generate_mac_part: Invoke Multi-Agent-CAD (MAC) generation for complex mechanical solid geometry
 - build_cad_solid: Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)
+- update_cad_solid: Update an existing CAD solid in place without changing its id
 - create_default_cad_sketch: Create a new default 2D CAD sketch centered on the workplane
 - extrude_cad_sketch: Extrude a closed 2D sketch profile into a 3D solid body
 - revolve_cad_sketch: Revolve a 2D sketch profile around an axis to create a solid of revolution

@@ -138,17 +138,53 @@ export function calculatePolygonPerimeter(points: Array<[number, number]>): numb
   return perimeter
 }
 
+const transformBoundsThroughParents = (node: AnyNode, bounds: NodeBounds): NodeBounds => {
+  let min = [...bounds.min] as [number, number, number]
+  let max = [...bounds.max] as [number, number, number]
+  let parentId = 'parentId' in node ? node.parentId : null
+  const nodes = useScene.getState().nodes
+  while (parentId) {
+    const parent = nodes[parentId as AnyNodeId]
+    if (!parent) break
+    const position = 'position' in parent && Array.isArray(parent.position) ? parent.position : [0, 0, 0]
+    const scale = 'scale' in parent && Array.isArray(parent.scale) ? parent.scale : [1, 1, 1]
+    min = [position[0] + min[0] * scale[0], position[1] + min[1] * scale[1], position[2] + min[2] * scale[2]]
+    max = [position[0] + max[0] * scale[0], position[1] + max[1] * scale[1], position[2] + max[2] * scale[2]]
+    parentId = 'parentId' in parent ? parent.parentId : null
+  }
+  const nextMin: [number, number, number] = [
+    Math.min(min[0], max[0]),
+    Math.min(min[1], max[1]),
+    Math.min(min[2], max[2]),
+  ]
+  const nextMax: [number, number, number] = [
+    Math.max(min[0], max[0]),
+    Math.max(min[1], max[1]),
+    Math.max(min[2], max[2]),
+  ]
+  return {
+    min: nextMin,
+    max: nextMax,
+    size: [nextMax[0] - nextMin[0], nextMax[1] - nextMin[1], nextMax[2] - nextMin[2]],
+    center: [
+      (nextMin[0] + nextMax[0]) / 2,
+      (nextMin[1] + nextMax[1]) / 2,
+      (nextMin[2] + nextMax[2]) / 2,
+    ],
+  }
+}
+
 export function getNodeBounds(node: AnyNode): NodeBounds | null {
   if (node.type === 'item') {
     const item = node as ItemNode
     const pos = item.position ?? [0, 0, 0]
     const [w, h, d] = getScaledDimensions(item)
-    return {
+    return transformBoundsThroughParents(node, {
       min: [pos[0] - w / 2, pos[1], pos[2] - d / 2],
       max: [pos[0] + w / 2, pos[1] + h, pos[2] + d / 2],
       size: [w, h, d],
       center: [pos[0], pos[1] + h / 2, pos[2]],
-    }
+    })
   }
 
   if (node.type === 'wall') {
@@ -171,41 +207,42 @@ export function getNodeBounds(node: AnyNode): NodeBounds | null {
     const body = node as CadBodyNode
     const position = body.position ?? [0, 0, 0]
     const metadata = (body.metadata ?? {}) as {
-      bbox?: { min?: [number, number, number]; max?: [number, number, number] }
+      bbox?:
+        | { min?: [number, number, number]; max?: [number, number, number] }
+        | [[number, number, number], [number, number, number]]
     }
-    const bbox = metadata.bbox
-    if (
-      Array.isArray(bbox?.min) &&
-      bbox.min.length === 3 &&
-      Array.isArray(bbox?.max) &&
-      bbox.max.length === 3
-    ) {
+    const raw = metadata.bbox
+    const objectBox = raw && !Array.isArray(raw) ? raw : null
+    const tupleBox = Array.isArray(raw) ? raw : null
+    const minSrc = objectBox?.min ?? tupleBox?.[0]
+    const maxSrc = objectBox?.max ?? tupleBox?.[1]
+    if (Array.isArray(minSrc) && minSrc.length === 3 && Array.isArray(maxSrc) && maxSrc.length === 3) {
       const min: [number, number, number] = [
-        bbox.min[0] + position[0],
-        bbox.min[1] + position[1],
-        bbox.min[2] + position[2],
+        minSrc[0] + position[0],
+        minSrc[1] + position[1],
+        minSrc[2] + position[2],
       ]
       const max: [number, number, number] = [
-        bbox.max[0] + position[0],
-        bbox.max[1] + position[1],
-        bbox.max[2] + position[2],
+        maxSrc[0] + position[0],
+        maxSrc[1] + position[1],
+        maxSrc[2] + position[2],
       ]
-      return {
+      return transformBoundsThroughParents(node, {
         min,
         max,
         size: [max[0] - min[0], max[1] - min[1], max[2] - min[2]],
         center: [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2],
-      }
+      })
     }
 
     if (body.preview?.primitive === 'box') {
       const [width, height, depth] = body.preview.dimensions
-      return {
+      return transformBoundsThroughParents(node, {
         min: [position[0] - width / 2, position[1], position[2] - depth / 2],
         max: [position[0] + width / 2, position[1] + height, position[2] + depth / 2],
         size: [width, height, depth],
         center: [position[0], position[1] + height / 2, position[2]],
-      }
+      })
     }
   }
 

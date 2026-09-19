@@ -12,7 +12,7 @@ import {
 import { useViewer } from '@pascal-app/viewer'
 import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
-import { evaluateCadSolidSpec } from '../cad/local-kernel'
+import { CadSpecError, evaluateCadSolidSpecCached } from '../cad/local-kernel'
 import { CadSolidSpecSchema } from '../cad/solid-spec'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { cadHelperUnavailableMessage } from '../../store/use-cad'
@@ -634,8 +634,17 @@ const getValidationError = (action: AssistantAction) => {
       const specResult = CadSolidSpecSchema.safeParse(action.spec)
       if (!specResult.success) {
         return specResult.error.issues
-          .map((issue) => `${issue.path.join('.') || 'spec'}: ${issue.message}`)
+          .map((issue) => `spec${issue.path.length ? `.${issue.path.join('.')}` : ''}: ${issue.message}`)
           .join('; ')
+      }
+      try {
+        evaluateCadSolidSpecCached(specResult.data)
+      } catch (error) {
+        return error instanceof CadSpecError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'CAD solid spec failed dry-run.'
       }
       const level = useViewer.getState().selection.levelId
       const siteExists = useScene
@@ -644,6 +653,27 @@ const getValidationError = (action: AssistantAction) => {
       return level || siteExists || resolveCadSpaceParentId()
         ? null
         : 'Create or select a site or level before creating CAD geometry.'
+    }
+    case 'update_cad_solid': {
+      if (isForwardRef(action.bodyId)) return null
+      const node = useScene.getState().nodes[action.bodyId as AnyNodeId]
+      if (!node || node.type !== 'cad-body') {
+        return `CAD body "${action.bodyId}" was not found.`
+      }
+      if (action.spec) {
+        const specResult = CadSolidSpecSchema.safeParse(action.spec)
+        if (!specResult.success) {
+          return specResult.error.issues
+            .map((issue) => `spec${issue.path.length ? `.${issue.path.join('.')}` : ''}: ${issue.message}`)
+            .join('; ')
+        }
+        try {
+          evaluateCadSolidSpecCached(specResult.data)
+        } catch (error) {
+          return error instanceof Error ? error.message : 'CAD solid spec failed dry-run.'
+        }
+      }
+      return null
     }
     case 'extrude_cad_sketch':
     case 'revolve_cad_sketch': {
@@ -807,9 +837,26 @@ export const validateAssistantPlan = (
       }
     }
 
-    const actions = Array.isArray(actionsInput)
-      ? actionsInput.map((action) => AssistantActionSchema.parse(action))
-      : []
+    const actions: AssistantAction[] = []
+    const actionIndexes: number[] = []
+    const parseErrors: string[] = []
+    if (Array.isArray(actionsInput)) {
+      for (let index = 0; index < actionsInput.length; index += 1) {
+        const parsed = AssistantActionSchema.safeParse(actionsInput[index])
+        if (!parsed.success) {
+          const issue = parsed.error.issues[0]
+          const path = issue?.path?.length ? issue.path.join('.') : 'action'
+          const type =
+            actionsInput[index] && typeof actionsInput[index] === 'object' && 'type' in actionsInput[index]
+              ? String((actionsInput[index] as { type?: unknown }).type)
+              : 'unknown'
+          parseErrors.push(`Action ${index + 1}: ${path}: ${issue?.message ?? 'invalid action'} (${type})`)
+          continue
+        }
+        actions.push(parsed.data)
+        actionIndexes.push(index)
+      }
+    }
 
     if (actions.length > maxActions) {
       return {
@@ -824,12 +871,16 @@ export const validateAssistantPlan = (
       }
     }
 
-    const errors = actions
-      .map((action, index) => {
-        const issue = getValidationError(action)
-        return issue ? `Action ${index + 1}: ${issue}` : null
-      })
-      .filter((issue): issue is string => Boolean(issue))
+    const errors = [
+      ...parseErrors,
+      ...actions
+        .map((action, parsedIndex) => {
+          const issue = getValidationError(action)
+          const index = actionIndexes[parsedIndex] ?? parsedIndex
+          return issue ? `Action ${index + 1}: ${issue}` : null
+        })
+        .filter((issue): issue is string => Boolean(issue)),
+    ]
     const sequenceValidation = validateAssistantActionSequence(actions)
     const sequenceErrors = sequenceValidation.issues.map((issue) => issue.message)
 
@@ -1181,11 +1232,12 @@ const executeAction = async (
       useEditor.getState().setWorkspace('cad')
       const parentId = action.parentId ?? resolveCadSpaceParentId()
       if (!parentId) throw new Error('CAD space is unavailable for local solids.')
-      const mesh = evaluateCadSolidSpec(action.spec)
+      const mesh = evaluateCadSolidSpecCached(action.spec)
       const body = CadBodyNodeSchema.parse({
         name: action.name ?? 'CAD Solid',
         parentId,
         position: action.position ?? [0, 0, 0],
+        rotation: action.rotation ?? [0, 0, 0],
         regenStatus: 'idle',
         preview: {
           primitive: 'mesh',
@@ -1202,12 +1254,61 @@ const executeAction = async (
         metadata: {
           cadEngine: 'local-kernel',
           volume: mesh.volume,
-          bbox: mesh.bbox,
+          bbox: { min: mesh.bbox[0], max: mesh.bbox[1] },
+          partId: action.partId ?? null,
+          role: action.role ?? null,
         },
       })
       useScene.getState().createNode(body, parentId as AnyNodeId)
       useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })
       return { bodyIds: [body.id], nodeId: body.id }
+    }
+    case 'update_cad_solid': {
+      const node = useScene.getState().nodes[action.bodyId as AnyNodeId]
+      if (!node || node.type !== 'cad-body') {
+        throw new Error(`CAD body "${action.bodyId}" was not found.`)
+      }
+      const preview = node.preview
+      const currentSpec =
+        action.spec ??
+        (preview && preview.primitive === 'mesh' ? preview.spec : undefined)
+      if (!currentSpec || typeof currentSpec !== 'object') {
+        throw new Error('update_cad_solid needs a spec when the body has no stored mesh spec.')
+      }
+      const mesh = evaluateCadSolidSpecCached(currentSpec)
+      const color =
+        action.color ?? (preview && 'color' in preview ? preview.color : '#60a5fa')
+      const nextPosition = action.position ?? node.position
+      const nextRotation = action.rotation ?? node.rotation
+      useScene.setState((state) => ({
+        nodes: {
+          ...state.nodes,
+          [node.id]: {
+            ...node,
+            position: nextPosition,
+            rotation: nextRotation,
+            transform: {
+              ...node.transform,
+              position: nextPosition,
+              rotation: nextRotation,
+            },
+            preview: {
+              primitive: 'mesh',
+              spec: currentSpec,
+              positions: mesh.positions,
+              indices: mesh.indices,
+              color,
+            },
+            metadata: {
+              ...(typeof node.metadata === 'object' && node.metadata ? node.metadata : {}),
+              cadEngine: 'local-kernel',
+              volume: mesh.volume,
+              bbox: { min: mesh.bbox[0], max: mesh.bbox[1] },
+            },
+          },
+        },
+      }))
+      return { bodyIds: [node.id], nodeId: node.id }
     }
     case 'place_cad_body_in_architecture': {
       const nodeId = placeCadBodyInArchitecture(action.bodyId, action.levelId)

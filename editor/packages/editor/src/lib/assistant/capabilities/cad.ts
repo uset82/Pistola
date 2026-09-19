@@ -133,8 +133,11 @@ export const buildCadSolidCapability = defineCapability({
     name: z.string().optional(),
     spec: z.record(z.string(), z.unknown()),
     position: AssistantPoint3Schema.optional(),
+    rotation: AssistantPoint3Schema.optional(),
     color: z.string().optional(),
     parentId: z.string().optional(),
+    partId: z.string().optional(),
+    role: z.string().optional(),
   }),
   safeImmediate: false,
   describe: 'Build a real local CAD solid from a declarative spec (primitives, extrude, revolve, booleans)',
@@ -142,6 +145,26 @@ export const buildCadSolidCapability = defineCapability({
   aliases: {
     en: ['build CAD solid', 'local solid'],
     es: ['construir solido CAD', 'solido local'],
+  },
+})
+
+export const updateCadSolidCapability = defineCapability({
+  type: 'update_cad_solid',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('update_cad_solid'),
+    bodyId: z.string().min(1),
+    spec: z.record(z.string(), z.unknown()).optional(),
+    position: AssistantPoint3Schema.optional(),
+    rotation: AssistantPoint3Schema.optional(),
+    color: z.string().optional(),
+  }),
+  safeImmediate: false,
+  describe: 'Update an existing CAD solid in place without changing its id',
+  examples: ['move the hull 0.1m up', 'replace the shade spec'],
+  aliases: {
+    en: ['update CAD solid', 'edit solid'],
+    es: ['actualizar solido CAD', 'editar solido'],
   },
 })
 
@@ -414,6 +437,7 @@ export const cadCapabilities = [
   runCadPromptCapability,
   generateMacPartCapability,
   buildCadSolidCapability,
+  updateCadSolidCapability,
   createDefaultCadSketchCapability,
   extrudeCadSketchCapability,
   revolveCadSketchCapability,

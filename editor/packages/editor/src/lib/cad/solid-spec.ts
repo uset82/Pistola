@@ -73,8 +73,11 @@ export type CadSolidSpec =
     }
   | {
       op: 'intersect_profiles'
-      sideProfile: [number, number][]
-      topProfile: [number, number][]
+      profileXY?: [number, number][]
+      profileZY?: [number, number][]
+      profileXZ?: [number, number][]
+      sideProfile?: [number, number][]
+      topProfile?: [number, number][]
       depthMargin?: number
       translate?: [number, number, number]
       rotate?: [number, number, number]
@@ -134,13 +137,28 @@ export const CadSolidSpecSchema: z.ZodType<CadSolidSpec> = z.lazy(() =>
     z.object({ op: z.literal('union'), children: z.array(CadSolidSpecSchema).min(1), ...transforms }),
     z.object({ op: z.literal('difference'), children: z.array(CadSolidSpecSchema).min(2), ...transforms }),
     z.object({ op: z.literal('intersection'), children: z.array(CadSolidSpecSchema).min(2), ...transforms }),
-    z.object({
-      op: z.literal('intersect_profiles'),
-      sideProfile: CadPolygonSchema,
-      topProfile: CadPolygonSchema,
-      depthMargin: z.number().positive().optional(),
-      ...transforms,
-    }),
+    z
+      .object({
+        op: z.literal('intersect_profiles'),
+        profileXY: CadPolygonSchema.optional(),
+        profileZY: CadPolygonSchema.optional(),
+        profileXZ: CadPolygonSchema.optional(),
+        sideProfile: CadPolygonSchema.optional(),
+        topProfile: CadPolygonSchema.optional(),
+        depthMargin: z.number().positive().optional(),
+        ...transforms,
+      })
+      .superRefine((value, ctx) => {
+        const xy = value.profileXY ?? value.sideProfile
+        const xz = value.profileXZ ?? value.topProfile
+        const zy = value.profileZY
+        if ([xy, xz, zy].filter(Boolean).length < 2) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'intersect_profiles needs at least two of profileXY, profileZY, profileXZ (sideProfile/topProfile stay as aliases)',
+          })
+        }
+      }),
     z.object({
       op: z.literal('mirror'),
       axis: z.enum(['x', 'y', 'z']).default('x'),

@@ -6,6 +6,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const writeManual = async () => {
   const { getAllCapabilities } = await import('../packages/editor/src/lib/assistant/capabilities/registry.ts')
+  const { PISTOLA_FRAME, ORTHO_VIEWS } = await import('../packages/editor/src/lib/cad/views.ts')
+  const { MANUAL_OP_EXAMPLES } = await import('../packages/editor/src/lib/cad/manual-examples.ts')
   const capabilities = getAllCapabilities().map((capability) => ({
     type: capability.type,
     domain: capability.domain,
@@ -15,11 +17,15 @@ const writeManual = async () => {
     destructive: Boolean(capability.destructive),
   }))
   const manual = {
+    frame: PISTOLA_FRAME,
+    views: ORTHO_VIEWS,
     workflow: {
       alwaysPassExplicitIds: true,
       useForwardRefs: '$ref_<name> for new nodes in the same batch',
       maxActionsPerBatch: 25,
+      coordinates: 'meters, Y up, floor y = 0, item position is bottom-center',
     },
+    examples: MANUAL_OP_EXAMPLES,
     capabilities,
   }
   const llms = [

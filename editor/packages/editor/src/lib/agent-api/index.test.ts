@@ -204,6 +204,54 @@ test('taskPlan.create keeps an unfinished plan unless replace is true', async ()
   assert.equal(replaced.source, 'qoder')
 })
 
+test('manual sections and runRecipe are allowlisted', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  const frame = (await api.invoke('manual', { section: 'frame' })) as { value: { up: string } }
+  assert.equal(frame.value.up, '+Y')
+  const examples = (await api.manual({ section: 'examples' })) as { value: Record<string, { op: string }> }
+  assert.equal(examples.value.box.op, 'box')
+  await assert.rejects(() => api.runRecipe('missing-recipe'), /not found/)
+})
+
+test('update_cad_solid keeps the body id', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  const created = await api.run([
+    {
+      type: 'build_cad_solid',
+      name: 'Keep me',
+      spec: { op: 'box', size: [1, 0.4, 0.6] },
+      position: [0, 0, 0],
+      rotation: [0, 0.2, 0],
+      partId: 'hull',
+      role: 'hull',
+    },
+  ])
+  const bodyId = created.createdNodeIds[0] ?? created.bodyIds?.[0]
+  assert.ok(bodyId)
+  const updated = await api.run([
+    {
+      type: 'update_cad_solid',
+      bodyId,
+      spec: { op: 'box', size: [1.2, 0.4, 0.6] },
+      position: [0, 0.1, 0],
+    },
+  ])
+  assert.equal(updated.ok, true)
+  assert.equal(updated.createdNodeIds[0] ?? updated.bodyIds?.[0] ?? bodyId, bodyId)
+  const node = useScene.getState().nodes[bodyId as never] as {
+    id: string
+    preview?: { spec?: { size?: number[] } }
+    transform?: { position?: number[] }
+    position?: number[]
+  }
+  assert.equal(node?.id, bodyId)
+  assert.equal(node.preview?.spec?.size?.[0], 1.2)
+  const pos = node.transform?.position ?? node.position
+  assert.deepEqual(pos, [0, 0.1, 0])
+})
+
 test('validate reports the real action index and solid-spec path', async () => {
   reset()
   const api = createPistolaAgentApi()

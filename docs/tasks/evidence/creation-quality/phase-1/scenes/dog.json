@@ -1,0 +1,1112 @@
+{
+  "prompt": {
+    "slug": "dog",
+    "prompt": "A blocky standing dog: body, head, four legs, tail, and two ears.",
+    "overall_m": [
+      0.66,
+      0.5,
+      0.22
+    ],
+    "anchor": "floor",
+    "parts": [
+      "body",
+      "head",
+      "leg-fl",
+      "leg-fr",
+      "leg-rl",
+      "leg-rr",
+      "tail",
+      "ear-l",
+      "ear-r"
+    ],
+    "relations": [
+      {
+        "a": "leg-fl",
+        "rel": "on_floor"
+      },
+      {
+        "a": "body",
+        "rel": "on_top_of",
+        "b": "leg-fl"
+      },
+      {
+        "a": "head",
+        "rel": "touches",
+        "b": "body"
+      }
+    ],
+    "set": "dev"
+  },
+  "gold": {
+    "slug": "dog",
+    "partCount": 9
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "body",
+        "role": "body",
+        "assetId": "primitive-box",
+        "color": "#92400e",
+        "parentId": null,
+        "position": [
+          0,
+          0.22,
+          0
+        ],
+        "scale": [
+          0.4,
+          0.18,
+          0.18
+        ],
+        "localPosition": [
+          0,
+          0.22,
+          0
+        ],
+        "localScale": [
+          0.4,
+          0.18,
+          0.18
+        ],
+        "box": {
+          "min": [
+            -0.2,
+            0.22,
+            -0.09
+          ],
+          "max": [
+            0.2,
+            0.4,
+            0.09
+          ],
+          "size": [
+            0.4,
+            0.18,
+            0.18
+          ],
+          "center": [
+            0,
+            0.31,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "head",
+        "role": "head",
+        "assetId": "primitive-box",
+        "color": "#b45309",
+        "parentId": null,
+        "position": [
+          0.26,
+          0.28,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.14,
+          0.14
+        ],
+        "localPosition": [
+          0.26,
+          0.28,
+          0
+        ],
+        "localScale": [
+          0.16,
+          0.14,
+          0.14
+        ],
+        "box": {
+          "min": [
+            0.18,
+            0.28,
+            -0.07
+          ],
+          "max": [
+            0.34,
+            0.42000000000000004,
+            0.07
+          ],
+          "size": [
+            0.16,
+            0.14,
+            0.14
+          ],
+          "center": [
+            0.26,
+            0.35000000000000003,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "leg-fl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.12,
+          0,
+          0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          0.12,
+          0,
+          0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.09,
+            0,
+            0.05
+          ],
+          "max": [
+            0.15,
+            0.22,
+            0.11
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            0.12,
+            0.11,
+            0.08
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "leg-fr",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.12,
+          0,
+          -0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          0.12,
+          0,
+          -0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.09,
+            0,
+            -0.11
+          ],
+          "max": [
+            0.15,
+            0.22,
+            -0.05
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            0.12,
+            0.11,
+            -0.08
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "leg-rl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          -0.12,
+          0,
+          0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          -0.12,
+          0,
+          0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.15,
+            0,
+            0.05
+          ],
+          "max": [
+            -0.09,
+            0.22,
+            0.11
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            -0.12,
+            0.11,
+            0.08
+          ]
+        }
+      },
+      {
+        "id": "item_6",
+        "type": "item",
+        "name": "leg-rr",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          -0.12,
+          0,
+          -0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          -0.12,
+          0,
+          -0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.15,
+            0,
+            -0.11
+          ],
+          "max": [
+            -0.09,
+            0.22,
+            -0.05
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            -0.12,
+            0.11,
+            -0.08
+          ]
+        }
+      },
+      {
+        "id": "item_7",
+        "type": "item",
+        "name": "tail",
+        "role": "tail",
+        "assetId": "primitive-box",
+        "color": "#92400e",
+        "parentId": null,
+        "position": [
+          -0.26,
+          0.3,
+          0
+        ],
+        "scale": [
+          0.14,
+          0.05,
+          0.05
+        ],
+        "localPosition": [
+          -0.26,
+          0.3,
+          0
+        ],
+        "localScale": [
+          0.14,
+          0.05,
+          0.05
+        ],
+        "box": {
+          "min": [
+            -0.33,
+            0.3,
+            -0.025
+          ],
+          "max": [
+            -0.19,
+            0.35,
+            0.025
+          ],
+          "size": [
+            0.14,
+            0.05,
+            0.05
+          ],
+          "center": [
+            -0.26,
+            0.325,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_8",
+        "type": "item",
+        "name": "ear-l",
+        "role": "ear",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.24,
+          0.42,
+          0.05
+        ],
+        "scale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "localPosition": [
+          0.24,
+          0.42,
+          0.05
+        ],
+        "localScale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "box": {
+          "min": [
+            0.22,
+            0.42,
+            0.035
+          ],
+          "max": [
+            0.26,
+            0.5,
+            0.065
+          ],
+          "size": [
+            0.04,
+            0.08,
+            0.03
+          ],
+          "center": [
+            0.24,
+            0.45999999999999996,
+            0.05
+          ]
+        }
+      },
+      {
+        "id": "item_9",
+        "type": "item",
+        "name": "ear-r",
+        "role": "ear",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.24,
+          0.42,
+          -0.05
+        ],
+        "scale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "localPosition": [
+          0.24,
+          0.42,
+          -0.05
+        ],
+        "localScale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "box": {
+          "min": [
+            0.22,
+            0.42,
+            -0.065
+          ],
+          "max": [
+            0.26,
+            0.5,
+            -0.035
+          ],
+          "size": [
+            0.04,
+            0.08,
+            0.03
+          ],
+          "center": [
+            0.24,
+            0.45999999999999996,
+            -0.05
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "body",
+        "role": "body",
+        "assetId": "primitive-box",
+        "color": "#92400e",
+        "parentId": null,
+        "position": [
+          0,
+          0.22,
+          0
+        ],
+        "scale": [
+          0.4,
+          0.18,
+          0.18
+        ],
+        "localPosition": [
+          0,
+          0.22,
+          0
+        ],
+        "localScale": [
+          0.4,
+          0.18,
+          0.18
+        ],
+        "box": {
+          "min": [
+            -0.2,
+            0.22,
+            -0.09
+          ],
+          "max": [
+            0.2,
+            0.4,
+            0.09
+          ],
+          "size": [
+            0.4,
+            0.18,
+            0.18
+          ],
+          "center": [
+            0,
+            0.31,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "head",
+        "role": "head",
+        "assetId": "primitive-box",
+        "color": "#b45309",
+        "parentId": null,
+        "position": [
+          0.26,
+          0.28,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.14,
+          0.14
+        ],
+        "localPosition": [
+          0.26,
+          0.28,
+          0
+        ],
+        "localScale": [
+          0.16,
+          0.14,
+          0.14
+        ],
+        "box": {
+          "min": [
+            0.18,
+            0.28,
+            -0.07
+          ],
+          "max": [
+            0.34,
+            0.42000000000000004,
+            0.07
+          ],
+          "size": [
+            0.16,
+            0.14,
+            0.14
+          ],
+          "center": [
+            0.26,
+            0.35000000000000003,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "leg-fl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.12,
+          0,
+          0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          0.12,
+          0,
+          0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.09,
+            0,
+            0.05
+          ],
+          "max": [
+            0.15,
+            0.22,
+            0.11
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            0.12,
+            0.11,
+            0.08
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "leg-fr",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.12,
+          0,
+          -0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          0.12,
+          0,
+          -0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            0.09,
+            0,
+            -0.11
+          ],
+          "max": [
+            0.15,
+            0.22,
+            -0.05
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            0.12,
+            0.11,
+            -0.08
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "leg-rl",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          -0.12,
+          0,
+          0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          -0.12,
+          0,
+          0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.15,
+            0,
+            0.05
+          ],
+          "max": [
+            -0.09,
+            0.22,
+            0.11
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            -0.12,
+            0.11,
+            0.08
+          ]
+        }
+      },
+      {
+        "id": "item_6",
+        "type": "item",
+        "name": "leg-rr",
+        "role": "leg",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          -0.12,
+          0,
+          -0.08
+        ],
+        "scale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "localPosition": [
+          -0.12,
+          0,
+          -0.08
+        ],
+        "localScale": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "box": {
+          "min": [
+            -0.15,
+            0,
+            -0.11
+          ],
+          "max": [
+            -0.09,
+            0.22,
+            -0.05
+          ],
+          "size": [
+            0.06,
+            0.22,
+            0.06
+          ],
+          "center": [
+            -0.12,
+            0.11,
+            -0.08
+          ]
+        }
+      },
+      {
+        "id": "item_7",
+        "type": "item",
+        "name": "tail",
+        "role": "tail",
+        "assetId": "primitive-box",
+        "color": "#92400e",
+        "parentId": null,
+        "position": [
+          -0.26,
+          0.3,
+          0
+        ],
+        "scale": [
+          0.14,
+          0.05,
+          0.05
+        ],
+        "localPosition": [
+          -0.26,
+          0.3,
+          0
+        ],
+        "localScale": [
+          0.14,
+          0.05,
+          0.05
+        ],
+        "box": {
+          "min": [
+            -0.33,
+            0.3,
+            -0.025
+          ],
+          "max": [
+            -0.19,
+            0.35,
+            0.025
+          ],
+          "size": [
+            0.14,
+            0.05,
+            0.05
+          ],
+          "center": [
+            -0.26,
+            0.325,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_8",
+        "type": "item",
+        "name": "ear-l",
+        "role": "ear",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.24,
+          0.42,
+          0.05
+        ],
+        "scale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "localPosition": [
+          0.24,
+          0.42,
+          0.05
+        ],
+        "localScale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "box": {
+          "min": [
+            0.22,
+            0.42,
+            0.035
+          ],
+          "max": [
+            0.26,
+            0.5,
+            0.065
+          ],
+          "size": [
+            0.04,
+            0.08,
+            0.03
+          ],
+          "center": [
+            0.24,
+            0.45999999999999996,
+            0.05
+          ]
+        }
+      },
+      {
+        "id": "item_9",
+        "type": "item",
+        "name": "ear-r",
+        "role": "ear",
+        "assetId": "primitive-box",
+        "color": "#78350f",
+        "parentId": null,
+        "position": [
+          0.24,
+          0.42,
+          -0.05
+        ],
+        "scale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "localPosition": [
+          0.24,
+          0.42,
+          -0.05
+        ],
+        "localScale": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "box": {
+          "min": [
+            0.22,
+            0.42,
+            -0.065
+          ],
+          "max": [
+            0.26,
+            0.5,
+            -0.035
+          ],
+          "size": [
+            0.04,
+            0.08,
+            0.03
+          ],
+          "center": [
+            0.24,
+            0.45999999999999996,
+            -0.05
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "dog",
+    "set": "dev",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0.015151515151515164,
+        0,
+        0
+      ],
+      "mean": 0.005050505050505054
+    },
+    "perPartDimensionError": [
+      {
+        "name": "body",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "head",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-fl",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-fr",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-rl",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "leg-rr",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "tail",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "ear-l",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "ear-r",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 9,
+      "found": 9,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 2,
+    "actualOverall_m": [
+      0.67,
+      0.5,
+      0.22
+    ],
+    "partCount": 9
+  }
+}

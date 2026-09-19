@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { evaluateCadSolidSpec, validateCadSolidSpec } from './local-kernel'
+import { countOpenEdges, evaluateCadSolidSpec, validateCadSolidSpec } from './local-kernel'
+import { ASYMMETRIC_L_SPEC, MANUAL_OP_EXAMPLES } from './manual-examples'
+import { projectBoxToView } from './views'
 
 test('local kernel volumes match analytic boxes, cylinders, extrudes, and differences', () => {
   const box = evaluateCadSolidSpec({ op: 'box', size: [2, 3, 4] })
@@ -115,4 +117,57 @@ test('build_cad_solid intersect_profiles generates a smooth 3D hull from orthogo
   // Check that X dimension matches the length of the profiles (-2 to 2)
   const [min, max] = hull.bbox
   assert.ok(Math.abs((max[0] - min[0]) - 4.0) < 0.1, `Length in X should match profile length (~4m), got ${max[0] - min[0]}`)
+
+  const aliased = evaluateCadSolidSpec({
+    op: 'intersect_profiles',
+    profileXY: sideProfile,
+    profileXZ: topProfile,
+  })
+  assert.ok(Math.abs(aliased.volume - hull.volume) < 0.05)
+})
+
+test('revolve closes and reports 0 open edges', () => {
+  const mesh = evaluateCadSolidSpec({
+    op: 'revolve',
+    profile: [
+      [0.2, 0],
+      [1, 0],
+      [1, 2],
+      [0.2, 2],
+    ],
+    angle: 360,
+  })
+  assert.equal(countOpenEdges(mesh), 0)
+})
+
+test('kernel errors carry the spec path', () => {
+  assert.throws(
+    () =>
+      evaluateCadSolidSpec({
+        op: 'extrude',
+        polygon: [
+          [0, 0],
+          [1, 1],
+          [1, 0],
+          [0, 1],
+        ],
+        height: 0.2,
+      }),
+    /spec\.polygon/,
+  )
+})
+
+test('every manual example executes', () => {
+  for (const [name, spec] of Object.entries(MANUAL_OP_EXAMPLES)) {
+    const mesh = evaluateCadSolidSpec(spec)
+    assert.ok(mesh.positions.length > 0, name)
+  }
+})
+
+test('asymmetric L-shape locks the view axes', () => {
+  const mesh = evaluateCadSolidSpec(ASYMMETRIC_L_SPEC)
+  const front = projectBoxToView(mesh.bbox[0], mesh.bbox[1], 'front')
+  const side = projectBoxToView(mesh.bbox[0], mesh.bbox[1], 'side')
+  assert.ok(front.size[0] > side.size[0] + 0.2, `front u ${front.size[0]} should beat side u ${side.size[0]}`)
+  assert.ok(Math.abs(front.size[1] - side.size[1]) < 0.05)
 })
