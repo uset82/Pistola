@@ -279,7 +279,8 @@ test('loft, hull, torus, capsule, and ellipsoid produce closed solids', () => {
 
 test('angle-based normals keep box creases and smooth a cylinder wall', () => {
   const box = evaluateCadSolidSpec({ op: 'box', size: [1, 1, 1] })
-  assert.equal(box.normals.length, box.positions.length)
+  const boxNormals = box.normals ?? []
+  assert.equal(boxNormals.length, box.positions.length)
   const top = []
   for (let i = 0; i < box.indices.length; i += 3) {
     const ia = box.indices[i] ?? 0
@@ -291,20 +292,20 @@ test('angle-based normals keep box creases and smooth a cylinder wall', () => {
     }
   }
   assert.ok(top.length > 0)
-  const topNormalY = box.normals[(top[0] ?? 0) * 3 + 1] ?? 0
+  const topNormalY = boxNormals[(top[0] ?? 0) * 3 + 1] ?? 0
   assert.ok(topNormalY > 0.95)
 
-  const corner = []
+  const corner: [number, number, number][] = []
   for (let i = 0; i < box.positions.length; i += 3) {
     const x = box.positions[i] ?? 0
     const y = box.positions[i + 1] ?? 0
     const z = box.positions[i + 2] ?? 0
     if (Math.abs(x + 0.5) < 1e-5 && Math.abs(y - 1) < 1e-5 && Math.abs(z + 0.5) < 1e-5) {
-      corner.push([box.normals[i] ?? 0, box.normals[i + 1] ?? 0, box.normals[i + 2] ?? 0])
+      corner.push([boxNormals[i] ?? 0, boxNormals[i + 1] ?? 0, boxNormals[i + 2] ?? 0])
     }
   }
   assert.ok(corner.length >= 2)
-  const a = corner[0] ?? [0, 1, 0]
+  const a: [number, number, number] = corner[0] ?? [0, 1, 0]
   const b = corner.find((normal) => Math.abs(normal[0] * a[0] + normal[1] * a[1] + normal[2] * a[2]) < 0.2)
   assert.ok(b, 'box corner should keep a sharp crease')
 
@@ -336,5 +337,5 @@ test('complexity budget rejects oversized meshes and kernel jobs evaluate on a w
   )
   const mesh = await runKernelJob({ kind: 'evaluate', spec: { op: 'box', size: [1, 1, 1] } })
   assert.ok(triangleCount(mesh) > 1)
-  assert.ok(mesh.normals.length === mesh.positions.length)
+  assert.ok((mesh.normals?.length ?? 0) === mesh.positions.length)
 })

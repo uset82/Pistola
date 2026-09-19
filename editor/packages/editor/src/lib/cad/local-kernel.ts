@@ -117,6 +117,7 @@ export const computeAngleNormals = (
   const faceNormals: Vec3[] = []
   const vertexFace = new Array<number>(vertexCount).fill(-1)
   const facesAtPosition = new Map<string, number[]>()
+  const fallbackNormal: Vec3 = [0, 1, 0]
 
   for (let t = 0; t < triCount; t += 1) {
     const ia = num(indices[t * 3])
@@ -139,11 +140,11 @@ export const computeAngleNormals = (
   const normals = new Array<number>(vertexCount * 3).fill(0)
   for (let i = 0; i < vertexCount; i += 1) {
     const ownFace = vertexFace[i] ?? -1
-    const ownNormal = ownFace >= 0 ? (faceNormals[ownFace] ?? [0, 1, 0]) : [0, 1, 0]
+    const ownNormal: Vec3 = ownFace >= 0 ? (faceNormals[ownFace] ?? fallbackNormal) : fallbackNormal
     const faces = facesAtPosition.get(quantizeKey(vertexAt(positions, i))) ?? []
     let accumulated: Vec3 = [0, 0, 0]
     for (const face of faces) {
-      const candidate = faceNormals[face] ?? [0, 1, 0]
+      const candidate: Vec3 = faceNormals[face] ?? fallbackNormal
       if (dot(ownNormal, candidate) >= creaseCos - 1e-8) {
         accumulated = add(accumulated, candidate)
       }

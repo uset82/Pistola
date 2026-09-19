@@ -52,15 +52,28 @@ export const cadMeshGeometryFromPreview = (preview?: CadBodyPreviewGeometry | nu
   }
 }
 
-export const cadBodyPbr = (node: {
+type CadBodyPbrSource = {
   roughness?: number
   metalness?: number
   opacity?: number
-  preview?: { roughness?: number; metalness?: number; opacity?: number }
-}) => {
-  const roughness = clamp01(node.roughness ?? node.preview?.roughness ?? 0.45)
-  const metalness = clamp01(node.metalness ?? node.preview?.metalness ?? 0.15)
-  const opacity = clamp01(node.opacity ?? node.preview?.opacity ?? 1)
+  preview?: unknown
+}
+
+const previewPbr = (preview: unknown) => {
+  if (!preview || typeof preview !== 'object' || Array.isArray(preview)) return {}
+  const source = preview as Record<string, unknown>
+  return {
+    roughness: typeof source.roughness === 'number' ? source.roughness : undefined,
+    metalness: typeof source.metalness === 'number' ? source.metalness : undefined,
+    opacity: typeof source.opacity === 'number' ? source.opacity : undefined,
+  }
+}
+
+export const cadBodyPbr = (node: CadBodyPbrSource) => {
+  const preview = previewPbr(node.preview)
+  const roughness = clamp01(node.roughness ?? preview.roughness ?? 0.45)
+  const metalness = clamp01(node.metalness ?? preview.metalness ?? 0.15)
+  const opacity = clamp01(node.opacity ?? preview.opacity ?? 1)
   return {
     roughness,
     metalness,

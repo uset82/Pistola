@@ -57,3 +57,8 @@ test('architecture instances reuse the source CAD mesh and per-body PBR', () => 
   assert.equal(pbr.opacity, 0.5)
   assert.equal(pbr.transparent, true)
 })
+
+test('primitive previews use the body PBR defaults without requiring mesh-only fields', () => {
+  const pbr = cadBodyPbr({ preview: { primitive: 'box', dimensions: [1, 1, 1] } })
+  assert.deepEqual(pbr, { roughness: 0.45, metalness: 0.15, opacity: 1, transparent: false })
+})
