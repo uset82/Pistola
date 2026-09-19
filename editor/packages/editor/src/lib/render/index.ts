@@ -1,3 +1,3 @@
 export { renderViews, critiqueRender, RENDER_PANEL } from './render-views'
-export { rasterizeParts, maskIou, PART_HUES } from './soft-raster'
-export { encodePng, pngDataUrl } from './png'
+export { rasterizeParts, fillPolygonMask, maskIou, PART_HUES, type RasterFrame } from './soft-raster'
+export { encodePng, decodePng, pngDataUrl, bytesFromDataUrl } from './png'

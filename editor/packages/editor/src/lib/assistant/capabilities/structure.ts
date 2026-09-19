@@ -292,6 +292,29 @@ export const createRoofCapability = defineCapability({
   },
 })
 
+export const createGuideCapability = defineCapability({
+  type: 'create_guide',
+  domain: 'structure',
+  schema: z.object({
+    type: z.literal('create_guide'),
+    name: z.string().optional(),
+    url: z.string().min(1),
+    view: z.enum(['front', 'side', 'top']),
+    position: AssistantPoint3Schema.optional(),
+    rotation: AssistantPoint3Schema.optional(),
+    scale: z.number().positive().optional(),
+    opacity: z.number().min(0).max(100).optional(),
+    levelId: z.string().optional(),
+  }),
+  safeImmediate: false,
+  describe: 'Place a vertical (front/side) or floor (top) reference guide plane behind the build',
+  examples: ['show front reference behind the hull', 'create side guide plane'],
+  aliases: {
+    en: ['create guide', 'reference plane', 'guide image'],
+    es: ['crear guia', 'plano de referencia'],
+  },
+})
+
 export const placeDoorCapability = defineCapability({
   type: 'place_door',
   domain: 'structure',
@@ -671,6 +694,7 @@ export const structureCapabilities = [
   createSlabCapability,
   createCeilingCapability,
   createRoofCapability,
+  createGuideCapability,
   placeDoorCapability,
   placeWindowCapability,
   updateDoorPropertiesCapability,

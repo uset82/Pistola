@@ -15,6 +15,10 @@ export const GuideRenderer = ({ node }: { node: GuideNode }) => {
   useRegistry(node.id, 'guide', ref)
 
   const resolvedUrl = useAssetUrl(node.url)
+  const plane =
+    node.metadata && typeof node.metadata === 'object' && 'pistolaPlane' in node.metadata
+      ? String((node.metadata as { pistolaPlane?: string }).pistolaPlane)
+      : 'top'
 
   return (
     <group
@@ -25,7 +29,13 @@ export const GuideRenderer = ({ node }: { node: GuideNode }) => {
     >
       {resolvedUrl && (
         <Suspense>
-          <GuidePlane handlers={handlers} opacity={node.opacity} scale={node.scale} url={resolvedUrl} />
+          <GuidePlane
+            handlers={handlers}
+            opacity={node.opacity}
+            plane={plane}
+            scale={node.scale}
+            url={resolvedUrl}
+          />
         </Suspense>
       )}
     </group>
@@ -36,11 +46,13 @@ const GuidePlane = ({
   url,
   scale,
   opacity,
+  plane,
   handlers,
 }: {
   url: string
   scale: number
   opacity: number
+  plane: string
   handlers: ReturnType<typeof useNodeEvents>
 }) => {
   const tex = useLoader(TextureLoader, url) as Texture
@@ -72,7 +84,9 @@ const GuidePlane = ({
     <mesh
       frustumCulled={false}
       material={material}
-      rotation={[-Math.PI / 2, 0, 0]}
+      rotation={
+        plane === 'front' ? [0, 0, 0] : plane === 'side' ? [0, Math.PI / 2, 0] : [-Math.PI / 2, 0, 0]
+      }
       {...handlers}
     >
       <planeGeometry args={[width, height]} boundingBox={null} boundingSphere={null} />

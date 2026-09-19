@@ -23,6 +23,7 @@ import {
   addCadSketchEntities,
   createBuilding,
   createCeiling,
+  createGuide,
   createLevel,
   createRoof,
   createSite,
@@ -543,7 +544,8 @@ const getValidationError = (action: AssistantAction) => {
     case 'create_zone':
     case 'create_slab':
     case 'create_ceiling':
-    case 'create_roof': {
+    case 'create_roof':
+    case 'create_guide': {
       if (!action.levelId || isForwardRef(action.levelId)) return null
       const level = useScene.getState().nodes[action.levelId as AnyNodeId]
       return level?.type === 'level' ? null : `Level "${action.levelId}" was not found.`
@@ -1131,6 +1133,8 @@ const executeAction = async (
       return { nodeId: createCeiling(action) }
     case 'create_roof':
       return { nodeId: createRoof(action) }
+    case 'create_guide':
+      return { nodeId: createGuide(action) }
     case 'place_item':
       if (!findCatalogItem(action.assetId)) {
         throw new Error(`Asset "${action.assetId}" was not found in the catalog.`)

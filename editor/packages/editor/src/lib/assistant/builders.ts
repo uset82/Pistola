@@ -12,7 +12,7 @@ import {
   DoorNode,
   emitter,
   generateId,
-  type GuideNode,
+  GuideNode,
   ItemNode,
   LevelNode,
   RoofNode,
@@ -582,6 +582,23 @@ export const createRoof = (action: Extract<AssistantAction, { type: 'create_roof
   useScene.getState().createNode(roof, level.id)
   selectCreatedNode(roof.id, 'roof')
   return roof.id
+}
+
+export const createGuide = (action: Extract<AssistantAction, { type: 'create_guide' }>) => {
+  const level = resolveLevel(action.levelId)
+  if (!level || level.type !== 'level') throw new Error('A level must be selected before creating a guide.')
+  const node = GuideNode.parse({
+    name: action.name ?? getDefaultName('Guide', 'guide'),
+    url: action.url,
+    position: action.position ?? [0, 0, 0],
+    rotation: action.rotation ?? [0, 0, 0],
+    scale: action.scale ?? 1,
+    opacity: action.opacity ?? 50,
+    metadata: { pistolaPlane: action.view },
+  })
+  useScene.getState().createNode(node, level.id)
+  useEditor.getState().setSelectedReferenceId(node.id)
+  return node.id
 }
 
 const resolveItemPlacement = (

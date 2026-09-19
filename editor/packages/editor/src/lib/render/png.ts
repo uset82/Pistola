@@ -104,3 +104,111 @@ export const pngDataUrl = (width: number, height: number, rgba: Uint8ClampedArra
   for (const byte of bytes) binary += String.fromCharCode(byte)
   return `data:image/png;base64,${btoa(binary)}`
 }
+
+const readU32 = (bytes: Uint8Array, offset: number) =>
+  ((bytes[offset] ?? 0) << 24) | ((bytes[offset + 1] ?? 0) << 16) | ((bytes[offset + 2] ?? 0) << 8) | (bytes[offset + 3] ?? 0)
+
+const inflateStore = (zlib: Uint8Array) => {
+  if (zlib.length < 6 || zlib[0] !== 0x78) {
+    throw new Error('PNG IDAT is not a zlib stream this decoder can inflate.')
+  }
+  const out: number[] = []
+  let cursor = 2
+  while (cursor + 5 <= zlib.length - 4) {
+    const last = zlib[cursor] ?? 0
+    const len = (zlib[cursor + 1] ?? 0) | ((zlib[cursor + 2] ?? 0) << 8)
+    cursor += 5
+    for (let i = 0; i < len; i += 1) out.push(zlib[cursor + i] ?? 0)
+    cursor += len
+    if (last & 1) break
+  }
+  return Uint8Array.from(out)
+}
+
+const inflateIdat = (idat: Uint8Array) => {
+  try {
+    const zlib = require('node:zlib') as { inflateSync: (input: Uint8Array) => Uint8Array }
+    return zlib.inflateSync(idat)
+  } catch {
+    return inflateStore(idat)
+  }
+}
+
+const paeth = (a: number, b: number, c: number) => {
+  const p = a + b - c
+  const pa = Math.abs(p - a)
+  const pb = Math.abs(p - b)
+  const pc = Math.abs(p - c)
+  if (pa <= pb && pa <= pc) return a
+  if (pb <= pc) return b
+  return c
+}
+
+const unfilter = (raw: Uint8Array, width: number, height: number) => {
+  const stride = width * 4
+  const rgba = new Uint8ClampedArray(stride * height)
+  let src = 0
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[src] ?? 0
+    src += 1
+    const dest = y * stride
+    for (let x = 0; x < stride; x += 1) {
+      const byte = raw[src + x] ?? 0
+      const left = x >= 4 ? (rgba[dest + x - 4] ?? 0) : 0
+      const up = y > 0 ? (rgba[dest - stride + x] ?? 0) : 0
+      const upLeft = y > 0 && x >= 4 ? (rgba[dest - stride + x - 4] ?? 0) : 0
+      let value = byte
+      if (filter === 1) value = (byte + left) & 255
+      else if (filter === 2) value = (byte + up) & 255
+      else if (filter === 3) value = (byte + Math.floor((left + up) / 2)) & 255
+      else if (filter === 4) value = (byte + paeth(left, up, upLeft)) & 255
+      rgba[dest + x] = value
+    }
+    src += stride
+  }
+  return rgba
+}
+
+export const decodePng = (bytes: Uint8Array) => {
+  if (bytes[0] !== 137 || bytes[1] !== 80 || bytes[2] !== 78 || bytes[3] !== 71) {
+    throw new Error('Not a PNG.')
+  }
+  let width = 0
+  let height = 0
+  const idat: number[] = []
+  let offset = 8
+  while (offset + 12 <= bytes.length) {
+    const length = readU32(bytes, offset)
+    const type = String.fromCharCode(
+      bytes[offset + 4] ?? 0,
+      bytes[offset + 5] ?? 0,
+      bytes[offset + 6] ?? 0,
+      bytes[offset + 7] ?? 0,
+    )
+    const data = bytes.subarray(offset + 8, offset + 8 + length)
+    if (type === 'IHDR') {
+      width = readU32(data, 0)
+      height = readU32(data, 4)
+      if ((data[8] ?? 0) !== 8 || (data[9] ?? 0) !== 6) {
+        throw new Error('Only 8-bit RGBA PNGs are supported.')
+      }
+    } else if (type === 'IDAT') {
+      idat.push(...data)
+    } else if (type === 'IEND') {
+      break
+    }
+    offset += 12 + length
+  }
+  if (!width || !height) throw new Error('PNG is missing IHDR.')
+  const raw = inflateIdat(Uint8Array.from(idat))
+  return { width, height, data: unfilter(raw, width, height) }
+}
+
+export const bytesFromDataUrl = (dataUrl: string) => {
+  const comma = dataUrl.indexOf(',')
+  const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}

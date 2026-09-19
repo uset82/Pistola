@@ -146,6 +146,17 @@ test('AssistantActionSchema parses building focus and batch delete actions', () 
   assert.equal(isDestructiveAssistantActionType(deleteAction.type), true)
 })
 
+test('AssistantActionSchema parses create_guide', () => {
+  const action = AssistantActionSchema.parse({
+    type: 'create_guide',
+    view: 'front',
+    url: 'data:image/png;base64,AAAA',
+    position: [0, 1, -1.2],
+  })
+  assert.equal(action.type, 'create_guide')
+  assert.equal(action.view, 'front')
+})
+
 test('AssistantActionSchema parses an item tool activation with a catalog category', () => {
   const action = AssistantActionSchema.parse({
     type: 'activate_tool',

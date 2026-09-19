@@ -35,7 +35,7 @@ import {
   useOperatorPlanStore,
 } from '../operator-plan'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
-import { checkStructure, type StructureReport } from '../structure'
+import { checkStructure, collectStructureParts, type StructureReport } from '../structure'
 import {
   checkBlueprint,
   checkSceneAgainstPlan,
@@ -47,13 +47,15 @@ import {
 import { getExample, searchExamples } from '../agent-examples'
 import { renderViews as renderSceneViews } from '../render'
 import {
-  CANONICAL_CONTACT_SHEET_LAYOUT,
-  CANONICAL_VIEW_CAMERAS,
-  PISTOLA_CANONICAL_FRAME,
-  renderSceneContactSheet,
-} from '../render-views'
-import { useReferencePackStore, validateReferencePack } from '../reference-pack'
-import { collectStructureParts } from '../structure'
+  guideActionsFromReference,
+  hullActionFromTrace,
+  loadReferenceGrid,
+  runReferenceJob,
+  useReferenceStore,
+  type FitResult,
+  type ReferenceAddInput,
+  type ReferenceRecord,
+} from '../reference'
 
 export const PISTOLA_API_VERSION = 1
 
@@ -101,11 +103,12 @@ const INVOKE_ALLOWLIST = new Set([
   'examples.search',
   'examples.get',
   'renderViews',
-  'renderEightViews',
-  'referencePack.validate',
-  'referencePack.set',
-  'referencePack.get',
-  'referencePack.clear',
+  'reference.add',
+  'reference.get',
+  'reference.clear',
+  'reference.fit',
+  'reference.hull',
+  'reference.guides',
   'waitForIdle',
   'undo',
   'redo',
@@ -184,28 +187,11 @@ export const createPistolaAgentApi = () => {
       method: 'renderViews',
       output: 'A deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) with a fixed critique checklist. At most 2 rounds; keep the best.',
     },
-    eightViewReview: {
-      method: 'renderEightViews',
-      output:
-        'A deterministic 4×2 SVG contact sheet: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom.',
-      policy:
-        'Use after each assembly milestone without moving the active viewport. Address structural errors first, then the largest visible placement or proportion mismatch.',
-      layout: CANONICAL_CONTACT_SHEET_LAYOUT,
-      frame: PISTOLA_CANONICAL_FRAME,
-    },
-    referencePack: {
-      version: 1,
-      source:
-        'IDE-native image generation or a user upload. Pistola accepts metadata only; image pixels remain in the IDE or asset store.',
-      conceptGate:
-        'Generate 2–3 concepts, obtain the user-selected approval, then set one exactly-eight-view reference pack.',
-      requiredViews: CANONICAL_VIEW_CAMERAS.map((camera) => ({
-        id: camera.id,
-        label: camera.label,
-        projection: camera.projection,
-      })),
-      requiredScale: 'One named positive real-world measurement in meters.',
-      methods: ['validate', 'set', 'get', 'clear'],
+    referenceMode: {
+      method: 'reference.add',
+      input: '{ path|dataUrl, layout: "front|side|top", knownDimension, blueprint }',
+      rule: 'A reference is always paired with a text blueprint. Tracing is optional. Default pipeline stays plan → build → check → fix → render.',
+      methods: ['add', 'get', 'clear', 'fit', 'hull', 'guides'],
     },
     capabilities: getAllCapabilities().map((capability) => ({
       type: capability.type,
@@ -339,47 +325,103 @@ export const createPistolaAgentApi = () => {
     return { mime: 'image/png', dataUrl: canvas.toDataURL('image/png') }
   }
 
-  const referencePack = {
-    validate: async (input: unknown) => validateReferencePack(input),
-    set: async (input: unknown) => {
-      const validation = validateReferencePack(input)
-      if (!validation.valid) return { ...validation, stored: false as const }
-      useReferencePackStore.getState().setPack(validation.data)
-      return { ...validation, stored: true as const }
+  const serializeRecord = (record: ReferenceRecord) => ({
+    id: record.id,
+    layout: record.layout,
+    knownDimension: record.knownDimension,
+    blueprint: record.blueprint,
+    dataUrl: record.dataUrl,
+    trace: record.trace,
+    frames: record.frames,
+    goldMasks: {
+      front: Array.from(record.goldMasks.front),
+      side: Array.from(record.goldMasks.side),
+      top: Array.from(record.goldMasks.top),
+      size: record.goldMasks.size,
     },
-    get: async () => useReferencePackStore.getState().pack,
+    consistent: record.trace.consistent,
+    overall_m: record.trace.overall_m,
+  })
+
+  const reference = {
+    add: async (input: ReferenceAddInput) => {
+      if (!input?.blueprint) throw new Error('A reference is always paired with a text blueprint.')
+      const blueprint = normalizeBlueprint(input.blueprint)
+      const { grid, dataUrl } = await loadReferenceGrid(input)
+      const traced = await runReferenceJob<{
+        kind: 'trace'
+        trace: ReferenceRecord['trace']
+        goldMasks: ReferenceRecord['goldMasks']
+        frames: ReferenceRecord['frames']
+      }>({
+        kind: 'trace',
+        grid,
+        knownDimension: input.knownDimension,
+      })
+      const record: ReferenceRecord = {
+        id: `ref_${Date.now().toString(36)}`,
+        layout: input.layout ?? 'front|side|top',
+        knownDimension:
+          typeof input.knownDimension === 'number'
+            ? { axis: 'width', meters: input.knownDimension, label: 'width' }
+            : input.knownDimension,
+        blueprint,
+        dataUrl,
+        trace: traced.trace,
+        goldMasks: traced.goldMasks,
+        frames: traced.frames,
+      }
+      useReferenceStore.getState().setActive(record)
+      return {
+        ...serializeRecord(record),
+        hull: hullActionFromTrace(record.trace),
+        guides: guideActionsFromReference(record),
+      }
+    },
+    get: async () => {
+      const active = useReferenceStore.getState().active
+      return active ? serializeRecord(active) : null
+    },
     clear: async () => {
-      const cleared = useReferencePackStore.getState().pack !== null
-      useReferencePackStore.getState().clearPack()
+      const cleared = useReferenceStore.getState().active !== null
+      useReferenceStore.getState().clear()
       return { cleared }
     },
-  }
-
-  /**
-   * A renderer-agnostic review surface: it projects real world-space AABBs and
-   * never changes the user's camera, selection, or editor state.
-   */
-  const renderEightViews = async () => {
-    const parts = collectStructureParts()
-    const sheet = renderSceneContactSheet(
-      parts.map((part) => ({
-        id: part.id,
-        name: part.name,
-        bounds: { min: part.box.min, max: part.box.max },
-      })),
-    )
-    return {
-      mime: 'image/svg+xml' as const,
-      svg: sheet.svg,
-      width: sheet.width,
-      height: sheet.height,
-      columns: sheet.columns,
-      rows: sheet.rows,
-      partCount: parts.length,
-      views: sheet.views,
-      partColors: sheet.partColors,
-      structure: checkStructure(),
-    }
+    fit: async () => {
+      const active = useReferenceStore.getState().active
+      if (!active) throw new Error('No active reference. Call reference.add first.')
+      const fitted = await runReferenceJob<FitResult>({
+        kind: 'fit',
+        parts: collectStructureParts(),
+        goldMasks: active.goldMasks,
+        frames: active.frames,
+        blueprint: active.blueprint,
+      })
+      const patches = fitted.patches.map((patch) => {
+        if (patch.type !== 'scale_target' || !patch.scale) return patch
+        const node = useScene.getState().nodes[patch.nodeId as never] as { scale?: [number, number, number] } | undefined
+        const current = node?.scale ?? [1, 1, 1]
+        return {
+          ...patch,
+          scale: [current[0] * patch.scale[0], current[1] * patch.scale[1], current[2] * patch.scale[2]] as [
+            number,
+            number,
+            number,
+          ],
+        }
+      })
+      return { ...fitted, applied: false as const, patches }
+    },
+    hull: async () => {
+      const active = useReferenceStore.getState().active
+      if (!active) throw new Error('No active reference. Call reference.add first.')
+      return { applied: false as const, action: hullActionFromTrace(active.trace) }
+    },
+    guides: async () => {
+      const active = useReferenceStore.getState().active
+      if (!active) throw new Error('No active reference. Call reference.add first.')
+      return { applied: false as const, actions: guideActionsFromReference(active) }
+    },
   }
 
   const taskPlan = {
@@ -641,8 +683,7 @@ export const createPistolaAgentApi = () => {
     run,
     checkStructure: async () => checkStructure(),
     renderViews: async (input?: { planned?: [number, number, number] }) => renderSceneViews(input),
-    renderEightViews,
-    referencePack,
+    reference,
     examples: {
       search: async (query?: string | { query?: string; kind?: string }) => {
         if (query && typeof query === 'object') return searchExamples(query.query ?? '', query.kind as never)
@@ -699,9 +740,9 @@ export const createPistolaAgentApi = () => {
         }
         return (fn as (...values: unknown[]) => unknown)(...payload)
       }
-      if (method.startsWith('referencePack.')) {
-        const name = method.slice('referencePack.'.length) as keyof typeof referencePack
-        const fn = referencePack[name]
+      if (method.startsWith('reference.')) {
+        const name = method.slice('reference.'.length) as keyof typeof reference
+        const fn = reference[name]
         if (typeof fn !== 'function') {
           throw new Error(`Unknown pistola method "${method}".`)
         }

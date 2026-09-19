@@ -48,8 +48,7 @@ export {
 } from './lib/assistant'
 export type { SceneGraph } from './lib/scene'
 export { applySceneGraphToEditor } from './lib/scene'
-export * from './lib/reference-pack'
-export * from './lib/render-views'
+export * from './lib/reference'
 export {
   createOperatorPlan,
   getOperatorPhaseStatus,

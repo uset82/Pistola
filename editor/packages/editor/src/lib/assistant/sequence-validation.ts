@@ -34,6 +34,7 @@ const nodeCreatingActionTypes = new Set<AssistantAction['type']>([
   'create_slab',
   'create_ceiling',
   'create_roof',
+  'create_guide',
   'place_item',
   'place_door',
   'place_window',
@@ -123,6 +124,7 @@ const collectReferencedIds = (action: AssistantAction): string[] => {
     case 'create_slab':
     case 'create_ceiling':
     case 'create_roof':
+    case 'create_guide':
     case 'clear_level_contents':
       appendId(ids, action.levelId)
       break
@@ -201,6 +203,7 @@ const actionUsesImplicitTarget = (action: AssistantAction) => {
     case 'create_slab':
     case 'create_ceiling':
     case 'create_roof':
+    case 'create_guide':
     case 'clear_level_contents':
       return !action.levelId
     case 'place_item':

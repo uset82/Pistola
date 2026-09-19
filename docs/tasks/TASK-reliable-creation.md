@@ -230,23 +230,32 @@ does not claim the gated image fitter below.
 
 ### Phase 6 (gated): Reference mode and a minimal fitter
 Start only if the Phase 5 benchmark shows outline and proportion errors dominate.
-- [ ] `pistola_reference_add({path|dataUrl, layout: 'front|side|top' sheet, knownDimension})`. A reference
+- [x] `pistola_reference_add({path|dataUrl, layout: 'front|side|top' sheet, knownDimension})`. A reference
   is always paired with a text blueprint.
-- [ ] A prompt pack for IDEs that generate images (one image holding all three views, black on white,
+  — evidence: `bun test ./packages/editor/src/lib/reference/reference.test.ts` → `reference.add requires a blueprint, traces the sheet, and does not apply hull or guides`; MCP `pistola_reference_add`
+- [x] A prompt pack for IDEs that generate images (one image holding all three views, black on white,
   orthographic), plus a user guide for making sheets on free sites (`docs/`).
-- [ ] Tracer, in a Worker, built on `silhouette-tracer.ts`:
+  — evidence: `.agents/skills/pistola-direct-control/references/ortho-sheet-prompt.md`; `docs/reference-sheets.md`
+- [x] Tracer, in a Worker, built on `silhouette-tracer.ts`:
   - threshold for clean sheets; background removal (BiRefNet ONNX, MIT) only later, for photos;
   - components sorted left to right;
   - Moore contour tracing, then Douglas-Peucker simplification;
   - output in meters, in the `views.ts` frame;
   - cross-view consistency within ±5%.
-- [ ] Uses: the IoU target for renders, and an optional 3-view hull blockout for prismatic main bodies.
-- [ ] Minimal fitter:
+  — evidence: same suite → `traceReferenceSheet scales three left-to-right views into the views.ts frame` (`consistent: true`, planes XY/ZY/XZ); `jobs.ts` `runReferenceJob`
+- [x] Uses: the IoU target for renders, and an optional 3-view hull blockout for prismatic main bodies.
+  — evidence: same suite → hull `intersect_profiles` validates; `render-views.ts` compares framed masks when a reference is active
+- [x] Minimal fitter:
   - coordinate descent, about 300 evaluations, in a Worker;
   - only translate and scale on at most 10 parts;
   - objective: IoU minus a relation-violation penalty;
   - returns a patch plus before/after IoU.
-- [ ] Vertical guide planes (a `create_guide` action) show the reference behind the build.
+  — evidence: same suite → `the fitter proposes unapplied patches` (`applied: false`, negative X `move_target`, scene unchanged)
+- [x] Vertical guide planes (a `create_guide` action) show the reference behind the build.
+  — evidence: same suite → `create_guide` writes `metadata.pistolaPlane: front`; `GuideRenderer` stands front/side planes up
+
+- [x] Checkpoint: 3-view sheet traces in meters, hull and guides stay proposals, fitter does not apply, benchmark run.
+  — evidence: 4 pass in `reference.test.ts`; `node editor/scripts/creation-benchmark/run.mjs --mode replay --out docs/tasks/evidence/creation-quality/phase-6` → `summary.iou: 1`
 
 ### Phase 7 (gated on remaining failures): Richness and composition
 - [ ] Loft (cross-sections along an axis), 3-view hull, and torus/capsule/ellipsoid in the kernel.
@@ -258,8 +267,7 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (user-approved eight-view gate,
-  `pistola_render_eight_views`, and the Phase 5 2×2 critique); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 6 optional `pistola_reference_add` 3-view sheet + `pistola_render_views` 2×2 + ≤2 critique rounds); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
@@ -268,9 +276,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   - replay and score every phase;
   - full agent runs at baseline and after Phases 2, 4 and 5 (to limit IDE usage);
   - save `phase-N/scores.json` plus side-by-side renders.
-  — evidence: replay `iou: 1` in `phase-3`, `phase-4`, `phase-5`; `--mode agent --cli codex` skipped (no IDE quota)
+  — evidence: replay `iou: 1` in `phase-3`, `phase-4`, `phase-5`, `phase-6`; `--mode agent --cli codex` skipped (no IDE quota)
 - [x] `validate-task-evidence.mjs` passes; 0 forbidden AI-route requests.
-  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 5 tick)
+  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 6 tick)
 
 ### Acceptance (held-out set, ≥2 headless IDEs, 3 seeds)
 - [ ] Final runnable rate ≥ 95%.

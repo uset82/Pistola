@@ -64,10 +64,13 @@ const barycentric = (
   return { u, v, w }
 }
 
+export type RasterFrame = { minU: number; minV: number; maxU: number; maxV: number }
+
 export const rasterizeParts = (
   parts: StructurePart[],
   view: OrthoViewName,
   size = 128,
+  frame?: RasterFrame,
 ): RasterView => {
   const rgba = new Uint8ClampedArray(size * size * 4)
   const ids = new Int32Array(size * size).fill(-1)
@@ -99,14 +102,20 @@ export const rasterizeParts = (
       maxV = Math.max(maxV, point[1])
     }
   }
-  if (!Number.isFinite(minU)) {
+  if (frame) {
+    minU = frame.minU
+    minV = frame.minV
+    maxU = frame.maxU
+    maxV = frame.maxV
+  } else if (!Number.isFinite(minU)) {
     return { name: view, width: size, height: size, rgba, ids, mask }
+  } else {
+    const pad = Math.max(0.1, 0.08 * Math.max(maxU - minU, maxV - minV, 0.2))
+    minU -= pad
+    minV -= pad
+    maxU += pad
+    maxV += pad
   }
-  const pad = Math.max(0.1, 0.08 * Math.max(maxU - minU, maxV - minV, 0.2))
-  minU -= pad
-  minV -= pad
-  maxU += pad
-  maxV += pad
   const spanU = Math.max(maxU - minU, 1e-6)
   const spanV = Math.max(maxV - minV, 1e-6)
   const toPixel = (u: number, v: number): [number, number] => [
@@ -162,6 +171,43 @@ export const drawGrid = (view: RasterView, meters = 0.1) => {
     for (let x = 0; x < width; x += 1) ink(x, y, [226, 232, 240])
   }
   for (let x = 0; x < width; x += 1) put(rgba, width, x, height - 2, [15, 23, 42])
+}
+
+export const fillPolygonMask = (
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  polygon: Array<[number, number]>,
+  frame: RasterFrame,
+) => {
+  if (polygon.length < 3) return mask
+  const spanU = Math.max(frame.maxU - frame.minU, 1e-6)
+  const spanV = Math.max(frame.maxV - frame.minV, 1e-6)
+  const toPixel = (u: number, v: number): [number, number] => [
+    ((u - frame.minU) / spanU) * (width - 1),
+    (1 - (v - frame.minV) / spanV) * (height - 1),
+  ]
+  const pts = polygon.map(([u, v]) => toPixel(u, v))
+  const minY = Math.max(0, Math.floor(Math.min(...pts.map((point) => point[1]))))
+  const maxY = Math.min(height - 1, Math.ceil(Math.max(...pts.map((point) => point[1]))))
+  for (let y = minY; y <= maxY; y += 1) {
+    const hits: number[] = []
+    for (let i = 0; i < pts.length; i += 1) {
+      const a = pts[i]!
+      const b = pts[(i + 1) % pts.length]!
+      if ((a[1] <= y && b[1] > y) || (b[1] <= y && a[1] > y)) {
+        const t = (y - a[1]) / (b[1] - a[1] || 1)
+        hits.push(a[0] + t * (b[0] - a[0]))
+      }
+    }
+    hits.sort((left, right) => left - right)
+    for (let i = 0; i + 1 < hits.length; i += 2) {
+      const x0 = Math.max(0, Math.floor(hits[i] ?? 0))
+      const x1 = Math.min(width - 1, Math.ceil(hits[i + 1] ?? 0))
+      for (let x = x0; x <= x1; x += 1) mask[y * width + x] = 1
+    }
+  }
+  return mask
 }
 
 export const maskIou = (a: Uint8Array, b: Uint8Array) => {

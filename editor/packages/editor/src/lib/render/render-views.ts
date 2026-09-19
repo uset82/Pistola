@@ -1,3 +1,4 @@
+import { useReferenceStore } from '../reference/store'
 import { checkStructure, collectStructureParts, type StructurePart } from '../structure'
 import { pngDataUrl } from './png'
 import { PART_HUES, drawGrid, maskIou, rasterizeParts, type RasterView } from './soft-raster'
@@ -155,11 +156,17 @@ export const renderViews = (input?: { planned?: [number, number, number]; goldMa
   label(rgba, width, RENDER_GAP, height - 18, `W${measured[0].toFixed(2)} H${measured[1].toFixed(2)} D${measured[2].toFixed(2)}`)
   const critique = critiqueRender(parts, views, input?.planned)
   let iou: number | undefined
-  if (input?.goldMasks) {
-    const scores = views
-      .map((view) => {
-        const gold = input.goldMasks?.[view.name]
-        return gold ? maskIou(view.mask, gold) : null
+  const stored = useReferenceStore.getState().active
+  const goldMasks = input?.goldMasks ?? stored?.goldMasks
+  const frames = stored?.frames
+  if (goldMasks) {
+    const names = ['front', 'side', 'top'] as const
+    const scores = names
+      .map((name) => {
+        const gold = goldMasks[name]
+        if (!gold) return null
+        const framed = frames?.[name] ? rasterizeParts(parts, name, RENDER_PANEL, frames[name]) : views.find((view) => view.name === name)
+        return framed ? maskIou(framed.mask, gold) : null
       })
       .filter((value): value is number => value != null)
     if (scores.length) iou = scores.reduce((sum, value) => sum + value, 0) / scores.length

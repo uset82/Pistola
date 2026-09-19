@@ -31,7 +31,7 @@ const unionBox = (parts: BlueprintPart[]) => {
   }
 }
 
-const relok = (rel: BlueprintRelation, a: BlueprintPart, b: BlueprintPart) => {
+export const relationHolds = (rel: BlueprintRelation, a: BlueprintPart, b: BlueprintPart) => {
   const left = partBox(a)
   const right = partBox(b)
   const tol = rel.tol_m ?? 0.02
@@ -115,7 +115,7 @@ export const checkBlueprint = (input: unknown) => {
       })
       continue
     }
-    if (!relok(relation, a, b)) {
+    if (!relationHolds(relation, a, b)) {
       issues.push({
         code: 'RELATION_VIOLATED',
         severity: 'error',
@@ -229,7 +229,7 @@ export const checkSceneAgainstPlan = (input: unknown) => {
     const foundA = matchPart(plannedA, scene)
     const foundB = matchPart(plannedB, scene)
     if (!foundA || !foundB) continue
-    if (!relok(relation, asPart(plannedA, foundA), asPart(plannedB, foundB))) {
+    if (!relationHolds(relation, asPart(plannedA, foundA), asPart(plannedB, foundB))) {
       issues.push({
         code: 'RELATION_VIOLATED',
         severity: 'error',
