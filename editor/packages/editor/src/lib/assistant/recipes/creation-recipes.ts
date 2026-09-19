@@ -1303,7 +1303,7 @@ export const speedboatRecipe: CreationRecipe = {
     const [x, y, z] = nextOpenRecipeOrigin(position)
     const rootRef = '$ref_speedboat_root'
     return [
-      // Hydrodynamic Sculpted CAD Hull (Root node)
+      // 1. Hydrodynamic Deep-V Sculpted CAD Hull (Ocean Blue)
       {
         type: 'build_cad_solid',
         refId: rootRef,
@@ -1313,96 +1313,95 @@ export const speedboatRecipe: CreationRecipe = {
         spec: {
           op: 'intersect_profiles',
           sideProfile: [
-            [-2.5, 0.95],
-            [-2.3, 0.45],
-            [-1.8, 0.1],
-            [-0.5, 0.0],
-            [2.5, 0.0],
-            [2.5, 0.75],
-            [1.0, 0.78],
-            [-0.5, 0.82],
-            [-1.8, 0.88],
+            [-2.5, 0.05],
+            [1.8, 0.05],
+            [2.7, 0.45],
+            [3.0, 0.95],
+            [2.2, 0.88],
+            [0.8, 0.82],
+            [-0.8, 0.78],
+            [-2.5, 0.75],
           ],
           topProfile: [
-            [-2.5, 0.0],
-            [-2.0, -0.6],
-            [-1.0, -0.9],
-            [0.0, -0.9],
-            [2.5, -0.7],
-            [2.5, 0.7],
-            [0.0, 0.9],
-            [-1.0, 0.9],
-            [-2.0, 0.6],
+            [3.0, 0.0],
+            [2.2, -0.55],
+            [1.0, -0.88],
+            [-0.5, -0.92],
+            [-2.5, -0.78],
+            [-2.5, 0.78],
+            [-0.5, 0.92],
+            [1.0, 0.88],
+            [2.2, 0.55],
           ],
         },
       },
-      // Cockpit Windshield (Tinted glass / wedge)
+      // 2. Cockpit Windshield (Tinted Cyan Glass)
       {
-        type: 'place_item',
-        parentId: rootRef,
-        placement: 'explicit',
+        type: 'build_cad_solid',
         name: 'Cockpit Windshield',
-        assetId: 'primitive-wedge',
-        allowOverlap: true,
-        position: [x - 0.5, y + 0.82, z],
-        scale: [1.3, 0.45, 0.65],
-        rotation: [0, -Math.PI / 2, 0],
+        color: '#38bdf8',
+        position: [x + 0.8, y + 0.95, z],
+        spec: {
+          op: 'box',
+          size: [0.35, 0.45, 1.45],
+          rotate: [0, 0, -0.3],
+        },
       },
-      // Cockpit Interior / Seating
+      // 3. Cockpit Seating Well (Marine White)
       {
-        type: 'place_item',
-        parentId: rootRef,
-        placement: 'explicit',
+        type: 'build_cad_solid',
         name: 'Cockpit Seating',
-        assetId: 'primitive-box',
-        allowOverlap: true,
-        position: [x + 0.4, y + 0.65, z],
-        scale: [1.2, 0.35, 1.1],
+        color: '#f1f5f9',
+        position: [x - 0.4, y + 0.65, z],
+        spec: {
+          op: 'box',
+          size: [1.8, 0.3, 1.3],
+        },
       },
-      // Steering Console
+      // 4. Steering Helm Console (Dark Slate)
       {
-        type: 'place_item',
-        parentId: rootRef,
-        placement: 'explicit',
+        type: 'build_cad_solid',
         name: 'Steering Helm',
-        assetId: 'primitive-box',
-        allowOverlap: true,
-        position: [x - 0.2, y + 0.8, z],
-        scale: [0.35, 0.35, 0.8],
+        color: '#334155',
+        position: [x + 0.4, y + 0.82, z - 0.35],
+        spec: {
+          op: 'box',
+          size: [0.35, 0.35, 0.35],
+        },
       },
-      // Port Outboard Engine
+      // 5. Swept Radar Arch & Sports Fin (Marine White)
       {
-        type: 'place_item',
-        parentId: rootRef,
-        placement: 'explicit',
+        type: 'build_cad_solid',
+        name: 'Radar Arch',
+        color: '#ffffff',
+        position: [x - 1.1, y + 1.15, z],
+        spec: {
+          op: 'box',
+          size: [0.22, 0.85, 1.55],
+          rotate: [0, 0, -0.2],
+        },
+      },
+      // 6. Port High-Performance Outboard Motor (Midnight Black)
+      {
+        type: 'build_cad_solid',
         name: 'Port Outboard Motor',
-        assetId: 'primitive-box',
-        allowOverlap: true,
-        position: [x + 2.65, y + 0.55, z - 0.35],
-        scale: [0.45, 0.65, 0.3],
+        color: '#0f172a',
+        position: [x - 2.75, y + 0.65, z - 0.42],
+        spec: {
+          op: 'box',
+          size: [0.55, 0.7, 0.32],
+        },
       },
-      // Starboard Outboard Engine
+      // 7. Starboard High-Performance Outboard Motor (Midnight Black)
       {
-        type: 'place_item',
-        parentId: rootRef,
-        placement: 'explicit',
+        type: 'build_cad_solid',
         name: 'Starboard Outboard Motor',
-        assetId: 'primitive-box',
-        allowOverlap: true,
-        position: [x + 2.65, y + 0.55, z + 0.35],
-        scale: [0.45, 0.65, 0.3],
-      },
-      // Chrome Bow Rail
-      {
-        type: 'place_item',
-        parentId: rootRef,
-        placement: 'explicit',
-        name: 'Bow Rail',
-        assetId: 'primitive-torus',
-        allowOverlap: true,
-        position: [x - 1.8, y + 0.92, z],
-        scale: [0.5, 0.1, 0.5],
-        rotation: [Math.PI / 2, 0, 0],
+        color: '#0f172a',
+        position: [x - 2.75, y + 0.65, z + 0.42],
+        spec: {
+          op: 'box',
+          size: [0.55, 0.7, 0.32],
+        },
       },
     ]
   },
