@@ -175,6 +175,31 @@ test('resolveAssistantComposerKeyAction accepts suggestions without auto-sending
   )
 })
 
+test('resolveAssistantComposerKeyAction sends on Enter and keeps Shift+Enter for new lines', () => {
+  assert.deepEqual(
+    resolveAssistantComposerKeyAction({ key: 'Enter', activeSuggestionIndex: 0, suggestionCount: 0 }),
+    { type: 'submit-prompt' },
+  )
+  assert.deepEqual(
+    resolveAssistantComposerKeyAction({
+      key: 'Enter',
+      shiftKey: true,
+      activeSuggestionIndex: 0,
+      suggestionCount: 0,
+    }),
+    { type: 'none' },
+  )
+  assert.deepEqual(
+    resolveAssistantComposerKeyAction({
+      key: 'Enter',
+      isComposing: true,
+      activeSuggestionIndex: 0,
+      suggestionCount: 0,
+    }),
+    { type: 'none' },
+  )
+})
+
 test('getInlineAutocompletion returns ghost text for matching prefixes', () => {
   const completion = getInlineAutocompletion({
     input: 'create a ',

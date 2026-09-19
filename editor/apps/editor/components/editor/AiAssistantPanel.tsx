@@ -20,12 +20,13 @@ import {
 } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent,
   type KeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { assistantToolPhaseMap, assistantToolValues } from '../../../../packages/editor/src/lib/assistant/tool-surface'
 import {
@@ -34,11 +35,8 @@ import {
 } from '../../../../packages/editor/src/lib/assistant/recipes/creation-recipes'
 import { shouldRequestAssistantContinuation } from '../../lib/assistant-continuation'
 import {
-  applyAssistantComposerSuggestion,
-  getAssistantComposerSuggestions,
   getInlineAutocompletion,
   resolveAssistantComposerKeyAction,
-  type AssistantComposerSuggestion,
 } from '../../lib/assistant-composer-suggestions'
 import {
   buildAssistantSessionId,
@@ -48,7 +46,7 @@ import {
   buildAssistantViewportMetadata,
   createAssistantImageAttachment,
 } from '../../lib/assistant-image-client'
-import type { AssistantImageAttachment, AssistantImageKind } from '../../lib/assistant-image-contract'
+import type { AssistantImageAttachment } from '../../lib/assistant-image-contract'
 import {
   buildAssistantPanelSessionReset,
   createEmptyAssistantSessionMemory,
@@ -80,13 +78,20 @@ import {
 } from '../../lib/assistant-task-plan'
 import { classifyRequestComplexity } from '../../lib/assistant-agent-router'
 import { runAgentTurn } from '../../lib/assistant-agent/run-agent-turn'
-import { AssistantTaskPlanCard } from './AssistantTaskPlanCard'
-import { ChatMessageContent } from './ChatMessageContent'
-import {
-  FALLBACK_OPENROUTER_MODELS,
-  fetchOpenRouterModelCatalog,
-} from '../../lib/openrouter-model-catalog'
+import { describeModelName } from '../../lib/assistant-model-display'
 import { pistolaFetch } from '../../lib/pistola-fetch'
+import { useAiSettings } from './assistant/ai-settings-store'
+import { ClarifyPrompt, ReviewPrompt, type ReviewActionKind } from './assistant/ApprovalPrompt'
+import { Composer, type ComposerSendState } from './assistant/Composer'
+import { ExecutionResult } from './assistant/ExecutionResult'
+import { AssistantMarkIcon } from './assistant/icons'
+import { ModelPicker } from './assistant/ModelPicker'
+import { PanelHeader } from './assistant/PanelHeader'
+import { PlanChecklist, type TaskPlanStatus } from './assistant/PlanChecklist'
+import { ProvidersSheet } from './assistant/ProvidersSheet'
+import { StatusLine, type ExecutionPolicy } from './assistant/StatusLine'
+import { AssistantMessage, EmptyState, PendingLine, Transcript, UserMessage } from './assistant/Transcript'
+import { useFloatingPanel } from './assistant/use-floating-panel'
 
 const isObservationPrompt = (text: string) => {
   const norm = text.toLowerCase()
@@ -97,7 +102,6 @@ const isObservationPrompt = (text: string) => {
   )
 }
 
-type ExecutionPolicy = 'autopilot' | 'review'
 type AssistantRouteErrorPayload = {
   error?: string
   provider?: 'fallback' | 'codex' | 'openai' | 'openrouter'
@@ -130,57 +134,8 @@ type AssistantUndoSnapshot = {
   >
 }
 
-type AssistantPanelPosition = {
-  x: number
-  y: number
-}
-
-type TaskPlanStatus = 'ready' | 'executing' | 'completed' | 'error'
 type PanelAttachedImage = AssistantImageAttachment & { file: File }
-
-const ASSISTANT_PANEL_STORAGE_KEY = 'pistola-assistant-panel'
-const PANEL_GUTTER = 16
-const DEFAULT_PANEL_WIDTH = 380
-
-const readAssistantPanelStorage = () => {
-  if (typeof window === 'undefined') {
-    return { collapsed: false, position: null as AssistantPanelPosition | null }
-  }
-
-  try {
-    const raw = window.localStorage.getItem(ASSISTANT_PANEL_STORAGE_KEY)
-    if (!raw) return { collapsed: false, position: null as AssistantPanelPosition | null }
-    const parsed = JSON.parse(raw) as {
-      collapsed?: unknown
-      position?: { x?: unknown; y?: unknown } | null
-    }
-    const position =
-      parsed.position &&
-      typeof parsed.position.x === 'number' &&
-      typeof parsed.position.y === 'number'
-        ? { x: parsed.position.x, y: parsed.position.y }
-        : null
-    return { collapsed: parsed.collapsed === true, position }
-  } catch {
-    return { collapsed: false, position: null as AssistantPanelPosition | null }
-  }
-}
-
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
-
-const clampPanelPosition = (
-  position: AssistantPanelPosition,
-  width: number,
-  height: number,
-): AssistantPanelPosition => ({
-  x: clamp(position.x, PANEL_GUTTER, Math.max(PANEL_GUTTER, window.innerWidth - width - PANEL_GUTTER)),
-  y: clamp(position.y, PANEL_GUTTER, Math.max(PANEL_GUTTER, window.innerHeight - height - PANEL_GUTTER)),
-})
-
-const isInteractiveDragTarget = (target: EventTarget | null) => {
-  if (!(target instanceof Element)) return false
-  return Boolean(target.closest('button, input, textarea, select, option, label, a, img'))
-}
+type PanelView = 'chat' | 'providers'
 
 const getCadParentId = (
   _levelId: string | null,
@@ -462,36 +417,39 @@ const summarizeAssistantTurn = (turn: AssistantTurnResult) => {
   return `Executing: ${labels[0]}, ${labels[1]}, and ${turn.actions.length - 2} more actions.`
 }
 
+const classifyReviewAction = (action: AssistantAction): ReviewActionKind => {
+  if (action.type.startsWith('delete_') || action.type === 'clear_level_contents') return 'delete'
+
+  if (
+    action.type.startsWith('create_') ||
+    action.type.startsWith('place_') ||
+    action.type === 'execute_cad_brief' ||
+    action.type === 'run_cad_prompt' ||
+    action.type === 'extrude_cad_sketch' ||
+    action.type === 'revolve_cad_sketch' ||
+    action.type === 'apply_cad_boolean' ||
+    action.type === 'apply_cad_fillet' ||
+    action.type === 'apply_cad_chamfer' ||
+    action.type === 'add_cad_box_ears' ||
+    action.type === 'extrude_cad_body_face' ||
+    action.type === 'shell_cad_body'
+  ) {
+    return 'create'
+  }
+
+  return 'edit'
+}
+
 const summarizeReviewScope = (actions: AssistantAction[]) => {
   let createCount = 0
   let editCount = 0
   let deleteCount = 0
 
   for (const action of actions) {
-    if (action.type.startsWith('delete_') || action.type === 'clear_level_contents') {
-      deleteCount += 1
-      continue
-    }
-
-    if (
-      action.type.startsWith('create_') ||
-      action.type.startsWith('place_') ||
-      action.type === 'execute_cad_brief' ||
-      action.type === 'run_cad_prompt' ||
-      action.type === 'extrude_cad_sketch' ||
-      action.type === 'revolve_cad_sketch' ||
-      action.type === 'apply_cad_boolean' ||
-      action.type === 'apply_cad_fillet' ||
-      action.type === 'apply_cad_chamfer' ||
-      action.type === 'add_cad_box_ears' ||
-      action.type === 'extrude_cad_body_face' ||
-      action.type === 'shell_cad_body'
-    ) {
-      createCount += 1
-      continue
-    }
-
-    editCount += 1
+    const kind = classifyReviewAction(action)
+    if (kind === 'delete') deleteCount += 1
+    else if (kind === 'create') createCount += 1
+    else editCount += 1
   }
 
   const parts = [
@@ -530,7 +488,17 @@ export function AiAssistantPanel() {
   const tool = useEditor((state) => state.tool)
   const showCommandToast = useCad((state) => state.showCommandToast)
 
-  const [collapsed, setCollapsed] = useState(false)
+  const floatingPanel = useFloatingPanel()
+  const { collapsed, setCollapsed } = floatingPanel
+  const activeModel = useAiSettings((state) => state.activeModel)
+  const activeProvider = useAiSettings((state) => state.activeProvider)
+  const aiCatalog = useAiSettings((state) => state.catalog)
+  const loadAiConfig = useAiSettings((state) => state.loadConfig)
+  const loadAiCatalog = useAiSettings((state) => state.loadCatalog)
+  const selectAiModel = useAiSettings((state) => state.selectModel)
+
+  const [panelView, setPanelView] = useState<PanelView>('chat')
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
   const [executionPolicy, setExecutionPolicy] = useState<ExecutionPolicy>('autopilot')
   const [chatMode, setChatMode] = useState<AssistantChatMode>('create')
   const [assistantSessionId, setAssistantSessionId] = useState(() => buildAssistantSessionId())
@@ -549,12 +517,7 @@ export function AiAssistantPanel() {
   const [, setLastPromptImageDataUrl] = useState<string | null>(null)
   const [attachedImage, setAttachedImage] = useState<PanelAttachedImage | null>(null)
   const [lastUndoSnapshot, setLastUndoSnapshot] = useState<AssistantUndoSnapshot | null>(null)
-  const [panelPosition, setPanelPosition] = useState<AssistantPanelPosition | null>(null)
-  const [assistantUiHydrated, setAssistantUiHydrated] = useState(false)
-  const [isDraggingPanel, setIsDraggingPanel] = useState(false)
-  const [floatingElement, setFloatingElement] = useState<HTMLElement | null>(null)
   const [isAutoContinuing, setIsAutoContinuing] = useState(false)
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
   const [taskPlan, setTaskPlan] = useState<TaskPlan | null>(null)
   const [activeStepIndex, setActiveStepIndex] = useState<number | null>(null)
   const [taskPlanStatus, setTaskPlanStatus] = useState<TaskPlanStatus>('ready')
@@ -562,166 +525,36 @@ export function AiAssistantPanel() {
   const [inlineCompletionText, setInlineCompletionText] = useState('')
   const [dismissedInlineCompletion, setDismissedInlineCompletion] = useState<string | null>(null)
 
-  const floatingRef = useRef<HTMLElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const dragStateRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null)
   const continuationRunIdRef = useRef(0)
   const assistantRequestIdRef = useRef(0)
   const assistantRequestWorkspaceContextRef = useRef<ReturnType<typeof getAssistantWorkspaceContext> | null>(null)
   const stopContinuationRef = useRef(false)
   const stopTaskPlanRef = useRef(false)
 
-  // Unified Model Switcher & API Config State
-  const [activeModel, setActiveModel] = useState('openrouter/free')
-  const [activeProvider, setActiveProvider] = useState('openrouter')
-  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
-  const [showApiSettings, setShowApiSettings] = useState(false)
-  const [apiKeyInput, setApiKeyInput] = useState('')
-  const [baseUrlInput, setBaseUrlInput] = useState('https://openrouter.ai/api/v1')
-  const [isSavingApiConfig, setIsSavingApiConfig] = useState(false)
-  const [apiConfigMessage, setApiConfigMessage] = useState<string | null>(null)
-  const [availableModels, setAvailableModels] = useState<
-    Array<{
-      id: string
-      name: string
-      description?: string
-      contextLength?: number | null
-      isFree: boolean
-      isRecommended?: boolean
-    }>
-  >([])
-  const [modelSearch, setModelSearch] = useState('')
-  const [modelFilter, setModelFilter] = useState<'free' | 'recommended' | 'all'>('free')
-  const [loadingModels, setLoadingModels] = useState(false)
-
-  const loadAiModelConfig = async () => {
-    try {
-      const res = await pistolaFetch('/api/ai/config')
-      if (res.ok) {
-        const data = await res.json()
-        if (data.model) setActiveModel(data.model)
-        if (data.provider) setActiveProvider(data.provider)
-        if (data.baseUrl) setBaseUrlInput(data.baseUrl)
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  const handleSaveApiSettings = async () => {
-    setIsSavingApiConfig(true)
-    setApiConfigMessage(null)
-    try {
-      const res = await pistolaFetch('/api/ai/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: activeProvider,
-          model: activeModel,
-          apiKey: apiKeyInput.trim() || undefined,
-          baseUrl: baseUrlInput.trim() || undefined,
-        }),
-      })
-      if (res.ok) {
-        setApiConfigMessage('Settings saved successfully!')
-        showCommandToast('AI API configuration updated.')
-        await loadAvailableModels(true)
-        setApiKeyInput('')
-        setTimeout(() => setShowApiSettings(false), 1200)
-      } else {
-        const data = await res.json().catch(() => ({}))
-        setApiConfigMessage(data.error || 'Failed to save settings.')
-      }
-    } catch (err) {
-      setApiConfigMessage(err instanceof Error ? err.message : 'Error saving settings.')
-    } finally {
-      setIsSavingApiConfig(false)
-    }
-  }
-
-  const loadAvailableModels = async (force = false) => {
-    setLoadingModels(true)
-    try {
-      try {
-        const res = await pistolaFetch(
-          `/api/ai/models?provider=${activeProvider}${force ? '&forceRefresh=1' : ''}`,
-        )
-        if (res.ok) {
-          const data = await res.json()
-          if (data.ok && Array.isArray(data.models) && data.models.length > 0) {
-            setAvailableModels(data.models)
-            return
-          }
-        }
-      } catch {
-        // Sites cannot read Canner's catalog until that API sends CORS headers.
-      }
-
-      if (activeProvider === 'openai') {
-        setAvailableModels([])
-        return
-      }
-
-      try {
-        const models = await fetchOpenRouterModelCatalog({
-          baseUrl: baseUrlInput,
-        })
-        setAvailableModels(models)
-      } catch {
-        setAvailableModels(FALLBACK_OPENROUTER_MODELS)
-      }
-    } finally {
-      setLoadingModels(false)
-    }
-  }
-
-  const handleSelectModel = async (newModelId: string) => {
-    setActiveModel(newModelId)
-    setIsModelMenuOpen(false)
-    try {
-      await pistolaFetch('/api/ai/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: activeProvider,
-          model: newModelId,
-        }),
-      })
-      showCommandToast(`Active AI model switched to: ${newModelId}`)
-    } catch {
-      // ignore
-    }
-  }
-
   useEffect(() => {
-    void loadAiModelConfig()
-    void loadAvailableModels()
-  }, [])
+    void loadAiConfig()
+  }, [loadAiConfig])
 
-  const filteredChatModels = useMemo(() => {
-    let list = availableModels
-    if (modelFilter === 'free') {
-      list = list.filter((m) => m.isFree)
-    } else if (modelFilter === 'recommended') {
-      list = list.filter((m) => m.isRecommended || m.isFree)
-    }
-    if (modelSearch.trim()) {
-      const q = modelSearch.toLowerCase().trim()
-      list = list.filter(
-        (m) =>
-          m.id.toLowerCase().includes(q) ||
-          m.name.toLowerCase().includes(q) ||
-          (m.description && m.description.toLowerCase().includes(q)),
-      )
-    }
-    return list
-  }, [availableModels, modelFilter, modelSearch])
+  const closeModelMenu = useCallback(() => setIsModelMenuOpen(false), [])
 
-  const freeModelCount = useMemo(
-    () => availableModels.filter((m) => m.isFree).length,
-    [availableModels],
-  )
+  const openModelMenu = () => {
+    setPanelView('chat')
+    setIsModelMenuOpen(true)
+  }
 
+  const handleSelectModel = async (modelId: string) => {
+    const result = await selectAiModel(modelId)
+    showCommandToast(result.ok ? result.message : result.error)
+    return result
+  }
+
+  const levelLabel = useMemo(() => {
+    if (!levelId) return 'no level'
+    const level = nodes[levelId as AnyNodeId]
+    if (level?.type !== 'level') return levelId
+    return level.name || `Level ${level.level}`
+  }, [levelId, nodes])
 
   const selectedSummary = useMemo(() => {
     if (zoneId) {
@@ -747,35 +580,6 @@ export function AiAssistantPanel() {
   const composerAvailableTools = useMemo(
     () => assistantToolValues.filter((candidate) => assistantToolPhaseMap[candidate] === phase),
     [phase],
-  )
-
-  const composerSuggestions = useMemo(
-    () =>
-      getAssistantComposerSuggestions({
-        input,
-        phase,
-        tool,
-        availableTools: composerAvailableTools,
-        selectedSummary,
-        hasSelection: selectedIds.length > 0 || Boolean(zoneId),
-        levelId,
-        chatMode,
-        catalogCategories: composerCatalogCategories,
-        recentSuccessfulPrompts: assistantSessionMemory.recentSuccessfulPrompts,
-      }),
-    [
-      assistantSessionMemory.recentSuccessfulPrompts,
-      chatMode,
-      composerAvailableTools,
-      composerCatalogCategories,
-      input,
-      levelId,
-      phase,
-      selectedIds.length,
-      selectedSummary,
-      tool,
-      zoneId,
-    ],
   )
 
   const inlineAutocompletion = useMemo(() => {
@@ -812,10 +616,10 @@ export function AiAssistantPanel() {
 
   const composerPlaceholder =
     chatMode === 'ask'
-      ? 'Ask about the workspace, current tools, or what the assistant can do.'
+      ? 'Ask about the workspace or the tools'
       : chatMode === 'refine'
-        ? 'Describe the change you want on the selected or recent result.'
-        : 'Describe what to build. Specific requests execute immediately when they are safe.'
+        ? 'Describe the change to the selection or last result'
+        : 'Describe a part, a room, or an edit'
 
   const turnNeedsManualReview = turn ? requiresManualReview(turn, executionPolicy) : false
   const shouldShowReviewCard =
@@ -823,19 +627,13 @@ export function AiAssistantPanel() {
 
   const pendingAssistantMessage =
     status === 'planning'
-      ? 'Planning your request...'
+      ? 'Planning'
       : status === 'executing'
         ? isAutoContinuing
-          ? 'Continuing the build...'
-          : 'Executing assistant actions...'
+          ? 'Continuing the build'
+          : 'Applying changes'
         : null
   const composerLocked = isAssistantComposerLocked(status)
-
-  useEffect(() => {
-    setActiveSuggestionIndex((current) =>
-      composerSuggestions.length === 0 ? 0 : Math.min(current, composerSuggestions.length - 1),
-    )
-  }, [composerSuggestions.length])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -888,148 +686,6 @@ export function AiAssistantPanel() {
     )
     localStorage.removeItem('pistola:aiAssistantConversationHistory')
   }, [assistantSessionMemory])
-
-  useEffect(() => {
-    if (!isDraggingPanel) return
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const dragState = dragStateRef.current
-      const rect = floatingRef.current?.getBoundingClientRect()
-      if (!dragState || dragState.pointerId !== event.pointerId || !rect) return
-
-      const nextPosition = clampPanelPosition(
-        {
-          x: event.clientX - dragState.offsetX,
-          y: event.clientY - dragState.offsetY,
-        },
-        rect.width,
-        rect.height,
-      )
-
-      setPanelPosition((current) =>
-        current?.x === nextPosition.x && current?.y === nextPosition.y ? current : nextPosition,
-      )
-    }
-
-    const stopDragging = (event: PointerEvent) => {
-      if (dragStateRef.current?.pointerId !== event.pointerId) return
-      dragStateRef.current = null
-      setIsDraggingPanel(false)
-    }
-
-    const previousUserSelect = document.body.style.userSelect
-    const previousCursor = document.body.style.cursor
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'grabbing'
-
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', stopDragging)
-    window.addEventListener('pointercancel', stopDragging)
-
-    return () => {
-      document.body.style.userSelect = previousUserSelect
-      document.body.style.cursor = previousCursor
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', stopDragging)
-      window.removeEventListener('pointercancel', stopDragging)
-    }
-  }, [isDraggingPanel])
-
-  useEffect(() => {
-    const syncPanelPosition = () => {
-      const rect = floatingRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      setPanelPosition((current) => {
-        if (!current) return current
-        const nextPosition = clampPanelPosition(current, rect.width, rect.height)
-        return nextPosition.x === current.x && nextPosition.y === current.y ? current : nextPosition
-      })
-    }
-
-    const element = floatingElement
-    const resizeObserver =
-      element && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncPanelPosition) : null
-
-    if (resizeObserver && element) {
-      resizeObserver.observe(element)
-    }
-    window.addEventListener('resize', syncPanelPosition)
-
-    return () => {
-      resizeObserver?.disconnect()
-      window.removeEventListener('resize', syncPanelPosition)
-    }
-  }, [floatingElement])
-
-  const assignFloatingRef = (element: HTMLButtonElement | HTMLDivElement | null) => {
-    floatingRef.current = element
-    setFloatingElement(element)
-  }
-
-  useEffect(() => {
-    const stored = readAssistantPanelStorage()
-    setCollapsed(stored.collapsed)
-    setPanelPosition(stored.position)
-    setAssistantUiHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (!assistantUiHydrated) return
-    try {
-      window.localStorage.setItem(
-        ASSISTANT_PANEL_STORAGE_KEY,
-        JSON.stringify({ collapsed, position: panelPosition }),
-      )
-    } catch {
-      // Private browsing can block storage. The panel still works for this session.
-    }
-  }, [assistantUiHydrated, collapsed, panelPosition])
-
-  const handleDockLeft = () => {
-    const sidebar = document.querySelector('[data-slot="sidebar"][data-state="expanded"]')
-    const sidebarWidth = sidebar?.getBoundingClientRect().width ?? 0
-    const height = floatingRef.current?.getBoundingClientRect().height ?? 480
-    setCollapsed(false)
-    setPanelPosition(
-      clampPanelPosition(
-        { x: sidebarWidth > 48 ? sidebarWidth + PANEL_GUTTER : PANEL_GUTTER, y: PANEL_GUTTER },
-        DEFAULT_PANEL_WIDTH,
-        height,
-      ),
-    )
-  }
-
-  const handlePanelDragStart = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || isInteractiveDragTarget(event.target)) return
-
-    const rect = floatingRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const nextPosition = clampPanelPosition(
-      { x: rect.left, y: rect.top },
-      rect.width || DEFAULT_PANEL_WIDTH,
-      rect.height,
-    )
-
-    dragStateRef.current = {
-      pointerId: event.pointerId,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top,
-    }
-    setPanelPosition(nextPosition)
-    setIsDraggingPanel(true)
-    event.preventDefault()
-  }
-
-  const floatingPositionStyle = panelPosition
-    ? {
-      left: panelPosition.x,
-      top: panelPosition.y,
-      right: 'auto',
-      bottom: 'auto',
-    }
-    : undefined
 
   const buildViewportMetadata = () =>
     buildAssistantViewportMetadata({
@@ -1099,19 +755,12 @@ export function AiAssistantPanel() {
     setDismissedInlineCompletion(null)
     setAssistantSessionId(nextSessionState.assistantSessionId)
     setAssistantSessionMemory(nextSessionState.assistantSessionMemory)
-    setActiveSuggestionIndex(nextSessionState.activeSuggestionIndex)
     setChatMode(nextSessionState.chatMode)
     localStorage.removeItem('pistola:aiAssistantSessionMemory')
     localStorage.removeItem('pistola:aiAssistantConversationHistory')
     if (options.showToast ?? true) {
       showCommandToast('Started a new assistant chat.')
     }
-  }
-
-  const applyComposerSuggestion = (suggestion: AssistantComposerSuggestion) => {
-    setInput((current) => applyAssistantComposerSuggestion(current, suggestion))
-    setActiveSuggestionIndex(0)
-    queueMicrotask(() => textareaRef.current?.focus())
   }
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1132,32 +781,29 @@ export function AiAssistantPanel() {
       return
     }
 
+    // Composer suggestions are not rendered, so arrow keys and Tab keep their
+    // normal textarea behaviour; only submission is resolved here.
     const keyAction = resolveAssistantComposerKeyAction({
       key: event.key,
       ctrlKey: event.ctrlKey,
       metaKey: event.metaKey,
-      activeSuggestionIndex,
-      suggestionCount: composerSuggestions.length,
+      shiftKey: event.shiftKey,
+      isComposing: event.nativeEvent.isComposing,
+      activeSuggestionIndex: 0,
+      suggestionCount: 0,
     })
 
     if (keyAction.type === 'submit-prompt') {
       event.preventDefault()
-      void handleSend()
-      return
+      if (!composerLocked && input.trim()) void handleSend()
     }
+  }
 
-    if (keyAction.type === 'move-selection') {
+  const handleComposerPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const file = event.clipboardData.files?.[0]
+    if (file?.type.startsWith('image/')) {
       event.preventDefault()
-      setActiveSuggestionIndex(keyAction.nextIndex)
-      return
-    }
-
-    if (keyAction.type === 'apply-suggestion') {
-      const suggestion =
-        composerSuggestions[keyAction.suggestionIndex] ?? composerSuggestions[0]
-      if (!suggestion) return
-      event.preventDefault()
-      applyComposerSuggestion(suggestion)
+      void attachImageFile(file, 'paste')
     }
   }
 
@@ -1845,8 +1491,7 @@ export function AiAssistantPanel() {
       const rawArg = modelSwitchMatch[1]?.trim().replace(/[.!]^/, '').trim() || ''
       const arg = rawArg.toLowerCase()
       if (!arg || arg === 'list') {
-        setIsModelMenuOpen(true)
-        void loadAvailableModels()
+        openModelMenu()
         setInput('')
         return
       }
@@ -1858,7 +1503,8 @@ export function AiAssistantPanel() {
       else if (arg.includes('claude')) targetModel = 'anthropic/claude-3.7-sonnet'
       else if (arg.includes('gpt-4') || arg.includes('gpt4') || arg.includes('gpt')) targetModel = 'openai/gpt-4o'
       else {
-        const found = availableModels.find(
+        await loadAiCatalog()
+        const found = useAiSettings.getState().catalog.find(
           (m) =>
             m.id.toLowerCase() === arg ||
             m.name.toLowerCase().includes(arg) ||
@@ -1867,14 +1513,16 @@ export function AiAssistantPanel() {
         if (found) targetModel = found.id
       }
 
-      await handleSelectModel(targetModel)
+      const switchResult = await handleSelectModel(targetModel)
       setMessages((current) => [
         ...current,
         { id: `${Date.now()}-user`, role: 'user', text: rawPrompt },
         {
           id: `${Date.now()}-assistant`,
           role: 'assistant',
-          text: `Switched active AI model to \`${targetModel}\`. CAD, architecture, and assistant generation will now use this model.`,
+          text: switchResult.ok
+            ? `Switched the model to \`${targetModel}\`. The Assistant, CAD and MAC now use it.`
+            : `Could not switch to \`${targetModel}\`: ${switchResult.error}`,
         },
       ])
       setInput('')
@@ -2365,19 +2013,70 @@ export function AiAssistantPanel() {
     setActiveSketchId(sketchId)
   }
 
+  const isBusy = status === 'planning' || status === 'executing'
+  const canStopRunningWork = isAutoContinuing || taskPlanStatus === 'executing'
+  const sendState: ComposerSendState = canStopRunningWork ? 'stop' : isBusy ? 'busy' : 'send'
+  const lastMessage = messages[messages.length - 1]
+  const showExecutionResult = status === 'executed' || Boolean(panelError)
+  const showClarifyPrompt = turn?.mode === 'clarify' && status === 'clarify'
+  const hasConversation =
+    messages.length > 0 ||
+    Boolean(pendingAssistantMessage) ||
+    Boolean(taskPlan) ||
+    Boolean(turn) ||
+    showExecutionResult
+  const modelLabel = describeModelName(
+    aiCatalog.find((model) => model.id === activeModel) ?? { id: activeModel },
+  ).title
+  const statusContext = [
+    phase,
+    levelLabel,
+    selectedSummary === 'No selection' ? 'nothing selected' : selectedSummary,
+    tool,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const transcriptFollowKey = [
+    messages.length,
+    pendingAssistantMessage,
+    status,
+    taskPlan?.steps.map((step) => step.status).join(','),
+    shouldShowReviewCard,
+  ].join('|')
+
+  const applyReviewedTurn = () => {
+    if (!turn) return
+    const requestId = assistantRequestIdRef.current + 1
+    assistantRequestIdRef.current = requestId
+    void executeTurnSequence({
+      initialTurn: turn,
+      prompt: lastPrompt ?? turn.reply,
+      image: lastPromptImage,
+      reviewConfirmed: true,
+      requestId,
+    })
+  }
+
+  const stopRunningWork = () => {
+    if (isAutoContinuing) stopAutoContinuation()
+    if (taskPlanStatus === 'executing') stopTaskPlanRef.current = true
+    showCommandToast('Stopping after the current step.')
+  }
+
   if (collapsed) {
     return (
       <button
-        className={`pointer-events-auto fixed z-[130] inline-flex h-11 items-center gap-2 rounded-full border border-white/[0.06] bg-neutral-950/90 pr-[18px] pl-3 font-medium text-[13px] text-zinc-100 shadow-[0_2px_6px_rgba(0,0,0,0.12),0_16px_40px_rgba(0,0,0,0.25)] backdrop-blur-2xl transition hover:bg-neutral-900/95 ${panelPosition ? '' : 'right-4 bottom-4'
-          }`}
+        className={`pointer-events-auto fixed z-[130] inline-flex h-10 items-center gap-2 rounded-full border border-as-line bg-as-panel/95 pr-4 pl-2 font-medium text-[13px] text-as-text shadow-[0_2px_6px_rgba(0,0,0,0.12),0_16px_40px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-colors hover:bg-as-surface ${
+          floatingPanel.positionStyle ? '' : 'right-4 bottom-4'
+        }`}
         data-testid="assistant-toggle"
         onClick={() => setCollapsed(false)}
-        ref={assignFloatingRef}
-        style={floatingPositionStyle}
+        ref={floatingPanel.assignRef}
+        style={floatingPanel.positionStyle}
         type="button"
       >
-        <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-cyan-300/[0.14] text-cyan-300">
-          <SparkleIcon size={14} />
+        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-as-line bg-as-surface text-as-accent">
+          <AssistantMarkIcon size={13} />
         </span>
         Assistant
       </button>
@@ -2385,769 +2084,170 @@ export function AiAssistantPanel() {
   }
 
   return (
-    <div
-      className={`pointer-events-auto fixed z-[130] flex max-h-[calc(100dvh-120px)] w-[380px] flex-col gap-3 overflow-hidden rounded-3xl border border-white/[0.06] bg-neutral-950/90 px-3 pt-2 pb-3 text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_2px_6px_rgba(0,0,0,0.12),0_24px_60px_rgba(0,0,0,0.28)] backdrop-blur-2xl ${panelPosition ? '' : 'right-4 bottom-4'
-        }`}
+    <section
+      aria-label="Assistant"
+      className={`pointer-events-auto fixed z-[130] flex max-h-[calc(100dvh-120px)] w-[380px] flex-col rounded-[14px] border border-as-line bg-as-panel/95 text-as-text shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_2px_6px_rgba(0,0,0,0.12),0_24px_60px_rgba(0,0,0,0.45)] backdrop-blur-2xl ${
+        floatingPanel.positionStyle ? '' : 'right-4 bottom-4'
+      }`}
       data-testid="assistant-panel"
-      ref={assignFloatingRef}
-      style={floatingPositionStyle}
+      ref={floatingPanel.assignRef}
+      style={floatingPanel.positionStyle}
     >
-      <div
-        aria-label="Drag assistant"
-        className={`group flex h-3.5 items-center justify-center ${isDraggingPanel ? 'cursor-grabbing' : 'cursor-grab'
-          } touch-none select-none`}
-        data-testid="assistant-drag-handle"
-        onPointerDown={handlePanelDragStart}
-        role="button"
-        tabIndex={0}
-        title="Drag to move assistant"
-      >
-        <span className="h-1 w-8 rounded-full bg-white/[0.18] transition group-hover:bg-white/30" />
-      </div>
+      {panelView === 'providers' ? (
+        <>
+          <PanelHeader
+            isDragging={floatingPanel.isDragging}
+            onBack={() => setPanelView('chat')}
+            onDragStart={floatingPanel.startDrag}
+            onMinimize={() => setCollapsed(true)}
+            title="Model providers"
+          />
+          <ProvidersSheet onBrowseModels={openModelMenu} />
+        </>
+      ) : (
+        <>
+          <PanelHeader
+            isDragging={floatingPanel.isDragging}
+            newChatDisabled={isBusy}
+            onDockLeft={floatingPanel.dockLeft}
+            onDragStart={floatingPanel.startDrag}
+            onMinimize={() => setCollapsed(true)}
+            onNewChat={() => resetAssistantSession({ preserveChatMode: true })}
+          />
 
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[10px] border border-cyan-300/25 bg-cyan-300/[0.12] text-cyan-300">
-          <SparkleIcon size={16} />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="font-semibold text-sm tracking-tight">Assistant</span>
-            {/* Live Model Badge / Switcher Button */}
-            <button
-              onClick={() => {
-                setIsModelMenuOpen((v) => !v)
-                if (!isModelMenuOpen) void loadAvailableModels()
-              }}
-              className={`inline-flex h-[22px] min-w-0 items-center gap-1 rounded-full border px-2 text-[11px] transition-colors ${
-                isModelMenuOpen
-                  ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
-                  : 'border-white/[0.08] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white'
-              }`}
-              title="Click to change AI Model (OpenRouter 445+ models)"
-              type="button"
-            >
-              <span className="truncate max-w-[120px]">
-                {activeModel === 'openrouter/free' ? 'Free Router' : activeModel.split('/').pop()}
-              </span>
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-          </div>
-          <div
-            className="truncate text-[11px] text-white/45"
-            title={`${phase} · ${levelId ?? 'no level'} · ${selectedSummary}${tool ? ` · ${tool}` : ''}`}
-          >
-            {phase} · {levelId ?? 'no level'} · {selectedSummary}
-            {tool ? <span className="text-white/60"> · {tool}</span> : null}
-          </div>
-        </div>
-        <div className="flex shrink-0 gap-0.5">
-          <button
-            aria-label="New chat"
-            className={HEADER_ICON_BUTTON_CLASS}
-            data-testid="assistant-new-chat"
-            disabled={status === 'planning' || status === 'executing'}
-            onClick={() => resetAssistantSession({ preserveChatMode: true })}
-            title="Start a fresh assistant chat without changing the current scene."
-            type="button"
-          >
-            <PencilIcon />
-          </button>
-          <button
-            aria-label="Dock left"
-            className={HEADER_ICON_BUTTON_CLASS}
-            data-testid="assistant-dock-left"
-            onClick={handleDockLeft}
-            title="Dock left"
-            type="button"
-          >
-            <PanelLeftIcon />
-          </button>
-          <button
-            aria-label="Hide assistant"
-            className={HEADER_ICON_BUTTON_CLASS}
-            data-testid="assistant-hide"
-            onClick={() => setCollapsed(true)}
-            title="Hide"
-            type="button"
-          >
-            <MinusIcon />
-          </button>
-        </div>
-      </div>
-
-      <div className="-mx-3 h-px shrink-0 bg-white/[0.06]" />
-
-      {/* Model Selection Dropdown inside Assistant Panel */}
-      {isModelMenuOpen && (
-        <div className="space-y-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3">
-          <div className="flex items-center justify-between text-[11px] text-white/70">
-            <span className="font-semibold text-cyan-300 flex items-center gap-1.5">
-              <span>Select Model</span>
-              <span className="text-[10px] font-normal text-white/50">
-                ({availableModels.length || '445+'} OpenRouter models)
-              </span>
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                className="text-[10px] text-cyan-400 hover:text-cyan-300"
-                onClick={() => void loadAvailableModels(true)}
-                disabled={loadingModels}
-                type="button"
-              >
-                {loadingModels ? 'Loading...' : 'Refresh'}
-              </button>
-              <button
-                className="text-[11px] text-white/50 hover:text-white"
-                onClick={() => setIsModelMenuOpen(false)}
-                type="button"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Quick presets */}
-          <div className="flex flex-wrap gap-1">
-            {[
-              { id: 'openrouter/free', label: '⭐ Free Router' },
-              { id: 'meta-llama/llama-3.3-70b-instruct:free', label: 'Llama 3.3 70B' },
-              { id: 'deepseek/deepseek-chat', label: 'DeepSeek V3' },
-              { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5' },
-              { id: 'anthropic/claude-3.7-sonnet', label: 'Claude 3.7' },
-              { id: 'openai/gpt-4o', label: 'GPT-4o' },
-            ].map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => void handleSelectModel(preset.id)}
-                className={`rounded px-1.5 py-0.5 text-[10px] border transition-colors ${
-                  activeModel === preset.id
-                    ? 'border-cyan-400 bg-cyan-400/20 text-cyan-100 font-medium'
-                    : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
-                type="button"
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Search bar */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search 445+ models (e.g. free, llama, deepseek, claude)..."
-              value={modelSearch}
-              onChange={(e) => setModelSearch(e.target.value)}
-              className="w-full rounded-xl border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-white placeholder:text-white/40 focus:border-cyan-400 focus:outline-none"
-            />
-          </div>
-
-          {/* Filter tabs */}
-          <div className="flex gap-1 text-[10px]">
-            <button
-              onClick={() => setModelFilter('free')}
-              className={`rounded px-2 py-0.5 font-medium transition ${
-                modelFilter === 'free'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : 'text-white/50 hover:text-white'
-              }`}
-              type="button"
-            >
-              ⭐ Free Only ({freeModelCount})
-            </button>
-            <button
-              onClick={() => setModelFilter('recommended')}
-              className={`rounded px-2 py-0.5 font-medium transition ${
-                modelFilter === 'recommended'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                  : 'text-white/50 hover:text-white'
-              }`}
-              type="button"
-            >
-              ⚡ Recommended
-            </button>
-            <button
-              onClick={() => setModelFilter('all')}
-              className={`rounded px-2 py-0.5 font-medium transition ${
-                modelFilter === 'all'
-                  ? 'bg-white/15 text-white border border-white/25'
-                  : 'text-white/50 hover:text-white'
-              }`}
-              type="button"
-            >
-              All ({availableModels.length})
-            </button>
-          </div>
-
-          {/* Model list */}
-          <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
-            {loadingModels ? (
-              <div className="py-3 text-center text-[11px] text-white/50">Loading real models...</div>
-            ) : filteredChatModels.length === 0 ? (
-              <div className="py-3 text-center text-[11px] text-white/50">No models found</div>
-            ) : (
-              filteredChatModels.map((m) => (
-                <button
-                  key={m.id}
-                  onClick={() => void handleSelectModel(m.id)}
-                  className={`flex w-full items-center justify-between gap-1.5 rounded-lg p-1.5 text-left text-[11px] transition ${
-                    activeModel === m.id
-                      ? 'bg-cyan-400/20 text-cyan-100 border border-cyan-400/30'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                  type="button"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="font-medium truncate">{m.name}</span>
-                      {m.isFree && (
-                        <span className="rounded bg-emerald-500/20 px-1 py-0.1 text-[8px] font-bold text-emerald-300 border border-emerald-500/30">
-                          FREE
-                        </span>
-                      )}
-                      {m.contextLength && (
-                        <span className="text-[9px] text-white/40">
-                          {Math.round(m.contextLength / 1000)}k
-                        </span>
-                      )}
-                    </div>
-                    <div className="font-mono text-[9px] text-white/40 truncate">{m.id}</div>
-                  </div>
-                  {activeModel === m.id && (
-                    <span className="text-cyan-300 text-xs">✓</span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-
-          {/* Collapsible API Key & Custom Configuration */}
-          <div className="border-t border-white/10 pt-1.5">
-            <button
-              onClick={() => setShowApiSettings((v) => !v)}
-              className="flex w-full items-center justify-between py-1 text-[10px] text-white/50 hover:text-white transition"
-              type="button"
-            >
-              <span className="flex items-center gap-1">
-                <span>⚙️</span>
-                <span>Custom API Key & Endpoint</span>
-              </span>
-              <span>{showApiSettings ? '▲' : '▼'}</span>
-            </button>
-
-            {showApiSettings && (
-              <div className="mt-1 space-y-1.5 rounded-xl bg-black/40 p-2 border border-white/10">
-                <div>
-                  <label className="block text-[9px] text-white/50 mb-0.5">API Key (OpenRouter / OpenAI)</label>
-                  <input
-                    type="password"
-                    placeholder="sk-or-v1-..."
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[10px] text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
+          {hasConversation ? (
+            <Transcript followKey={transcriptFollowKey}>
+              {messages.map((message, index) => {
+                const isLast = index === messages.length - 1
+                return message.role === 'user' ? (
+                  <UserMessage imageUrl={message.imageUrl} key={message.id} text={message.text} />
+                ) : (
+                  <AssistantMessage
+                    imageUrl={message.imageUrl}
+                    isLast={isLast}
+                    key={message.id}
+                    onUndo={isLast && lastUndoSnapshot && !showExecutionResult ? undoLastAssistantTurn : undefined}
+                    text={message.text}
                   />
-                </div>
-                <div>
-                  <label className="block text-[9px] text-white/50 mb-0.5">Base URL</label>
-                  <input
-                    type="text"
-                    placeholder="https://openrouter.ai/api/v1"
-                    value={baseUrlInput}
-                    onChange={(e) => setBaseUrlInput(e.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-white/5 px-2 py-1 text-[10px] text-white placeholder:text-white/30 focus:border-cyan-400 focus:outline-none"
-                  />
-                </div>
-                {apiConfigMessage && (
-                  <div className="text-[9px] text-cyan-300">{apiConfigMessage}</div>
-                )}
-                <div className="flex justify-end pt-1">
-                  <button
-                    onClick={() => void handleSaveApiSettings()}
-                    disabled={isSavingApiConfig}
-                    className="rounded-lg bg-cyan-500/20 border border-cyan-400/40 px-2.5 py-0.5 text-[10px] font-medium text-cyan-200 hover:bg-cyan-500/30 transition"
-                    type="button"
-                  >
-                    {isSavingApiConfig ? 'Saving...' : 'Save & Apply'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                )
+              })}
 
-      {messages.length > 0 || pendingAssistantMessage ? (
-        <div className="-mx-1 flex min-h-[120px] flex-1 flex-col gap-2.5 overflow-y-auto px-1 py-1 [scrollbar-color:rgba(255,255,255,0.15)_transparent] [scrollbar-width:thin]">
-          {messages.map((message, idx) => (
-            <div
-              className={`flex flex-col gap-2 break-words px-3 py-2 text-[13px] leading-[1.5] ${
-                message.role === 'user'
-                  ? 'max-w-[85%] self-end rounded-[18px] rounded-br-md bg-cyan-300 text-neutral-950 shadow-sm'
-                  : 'max-w-[92%] self-start rounded-[18px] rounded-bl-md bg-white/[0.06] text-white/[0.86] shadow-sm'
-              }`}
-              data-testid={message.role === 'assistant' && idx === messages.length - 1 ? 'assistant-last-result' : undefined}
-              key={message.id}
-            >
-              {message.imageUrl && (
-                <img
-                  src={message.imageUrl}
-                  alt="Attached"
-                  className="max-h-32 rounded-lg object-contain w-full bg-black/10"
-                />
-              )}
-              <ChatMessageContent content={message.text} role={message.role} />
-              {message.role === 'assistant' && idx === messages.length - 1 && lastUndoSnapshot && (
-                <div className="flex justify-end border-t border-white/[0.06] pt-1.5">
-                  <button
-                    onClick={undoLastAssistantTurn}
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-cyan-300/80 transition-colors hover:bg-cyan-300/10 hover:text-cyan-200"
-                    type="button"
-                  >
-                    <UndoIcon />
-                    Undo this action
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-          {pendingAssistantMessage ? (
-            <div
-              className="flex max-w-[85%] items-center gap-2 self-start rounded-[18px] rounded-bl-md bg-white/[0.04] px-3 py-2 text-[12px] text-white/55"
-              data-testid="assistant-pending"
-            >
-              <span aria-hidden="true" className="flex shrink-0 gap-1">
-                <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-cyan-300" />
-                <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-cyan-300 [animation-delay:150ms]" />
-                <span className="h-[5px] w-[5px] animate-pulse rounded-full bg-cyan-300 [animation-delay:300ms]" />
-              </span>
-              {pendingAssistantMessage}
-            </div>
-          ) : null}
-        </div>
-      ) : taskPlan || turn ? null : (
-        <div className="flex flex-col items-center gap-1.5 px-2 pt-4 pb-2 text-center">
-          <div className="font-medium text-sm">What should we build?</div>
-          <div className="max-w-[260px] text-[12px] leading-[1.5] text-white/50">
-            Describe a part, a room or an edit. Safe, specific requests run right away.
-          </div>
-        </div>
-      )}
+              {pendingAssistantMessage ? <PendingLine text={pendingAssistantMessage} /> : null}
 
-
-
-      {/* Build suggestions removed as per user request to reduce clutter */}
-
-      {taskPlan ? (
-        <AssistantTaskPlanCard
-          activeStepIndex={activeStepIndex}
-          onExecute={() => void executeCurrentTaskPlan()}
-          onRetryStep={(stepIndex) => void retryTaskPlanStep(stepIndex)}
-          onStopAfterCurrent={() => {
-            stopTaskPlanRef.current = true
-          }}
-          taskPlan={taskPlan}
-          taskPlanStatus={taskPlanStatus}
-        />
-      ) : null}
-
-      {turn?.mode === 'clarify' && status === 'clarify' ? (
-        <div
-          className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3"
-          data-testid="assistant-clarify-card"
-        >
-          <div className="font-medium text-[12px] text-amber-100">Clarification</div>
-          {turn.targetingExplanation ? (
-            <div className="mt-2 text-[12px] text-amber-50/90">{turn.targetingExplanation}</div>
-          ) : null}
-          {turn.ambiguities.length > 0 ? (
-            <div className="mt-2 space-y-1 text-[12px] text-amber-50/80">
-              {turn.ambiguities.map((ambiguity, index) => (
-                <div key={`${ambiguity}-${index}`}>{ambiguity}</div>
-              ))}
-            </div>
-          ) : null}
-          {(turn.targetCandidates?.length ?? 0) > 0 ? (
-            <div className="mt-3 space-y-1">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-amber-50/55">Candidate Targets</div>
-              {turn.targetCandidates?.map((candidate) => (
-                <div
-                  className="rounded-xl bg-black/20 px-3 py-2 text-[12px] text-amber-50/85"
-                  key={candidate.id}
-                >
-                  {(candidate.name ?? candidate.id)} · {candidate.type}
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-
-
-      {turn && shouldShowReviewCard ? (
-        <div
-          className="rounded-2xl border border-white/10 bg-white/[0.045] p-3"
-          data-testid="assistant-review-card"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <div className="font-medium text-[12px] text-white/85">Review Required</div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-white/45">
-              {turn.actions.length} actions
-            </div>
-          </div>
-          {turn.targetingExplanation ? (
-            <div className="mt-2 text-[12px] text-cyan-100/85">{turn.targetingExplanation}</div>
-          ) : null}
-          <div className="mt-2 text-[11px] text-white/55">{summarizeReviewScope(turn.actions)}</div>
-          {(turn.targetCandidates?.length ?? 0) > 0 ? (
-            <div className="mt-2 max-h-24 space-y-1 overflow-y-auto text-[12px] text-white/72">
-              {turn.targetCandidates?.map((candidate) => (
-                <div className="rounded-xl bg-black/20 px-3 py-2" key={candidate.id}>
-                  {(candidate.name ?? candidate.id)} · {candidate.type}
-                </div>
-              ))}
-            </div>
-          ) : null}
-          <div className="mt-2 max-h-32 space-y-1 overflow-y-auto text-[12px] text-white/72">
-            {turn.actions.map((action, index) => (
-              <div className="rounded-xl bg-black/20 px-3 py-2" key={`${action.type}-${index}`}>
-                {formatAction(action)}
-              </div>
-            ))}
-          </div>
-          <button
-            className="mt-3 inline-flex items-center justify-center rounded-xl bg-cyan-300 px-3 py-2 font-medium text-[12px] text-black transition hover:bg-cyan-200"
-            data-testid="assistant-apply-plan"
-            onClick={() => {
-              const requestId = assistantRequestIdRef.current + 1
-              assistantRequestIdRef.current = requestId
-              void executeTurnSequence({
-                initialTurn: turn,
-                prompt: lastPrompt ?? turn.reply,
-                image: lastPromptImage,
-                reviewConfirmed: true,
-                requestId,
-              })
-            }}
-            type="button"
-          >
-            Apply Plan
-          </button>
-        </div>
-      ) : null}
-
-      {/* Compact post-execution result bar — no verbose event log */}
-      {(status === 'executed' || panelError) && (
-        <div
-          className="rounded-2xl border border-white/10 bg-white/[0.045] p-3"
-          data-testid="assistant-execution-status"
-        >
-          {status === 'executed' && !panelError && (
-            <div className="flex items-center gap-2 text-[12px] text-emerald-200">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-              Done{turn?.assumptions.length ? ` — ${turn.assumptions[0]}` : ''}
-            </div>
-          )}
-          {panelError && (
-            <div className="text-[12px] text-rose-200">{panelError}</div>
-          )}
-          <div className="mt-2 flex flex-wrap gap-2">
-            {isAutoContinuing ? (
-              <button
-                className="inline-flex items-center justify-center rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 font-medium text-[12px] text-amber-100 transition hover:bg-amber-300/20"
-                onClick={stopAutoContinuation}
-                type="button"
-              >
-                Stop Build
-              </button>
-            ) : null}
-            {lastPrompt && (
-              <button
-                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 font-medium text-[12px] text-white/80 transition hover:bg-white/10"
-                disabled={status === 'planning' || status === 'executing'}
-                onClick={() => void submitPrompt(lastPrompt, lastPromptImage)}
-                type="button"
-              >
-                Retry
-              </button>
-            )}
-            {lastUndoSnapshot ? (
-              <button
-                className="inline-flex items-center justify-center rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 font-medium text-[12px] text-amber-100 transition hover:bg-amber-300/20"
-                data-testid="assistant-undo-last-turn"
-                disabled={status === 'planning' || status === 'executing'}
-                onClick={undoLastAssistantTurn}
-                type="button"
-              >
-                Undo
-              </button>
-            ) : null}
-            {executionResult?.sketchIds.length ? (
-              <button
-                className="inline-flex items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2 font-medium text-[12px] text-cyan-100 transition hover:bg-cyan-300/20"
-                onClick={editLatestSketch}
-                type="button"
-              >
-                Edit Sketch
-              </button>
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      <div className="relative shrink-0">
-        {attachedImage && (
-          <div className="absolute bottom-full left-0 z-10 mb-2 flex min-w-[280px] items-center gap-2 rounded-2xl border border-white/[0.08] bg-neutral-900/95 p-2 shadow-xl backdrop-blur-xl">
-            <img src={attachedImage.dataUrl} alt="Preview" className="h-10 w-10 rounded-lg object-cover" />
-            <div className="min-w-0 flex-1">
-              <div className="max-w-[150px] truncate text-[11px] text-white/70">
-                {attachedImage.file.name}
-              </div>
-              <label className="mt-1 flex items-center gap-2 text-[11px] text-white/45">
-                Intent
-                <select
-                  className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[11px] text-white outline-none"
-                  data-testid="assistant-image-intent"
-                  onChange={(event) => {
-                    const nextKind = event.target.value as AssistantImageKind
-                    setAttachedImage((current) => (current ? { ...current, kind: nextKind } : current))
+              {taskPlan ? (
+                <PlanChecklist
+                  activeStepIndex={activeStepIndex}
+                  onExecute={() => void executeCurrentTaskPlan()}
+                  onRetryStep={(stepIndex) => void retryTaskPlanStep(stepIndex)}
+                  onStopAfterCurrent={() => {
+                    stopTaskPlanRef.current = true
                   }}
-                  value={attachedImage.kind}
-                >
-                  <option value="auto">Auto</option>
-                  <option value="workspace">Workspace</option>
-                  <option value="reference">Reference</option>
-                  <option value="floorplan">Floorplan</option>
-                  <option value="sketch">Sketch</option>
-                </select>
-              </label>
-            </div>
-            <button
-              aria-label="Remove image"
-              type="button"
-              className="rounded-full bg-white/10 p-1 hover:bg-white/20"
-              onClick={() => setAttachedImage(null)}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-        <div className="flex flex-col rounded-[18px] border border-white/[0.08] bg-white/[0.04] transition focus-within:border-cyan-300/35 focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(103,232,249,0.08)]">
-          <div className="relative">
-            {inlineGhostText ? (
-              <div
-                className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3.5 pt-3 pb-1 text-sm leading-5"
-                data-testid="assistant-inline-autocomplete"
-              >
-                <span className="invisible">{input}</span>
-                <span className="text-white/25">{inlineGhostText}</span>
-              </div>
-            ) : null}
-            <textarea
-              aria-label="Message the assistant"
-              className="relative z-10 block max-h-40 min-h-[60px] w-full resize-none bg-transparent px-3.5 pt-3 pb-1 text-sm leading-5 text-white outline-none placeholder:text-white/35 disabled:opacity-60"
-              data-gramm="false"
-              data-testid="assistant-input"
-              disabled={composerLocked}
-              onChange={(event) => {
-                setInput(event.target.value)
-                setDismissedInlineCompletion(null)
-              }}
-              onKeyDown={handleComposerKeyDown}
-              onPaste={(event) => {
-                const file = event.clipboardData.files?.[0]
-                if (file?.type.startsWith('image/')) {
-                  event.preventDefault()
-                  void attachImageFile(file, 'paste')
-                }
-              }}
-              placeholder={composerPlaceholder}
-              ref={textareaRef}
-              spellCheck={false}
-              suppressHydrationWarning
-              value={input}
-            />
-          </div>
-          <div className="flex items-center gap-1.5 px-2 pt-1.5 pb-2">
-            <label
-              aria-label="Attach image"
-              className={`inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] text-white/55 transition ${composerLocked
-                ? 'cursor-not-allowed opacity-40'
-                : 'cursor-pointer hover:bg-white/[0.08] hover:text-white'
-                }`}
-              title="Attach Image"
-            >
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={composerLocked}
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    void attachImageFile(file, 'upload')
-                  }
-                  // reset value so the same file can be selected again
-                  e.target.value = ''
-                }}
-              />
-              <PaperclipIcon />
-            </label>
-            <div className="flex shrink-0 rounded-full border border-white/[0.06] bg-white/[0.05] p-0.5">
-              {([
-                { id: 'ask', label: 'Ask' },
-                { id: 'create', label: 'Create' },
-                { id: 'refine', label: 'Refine' },
-              ] as const).map((option) => (
-                <button
-                  key={option.id}
-                  aria-pressed={chatMode === option.id}
-                  className={`h-6 rounded-full px-2.5 font-medium text-[11.5px] transition disabled:cursor-not-allowed ${chatMode === option.id
-                    ? 'bg-cyan-300/[0.16] text-cyan-200'
-                    : 'text-white/55 hover:text-white'
-                    }`}
-                  data-testid={`assistant-chat-mode-${option.id}`}
-                  disabled={composerLocked}
-                  onClick={() => setChatMode(option.id)}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <button
-              aria-pressed={executionPolicy === 'autopilot'}
-              className="group inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg px-1.5 text-[11.5px] text-white/60 capitalize transition hover:text-white"
-              data-testid="assistant-policy-toggle"
-              onClick={() =>
-                setExecutionPolicy((current) => (current === 'autopilot' ? 'review' : 'autopilot'))
-              }
-              title="Toggle between auto-executing non-destructive plans and manual review."
-              type="button"
-            >
-              <span
-                aria-hidden="true"
-                className={`flex h-3.5 w-6 shrink-0 items-center rounded-full p-0.5 transition-colors ${executionPolicy === 'autopilot' ? 'justify-end bg-cyan-400' : 'justify-start bg-white/15'
-                  }`}
-              >
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${executionPolicy === 'autopilot' ? 'bg-neutral-950' : 'bg-white/70'}`}
+                  taskPlan={taskPlan}
+                  taskPlanStatus={taskPlanStatus}
                 />
-              </span>
-              {executionPolicy}
-            </button>
-            <div className="flex-1" />
-            <button
-              aria-label={getAssistantSendLabel(status)}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-300 text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40"
-              data-testid="assistant-send"
-              disabled={composerLocked}
-              onClick={() => void handleSend()}
-              title={getAssistantSendLabel(status)}
-              type="button"
-            >
-              {status === 'planning' || status === 'executing' ? <SpinnerIcon /> : <ArrowUpIcon />}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+              ) : null}
+
+              {showClarifyPrompt && turn ? (
+                <ClarifyPrompt
+                  ambiguities={turn.ambiguities}
+                  candidates={turn.targetCandidates ?? []}
+                  explanation={turn.targetingExplanation}
+                />
+              ) : null}
+
+              {turn && shouldShowReviewCard ? (
+                <ReviewPrompt
+                  actions={turn.actions.map((action) => ({
+                    label: formatAction(action),
+                    kind: classifyReviewAction(action),
+                  }))}
+                  autopilotOn={executionPolicy === 'autopilot'}
+                  candidates={turn.targetCandidates ?? []}
+                  explanation={turn.targetingExplanation}
+                  onApply={applyReviewedTurn}
+                  onApplyAndAutopilot={() => {
+                    setExecutionPolicy('autopilot')
+                    applyReviewedTurn()
+                  }}
+                  onRevise={() => textareaRef.current?.focus()}
+                  scopeSummary={summarizeReviewScope(turn.actions)}
+                />
+              ) : null}
+
+              {showExecutionResult ? (
+                <ExecutionResult
+                  actionLabels={status === 'executed' && turn ? turn.actions.map(formatAction) : []}
+                  busy={isBusy}
+                  // The failure is usually also the last message; do not print it twice.
+                  error={panelError && panelError !== lastMessage?.text ? panelError : null}
+                  executed={status === 'executed'}
+                  note={turn?.assumptions[0]}
+                  onEditSketch={executionResult?.sketchIds.length ? editLatestSketch : undefined}
+                  onRetry={lastPrompt ? () => void submitPrompt(lastPrompt, lastPromptImage) : undefined}
+                  onStopBuild={isAutoContinuing ? stopAutoContinuation : undefined}
+                  onUndo={lastUndoSnapshot ? undoLastAssistantTurn : undefined}
+                />
+              ) : null}
+            </Transcript>
+          ) : (
+            <EmptyState />
+          )}
+
+          <Composer
+            attachedImage={
+              attachedImage
+                ? { dataUrl: attachedImage.dataUrl, name: attachedImage.file.name, kind: attachedImage.kind }
+                : null
+            }
+            chatMode={chatMode}
+            ghostText={inlineGhostText}
+            input={input}
+            locked={composerLocked}
+            modelLabel={modelLabel}
+            modelMenuOpen={isModelMenuOpen}
+            onAttachFile={(file) => void attachImageFile(file, 'upload')}
+            onChatModeChange={setChatMode}
+            onImageKindChange={(kind) =>
+              setAttachedImage((current) => (current ? { ...current, kind } : current))
+            }
+            onInputChange={(value) => {
+              setInput(value)
+              setDismissedInlineCompletion(null)
+            }}
+            onKeyDown={handleComposerKeyDown}
+            onPaste={handleComposerPaste}
+            onRemoveImage={() => setAttachedImage(null)}
+            onSend={() => void handleSend()}
+            onStop={stopRunningWork}
+            onToggleModelMenu={() => setIsModelMenuOpen((open) => !open)}
+            placeholder={isBusy ? 'Working on it…' : composerPlaceholder}
+            popover={
+              isModelMenuOpen ? (
+                <ModelPicker
+                  onClose={closeModelMenu}
+                  onOpenProviders={() => {
+                    setIsModelMenuOpen(false)
+                    setPanelView('providers')
+                  }}
+                  onSelected={showCommandToast}
+                />
+              ) : null
+            }
+            sendLabel={getAssistantSendLabel(status)}
+            sendState={sendState}
+            textareaRef={textareaRef}
+          />
+
+          <StatusLine
+            context={statusContext}
+            onTogglePolicy={() =>
+              setExecutionPolicy((current) => (current === 'autopilot' ? 'review' : 'autopilot'))
+            }
+            policy={executionPolicy}
+          />
+        </>
+      )}
+    </section>
   )
 }
 
-const HEADER_ICON_BUTTON_CLASS =
-  'inline-flex h-[30px] w-[30px] items-center justify-center rounded-[9px] text-white/60 transition hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40'
-
-type IconProps = { size?: number }
-
-const iconSvgProps = (size: number) => ({
-  'aria-hidden': true,
-  fill: 'none',
-  height: size,
-  stroke: 'currentColor',
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-  strokeWidth: 2,
-  viewBox: '0 0 24 24',
-  width: size,
-})
-
-function SparkleIcon({ size = 16 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)}>
-      <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z" />
-      <path d="M19 16v4M17 18h4" />
-    </svg>
-  )
-}
-
-function PencilIcon({ size = 16 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)}>
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-    </svg>
-  )
-}
-
-function PanelLeftIcon({ size = 16 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)}>
-      <rect height="18" rx="2" width="18" x="3" y="3" />
-      <path d="M9 3v18" />
-    </svg>
-  )
-}
-
-function MinusIcon({ size = 16 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)}>
-      <path d="M5 12h14" />
-    </svg>
-  )
-}
-
-function PaperclipIcon({ size = 17 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)}>
-      <path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" />
-    </svg>
-  )
-}
-
-function ArrowUpIcon({ size = 16 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)} strokeWidth={2.4}>
-      <path d="M12 19V5" />
-      <path d="M5 12l7-7 7 7" />
-    </svg>
-  )
-}
-
-function UndoIcon({ size = 12 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)}>
-      <path d="M9 14L4 9l5-5" />
-      <path d="M4 9h11a5 5 0 0 1 0 10h-3" />
-    </svg>
-  )
-}
-
-function SpinnerIcon({ size = 16 }: IconProps) {
-  return (
-    <svg {...iconSvgProps(size)} className="animate-spin">
-      <path d="M21 12a9 9 0 1 1-6.2-8.6" />
-    </svg>
-  )
-}

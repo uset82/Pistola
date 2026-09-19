@@ -325,16 +325,22 @@ export const resolveAssistantComposerKeyAction = ({
   key,
   ctrlKey = false,
   metaKey = false,
+  shiftKey = false,
+  isComposing = false,
   activeSuggestionIndex,
   suggestionCount,
 }: {
   key: string
   ctrlKey?: boolean
   metaKey?: boolean
+  shiftKey?: boolean
+  /** True while an IME composition is open; Enter then confirms the composition. */
+  isComposing?: boolean
   activeSuggestionIndex: number
   suggestionCount: number
 }): AssistantComposerKeyAction => {
-  if ((ctrlKey || metaKey) && key === 'Enter') {
+  // Enter sends and Shift+Enter adds a line; Ctrl/Cmd+Enter keeps working.
+  if (key === 'Enter' && !isComposing && (!shiftKey || ctrlKey || metaKey)) {
     return { type: 'submit-prompt' }
   }
 

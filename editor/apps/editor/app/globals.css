@@ -128,6 +128,28 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/*
+ * Assistant panel palette. The panel is always dark: neutrals carry the
+ * hierarchy, `as-accent` only marks live state (working, focus, the brand
+ * mark) and `as-danger` is reserved for errors and removals.
+ */
+@theme {
+  --color-as-panel: #151514;
+  --color-as-overlay: #1b1b19;
+  --color-as-surface: #1c1c1a;
+  --color-as-raised: #242422;
+  --color-as-selected: #2a2927;
+  --color-as-line-soft: #232321;
+  --color-as-line: #2a2927;
+  --color-as-line-strong: #3a3935;
+  --color-as-text: #ecece8;
+  --color-as-muted: #a7a6a0;
+  --color-as-faint: #8e8d87;
+  --color-as-disabled: #6b6a65;
+  --color-as-accent: #e38b5c;
+  --color-as-danger: #f2706a;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

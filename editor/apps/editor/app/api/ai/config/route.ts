@@ -3,9 +3,10 @@ import { requireRouteAuthSession } from '@/lib/auth/route'
 import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import {
   getInstalledAiConfigPublicView,
+  mergeInstalledAiConfigUpdate,
   readInstalledAiConfig,
   writeInstalledAiConfig,
-  type InstalledAiConfig,
+  type InstalledAiConfigUpdate,
   DEFAULT_INSTALLED_OPENROUTER_BASE_URL,
   DEFAULT_INSTALLED_OPENROUTER_MODEL,
 } from '@/lib/installed-ai-config'
@@ -52,29 +53,13 @@ export async function PUT(request: Request) {
       return withPistolaCors(request, auth.response)
     }
 
-    const body = (await request.json()) as Partial<InstalledAiConfig>
-    const existing = readInstalledAiConfig()
-    const provider = body.provider === 'openai' ? 'openai' : 'openrouter'
-    const apiKey =
-      typeof body.apiKey === 'string' && body.apiKey.trim()
-        ? body.apiKey.trim()
-        : existing?.apiKey || process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
-    if (!apiKey) {
-      return withPistolaCors(request, NextResponse.json({ error: 'apiKey is required.' }, { status: 400 }))
+    const body = (await request.json().catch(() => ({}))) as InstalledAiConfigUpdate
+    const merged = mergeInstalledAiConfigUpdate(readInstalledAiConfig(), body)
+    if ('error' in merged) {
+      return withPistolaCors(request, NextResponse.json({ error: merged.error }, { status: 400 }))
     }
 
-    const written = writeInstalledAiConfig({
-      provider,
-      apiKey,
-      model:
-        typeof body.model === 'string' && body.model.trim()
-          ? body.model.trim()
-          : DEFAULT_INSTALLED_OPENROUTER_MODEL,
-      baseUrl:
-        typeof body.baseUrl === 'string' && body.baseUrl.trim()
-          ? body.baseUrl.trim()
-          : DEFAULT_INSTALLED_OPENROUTER_BASE_URL,
-    })
+    const written = writeInstalledAiConfig(merged)
 
     return withPistolaCors(
       request,

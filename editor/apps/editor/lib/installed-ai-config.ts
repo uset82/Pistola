@@ -89,6 +89,49 @@ export const writeInstalledAiConfig = (
   return { path: configPath, config: normalized }
 }
 
+export type InstalledAiConfigUpdate = {
+  provider?: unknown
+  apiKey?: unknown
+  model?: unknown
+  baseUrl?: unknown
+}
+
+const readUpdateString = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+
+/**
+ * Resolve a partial config update against the stored config. Fields the caller
+ * omits keep their stored value, so switching models never resets a custom
+ * base URL. Switching provider drops the previous provider's key, model and
+ * base URL instead of carrying them across.
+ */
+export const mergeInstalledAiConfigUpdate = (
+  existing: InstalledAiConfig | null,
+  update: InstalledAiConfigUpdate,
+  env: Record<string, string | undefined> = process.env,
+): InstalledAiConfig | { error: string } => {
+  const requestedProvider = readUpdateString(update.provider)
+  const provider: InstalledAiProvider =
+    requestedProvider === 'openai' || requestedProvider === 'openrouter'
+      ? requestedProvider
+      : (existing?.provider ?? 'openrouter')
+  const keepsProvider = existing?.provider === provider
+  const envKey = provider === 'openrouter' ? env.OPENROUTER_API_KEY : env.OPENAI_API_KEY
+
+  const apiKey =
+    readUpdateString(update.apiKey) || (keepsProvider ? existing.apiKey : '') || envKey?.trim() || ''
+  if (!apiKey) {
+    return { error: 'apiKey is required.' }
+  }
+
+  return {
+    provider,
+    apiKey,
+    // Empty values fall back to the provider defaults in writeInstalledAiConfig.
+    model: readUpdateString(update.model) || (keepsProvider ? existing.model : ''),
+    baseUrl: readUpdateString(update.baseUrl) || (keepsProvider ? existing.baseUrl : ''),
+  }
+}
+
 export const getInstalledAiConfigPublicView = (config: InstalledAiConfig | null) => {
   if (!config) {
     return {
