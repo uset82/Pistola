@@ -200,7 +200,9 @@ const buildLocalCreationRecipeTurn = (prompt: string): AssistantTurnResult | nul
       mode: 'plan',
       assumptions: ['Adding visible sails, a rudder, and cabin portholes to the existing boat.'],
       ambiguities: [],
-      actions: boatDetailActions(),
+      actions: boatDetailActions({
+        levelId: useViewer.getState().selection.levelId ?? undefined,
+      }),
       requiresReview: false,
       destructiveActionCount: 0,
       continuation: null,
