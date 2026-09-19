@@ -14,6 +14,28 @@ const tempBox = new Box3()
 const tempCenter = new Vector3()
 const tempSize = new Vector3()
 
+const FIT_NODE_TYPES = [
+  'wall',
+  'item',
+  'slab',
+  'zone',
+  'roof',
+  'roof-segment',
+  'window',
+  'door',
+  'ceiling',
+  'cad-body',
+  'cad-instance',
+  'cad-sketch',
+] as const
+
+const isTypingTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+}
+
 export const CustomCameraControls = () => {
   const controls = useRef<CameraControlsImpl>(null!)
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
@@ -335,18 +357,130 @@ export const CustomCameraControls = () => {
       controls.current.rotateTo(target, currentPolar, true)
     }
 
+    const handleFrontView = () => {
+      if (!controls.current) return
+      controls.current.rotateTo(0, Math.PI / 2 - 0.2, true)
+    }
+
+    const handleDolly = ({ direction }: { direction: 'in' | 'out' }) => {
+      if (!controls.current) return
+      controls.current.dolly(direction === 'in' ? 2 : -2, true)
+    }
+
+    const handleTruck = ({ x, y }: { x: number; y: number }) => {
+      if (!controls.current) return
+      controls.current.truck(x, y, true)
+    }
+
+    const handleFit = () => {
+      if (!controls.current) return
+
+      const selectedIds = useViewer.getState().selection.selectedIds
+      const ids =
+        selectedIds.length > 0
+          ? selectedIds
+          : FIT_NODE_TYPES.flatMap((type) => [...sceneRegistry.byType[type]])
+      const box = new Box3()
+      let found = false
+
+      for (const id of ids) {
+        const object = sceneRegistry.nodes.get(id)
+        if (!object) continue
+        tempBox.setFromObject(object)
+        if (tempBox.isEmpty()) continue
+        box.union(tempBox)
+        found = true
+      }
+
+      if (!found) {
+        const workspace = useEditor.getState().workspace
+        if (workspace === 'cad') {
+          controls.current.setLookAt(8, 6, 8, 0, 0, 0, true)
+        } else {
+          controls.current.setLookAt(20, 20, 20, 0, 0, 0, true)
+        }
+        return
+      }
+
+      void controls.current.fitToBox(box, true, {
+        paddingTop: 0.8,
+        paddingBottom: 0.8,
+        paddingLeft: 0.8,
+        paddingRight: 0.8,
+      })
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || isTypingTarget(event.target)) return
+
+      if (event.key === 'f' || event.key === 'F') {
+        event.preventDefault()
+        handleFit()
+        return
+      }
+      if (event.key === '+' || event.key === '=' || event.key === 'Add') {
+        event.preventDefault()
+        handleDolly({ direction: 'in' })
+        return
+      }
+      if (event.key === '-' || event.key === '_' || event.key === 'Subtract') {
+        event.preventDefault()
+        handleDolly({ direction: 'out' })
+        return
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        handleTruck({ x: 0, y: 1.25 })
+        return
+      }
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        handleTruck({ x: 0, y: -1.25 })
+        return
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        handleTruck({ x: -1.25, y: 0 })
+        return
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        handleTruck({ x: 1.25, y: 0 })
+        return
+      }
+      if (event.key === '[') {
+        event.preventDefault()
+        handleOrbitCCW()
+        return
+      }
+      if (event.key === ']') {
+        event.preventDefault()
+        handleOrbitCW()
+      }
+    }
+
     emitter.on('camera-controls:capture', handleNodeCapture)
     emitter.on('camera-controls:view', handleNodeView)
     emitter.on('camera-controls:top-view', handleTopView)
+    emitter.on('camera-controls:front-view', handleFrontView)
     emitter.on('camera-controls:orbit-cw', handleOrbitCW)
     emitter.on('camera-controls:orbit-ccw', handleOrbitCCW)
+    emitter.on('camera-controls:dolly', handleDolly)
+    emitter.on('camera-controls:truck', handleTruck)
+    emitter.on('camera-controls:fit', handleFit)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
       emitter.off('camera-controls:capture', handleNodeCapture)
       emitter.off('camera-controls:view', handleNodeView)
       emitter.off('camera-controls:top-view', handleTopView)
+      emitter.off('camera-controls:front-view', handleFrontView)
       emitter.off('camera-controls:orbit-cw', handleOrbitCW)
       emitter.off('camera-controls:orbit-ccw', handleOrbitCCW)
+      emitter.off('camera-controls:dolly', handleDolly)
+      emitter.off('camera-controls:truck', handleTruck)
+      emitter.off('camera-controls:fit', handleFit)
+      window.removeEventListener('keydown', handleKeyDown)
     }
   }, [])
 

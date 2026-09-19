@@ -103,9 +103,6 @@ export const useKeyboard = () => {
       } else if (e.key === 'c' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
         void runAssistantCommand([{ type: 'set_phase', phase: 'cad' }])
-      } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        void runAssistantCommand([{ type: 'set_phase', phase: 'furnish' }])
       } else if (e.key === 'z' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
         void runAssistantCommand([

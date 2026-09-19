@@ -134,8 +134,33 @@ type AssistantPanelPosition = {
 type TaskPlanStatus = 'ready' | 'executing' | 'completed' | 'error'
 type PanelAttachedImage = AssistantImageAttachment & { file: File }
 
+const ASSISTANT_PANEL_STORAGE_KEY = 'pistola-assistant-panel'
 const PANEL_GUTTER = 16
 const DEFAULT_PANEL_WIDTH = 380
+
+const readAssistantPanelStorage = () => {
+  if (typeof window === 'undefined') {
+    return { collapsed: false, position: null as AssistantPanelPosition | null }
+  }
+
+  try {
+    const raw = window.localStorage.getItem(ASSISTANT_PANEL_STORAGE_KEY)
+    if (!raw) return { collapsed: false, position: null as AssistantPanelPosition | null }
+    const parsed = JSON.parse(raw) as {
+      collapsed?: unknown
+      position?: { x?: unknown; y?: unknown } | null
+    }
+    const position =
+      parsed.position &&
+      typeof parsed.position.x === 'number' &&
+      typeof parsed.position.y === 'number'
+        ? { x: parsed.position.x, y: parsed.position.y }
+        : null
+    return { collapsed: parsed.collapsed === true, position }
+  } catch {
+    return { collapsed: false, position: null as AssistantPanelPosition | null }
+  }
+}
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
@@ -519,6 +544,7 @@ export function AiAssistantPanel() {
   const [attachedImage, setAttachedImage] = useState<PanelAttachedImage | null>(null)
   const [lastUndoSnapshot, setLastUndoSnapshot] = useState<AssistantUndoSnapshot | null>(null)
   const [panelPosition, setPanelPosition] = useState<AssistantPanelPosition | null>(null)
+  const [assistantUiHydrated, setAssistantUiHydrated] = useState(false)
   const [isDraggingPanel, setIsDraggingPanel] = useState(false)
   const [floatingElement, setFloatingElement] = useState<HTMLElement | null>(null)
   const [isAutoContinuing, setIsAutoContinuing] = useState(false)
@@ -933,6 +959,39 @@ export function AiAssistantPanel() {
   const assignFloatingRef = (element: HTMLButtonElement | HTMLDivElement | null) => {
     floatingRef.current = element
     setFloatingElement(element)
+  }
+
+  useEffect(() => {
+    const stored = readAssistantPanelStorage()
+    setCollapsed(stored.collapsed)
+    setPanelPosition(stored.position)
+    setAssistantUiHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!assistantUiHydrated) return
+    try {
+      window.localStorage.setItem(
+        ASSISTANT_PANEL_STORAGE_KEY,
+        JSON.stringify({ collapsed, position: panelPosition }),
+      )
+    } catch {
+      // Private browsing can block storage. The panel still works for this session.
+    }
+  }, [assistantUiHydrated, collapsed, panelPosition])
+
+  const handleDockLeft = () => {
+    const sidebar = document.querySelector('[data-slot="sidebar"][data-state="expanded"]')
+    const sidebarWidth = sidebar?.getBoundingClientRect().width ?? 0
+    const height = floatingRef.current?.getBoundingClientRect().height ?? 480
+    setCollapsed(false)
+    setPanelPosition(
+      clampPanelPosition(
+        { x: sidebarWidth > 48 ? sidebarWidth + PANEL_GUTTER : PANEL_GUTTER, y: PANEL_GUTTER },
+        DEFAULT_PANEL_WIDTH,
+        height,
+      ),
+    )
   }
 
   const handlePanelDragStart = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -2283,13 +2342,16 @@ export function AiAssistantPanel() {
       style={floatingPositionStyle}
     >
       <div
+        aria-label="Drag assistant"
         className={`flex items-center justify-center pb-1 text-white/40 transition ${isDraggingPanel ? 'cursor-grabbing' : 'cursor-grab'
           } touch-none select-none`}
         data-testid="assistant-drag-handle"
         onPointerDown={handlePanelDragStart}
+        role="button"
+        tabIndex={0}
         title="Drag to move assistant"
       >
-        <div className="h-1.5 w-16 rounded-full bg-white/10" />
+        <span className="text-[10px] uppercase tracking-[0.18em] text-white/55">Drag</span>
       </div>
 
       <div className="flex items-start justify-between gap-3">
@@ -2357,6 +2419,15 @@ export function AiAssistantPanel() {
           </button>
           <button
             className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/80"
+            data-testid="assistant-dock-left"
+            onClick={handleDockLeft}
+            type="button"
+          >
+            Dock left
+          </button>
+          <button
+            className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/80"
+            data-testid="assistant-hide"
             onClick={() => setCollapsed(true)}
             type="button"
           >

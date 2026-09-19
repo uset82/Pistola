@@ -39,7 +39,6 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
       { keys: ['4'], action: 'Switch to CAD phase' },
       { keys: ['S'], action: 'Switch to Structure layer', note: 'Outside the CAD phase.' },
       { keys: ['C'], action: 'Switch to CAD phase' },
-      { keys: ['F'], action: 'Switch to Furnish layer' },
       { keys: ['Z'], action: 'Switch to Zones layer' },
       {
         keys: ['Cmd/Ctrl', 'Arrow Up'],
@@ -50,6 +49,15 @@ const SHORTCUT_CATEGORIES: ShortcutCategory[] = [
         action: 'Select previous level in the active building',
       },
       { keys: ['Cmd/Ctrl', 'B'], action: 'Toggle sidebar' },
+    ],
+  },
+  {
+    title: 'View',
+    shortcuts: [
+      { keys: ['F'], action: 'Fit the selection, or the whole scene' },
+      { keys: ['+', '−'], action: 'Zoom in or out' },
+      { keys: ['Arrow keys'], action: 'Pan the view' },
+      { keys: ['[', ']'], action: 'Orbit left or right' },
     ],
   },
   {

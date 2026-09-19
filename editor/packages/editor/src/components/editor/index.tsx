@@ -22,6 +22,7 @@ import { ZoneLabelEditorSystem } from '../systems/zone/zone-label-editor-system'
 import { ZoneSystem } from '../systems/zone/zone-system'
 import { ToolManager } from '../tools/tool-manager'
 import { ActionMenu } from '../ui/action-menu'
+import { ViewPad } from '../ui/action-menu/view-pad'
 import { HelperManager } from '../ui/helpers/helper-manager'
 import { PanelManager } from '../ui/panels/panel-manager'
 import { ErrorBoundary } from '../ui/primitives/error-boundary'
@@ -201,6 +202,7 @@ export default function Editor({
         ) : (
           <>
             <ActionMenu enableCadRuntime={enableCadRuntime} />
+            <ViewPad />
             <PanelManager />
             <HelperManager enableCad={enableCad} enableCadRuntime={enableCadRuntime} />
 

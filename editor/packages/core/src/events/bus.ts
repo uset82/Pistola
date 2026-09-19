@@ -82,6 +82,15 @@ export interface CameraControlEvent {
   nodeId: AnyNode['id']
 }
 
+export interface CameraDollyEvent {
+  direction: 'in' | 'out'
+}
+
+export interface CameraTruckEvent {
+  x: number
+  y: number
+}
+
 export interface ThumbnailGenerateEvent {
   projectId: string
 }
@@ -90,8 +99,12 @@ type CameraControlEvents = {
   'camera-controls:view': CameraControlEvent
   'camera-controls:capture': CameraControlEvent
   'camera-controls:top-view': undefined
+  'camera-controls:front-view': undefined
   'camera-controls:orbit-cw': undefined
   'camera-controls:orbit-ccw': undefined
+  'camera-controls:dolly': CameraDollyEvent
+  'camera-controls:truck': CameraTruckEvent
+  'camera-controls:fit': undefined
   'camera-controls:generate-thumbnail': ThumbnailGenerateEvent
 }
 

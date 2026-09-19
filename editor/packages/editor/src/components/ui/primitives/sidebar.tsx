@@ -43,14 +43,22 @@ type SidebarStore = {
 export const useSidebarStore = create<SidebarStore>()(
   persist(
     (set) => ({
-      width: 288, // 18rem = 288px
+      width: 320,
       setWidth: (width) => set({ width: Math.max(288, Math.min(width, 800)) }),
       isDragging: false,
       setIsDragging: (isDragging) => set({ isDragging }),
     }),
     {
       name: 'sidebar-preferences',
-      partialize: (state) => ({ width: state.width }), // Only persist width
+      version: 1,
+      partialize: (state) => ({ width: state.width }),
+      migrate: (persisted) => {
+        const state = persisted as { width?: number }
+        if (typeof state?.width !== 'number' || state.width === 432) {
+          return { width: 320 }
+        }
+        return state
+      },
     },
   ),
 )
@@ -98,6 +106,12 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen)
   const open = openProp ?? _open
+
+  React.useEffect(() => {
+    if (openProp !== undefined) return
+    const match = document.cookie.match(/(?:^|; )sidebar_state=(true|false)/)
+    if (match) _setOpen(match[1] === 'true')
+  }, [openProp])
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === 'function' ? value(open) : value

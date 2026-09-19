@@ -124,7 +124,7 @@ export function WorkspaceSwitcher({
         </div>
         <div className="absolute right-1.5 bottom-1 z-10 rounded border border-border/40 bg-background/40 px-1 py-[2px] backdrop-blur-md">
           <span className="block font-medium font-mono text-[9px] text-muted-foreground/70 leading-none">
-            F
+            3
           </span>
         </div>
       </button>
