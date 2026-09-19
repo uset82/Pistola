@@ -60,7 +60,7 @@ test('local kernel volumes match analytic boxes, cylinders, extrudes, and differ
       { op: 'box', size: [0.8, 1, 0.8], translate: [0, 0, 0] },
     ],
   })
-  assert.ok(cut.volume < 4 && cut.volume > 2)
+  assert.ok(Math.abs(cut.volume - 3.36) / 3.36 < 0.08)
 })
 
 test('build_cad_solid spec validation accepts a heart-like extrude and rejects empty trees', () => {

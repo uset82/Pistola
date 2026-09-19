@@ -1,3 +1,5 @@
+import * as THREE from 'three'
+import { ADDITION, Brush, Evaluator, INTERSECTION, SUBTRACTION } from 'three-bvh-csg'
 import { CadSolidSpecSchema, type CadSolidSpec } from './solid-spec'
 
 export type KernelMesh = {
@@ -245,7 +247,7 @@ const pointInPolygon = (point: Vec2, polygon: Vec2[]) => {
   return inside
 }
 
-const extrudeMesh = (polygon: Vec2[], holes: Vec2[][] = [], height: number): KernelMesh => {
+const extrudeSolid = (polygon: Vec2[], height: number): KernelMesh => {
   const outer = ensureCcw(polygon)
   const { verts, tris } = triangulate(outer)
   const positions: number[] = []
@@ -263,12 +265,24 @@ const extrudeMesh = (polygon: Vec2[], holes: Vec2[][] = [], height: number): Ker
     pushTriangle(positions, indices, [a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], height, b[1]])
     pushTriangle(positions, indices, [a[0], 0, a[1]], [b[0], height, b[1]], [a[0], height, a[1]])
   }
-  if (holes.length > 0) {
-    const holeArea = holes.reduce((sum, hole) => sum + Math.abs(polygonArea(hole)) * height, 0)
-    const solid = finishMesh(positions, indices)
-    return { ...solid, volume: Math.max(0, solid.volume - holeArea) }
-  }
   return finishMesh(positions, indices)
+}
+
+const extrudeMesh = (polygon: Vec2[], holes: Vec2[][] = [], height: number): KernelMesh => {
+  const outer = extrudeSolid(polygon, height)
+  let mesh = outer
+  let holeVolume = 0
+  for (const hole of holes) {
+    const solidHole = extrudeSolid(hole, height)
+    holeVolume += solidHole.volume
+    const cutter = applyTransforms(extrudeSolid(hole, height + 0.04), {
+      op: 'box',
+      size: [1, 1, 1],
+      translate: [0, -0.02, 0],
+    })
+    mesh = evaluateBoolean(mesh, cutter, 'difference')
+  }
+  return holes.length > 0 ? { ...mesh, volume: Math.max(0, outer.volume - holeVolume) } : mesh
 }
 
 const revolveMesh = (profile: Vec2[], angleDeg = 360, segments = 32): KernelMesh => {
@@ -293,13 +307,55 @@ const revolveMesh = (profile: Vec2[], angleDeg = 360, segments = 32): KernelMesh
   return finishMesh(positions, indices)
 }
 
-const bboxOverlap = (a: KernelMesh, b: KernelMesh) =>
-  a.bbox[0][0] <= b.bbox[1][0] &&
-  a.bbox[1][0] >= b.bbox[0][0] &&
-  a.bbox[0][1] <= b.bbox[1][1] &&
-  a.bbox[1][1] >= b.bbox[0][1] &&
-  a.bbox[0][2] <= b.bbox[1][2] &&
-  a.bbox[1][2] >= b.bbox[0][2]
+const csgEvaluator = new Evaluator()
+csgEvaluator.attributes = ['position', 'normal']
+
+const meshToBrush = (mesh: KernelMesh): Brush => {
+  const geometry = new THREE.BufferGeometry()
+  const vertexCount = mesh.positions.length / 3
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(mesh.positions, 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(vertexCount * 2), 2))
+  geometry.setIndex(mesh.indices)
+  geometry.computeVertexNormals()
+  const brush = new Brush(geometry)
+  brush.updateMatrixWorld()
+  return brush
+}
+
+const brushToMesh = (brush: Brush): KernelMesh => {
+  const geometry = brush.geometry
+  const position = geometry.getAttribute('position')
+  const index = geometry.getIndex()
+  if (!position) throw new Error('CSG result has no position attribute.')
+  const positions = Array.from(position.array)
+  const indices = index ? Array.from(index.array) : [...Array(positions.length / 3).keys()]
+  geometry.dispose()
+  return finishMesh(positions, indices)
+}
+
+const evaluateBoolean = (left: KernelMesh, right: KernelMesh, op: 'union' | 'difference' | 'intersection') => {
+  const operation = op === 'union' ? ADDITION : op === 'difference' ? SUBTRACTION : INTERSECTION
+  const a = meshToBrush(left)
+  const b = meshToBrush(right)
+  try {
+    const result = csgEvaluator.evaluate(a, b, operation)
+    a.geometry.dispose()
+    b.geometry.dispose()
+    const mesh = brushToMesh(result)
+    if (mesh.positions.length === 0) {
+      throw new Error(`CAD ${op} produced an empty solid.`)
+    }
+    return mesh
+  } catch (error) {
+    a.geometry.dispose()
+    b.geometry.dispose()
+    throw new Error(
+      error instanceof Error
+        ? `CAD ${op} failed: ${error.message}`
+        : `CAD ${op} failed.`,
+    )
+  }
+}
 
 const mergeMeshes = (meshes: KernelMesh[]): KernelMesh => {
   const positions: number[] = []
@@ -310,64 +366,6 @@ const mergeMeshes = (meshes: KernelMesh[]): KernelMesh => {
     indices.push(...mesh.indices.map((index) => index + offset))
   }
   return finishMesh(positions, indices)
-}
-
-const boxFromMesh = (mesh: KernelMesh): Vec3 => [
-  mesh.bbox[1][0] - mesh.bbox[0][0],
-  mesh.bbox[1][1] - mesh.bbox[0][1],
-  mesh.bbox[1][2] - mesh.bbox[0][2],
-]
-
-const differenceApprox = (keep: KernelMesh, cut: KernelMesh): KernelMesh => {
-  if (!bboxOverlap(keep, cut)) return keep
-  const keepSize = boxFromMesh(keep)
-  const cutSize = boxFromMesh(cut)
-  const overlap: Vec3 = [
-    Math.max(0, Math.min(keep.bbox[1][0], cut.bbox[1][0]) - Math.max(keep.bbox[0][0], cut.bbox[0][0])),
-    Math.max(0, Math.min(keep.bbox[1][1], cut.bbox[1][1]) - Math.max(keep.bbox[0][1], cut.bbox[0][1])),
-    Math.max(0, Math.min(keep.bbox[1][2], cut.bbox[1][2]) - Math.max(keep.bbox[0][2], cut.bbox[0][2])),
-  ]
-  const overlapVolume = overlap[0] * overlap[1] * overlap[2]
-  const next = { ...keep, volume: Math.max(0, keep.volume - overlapVolume) }
-  if (overlapVolume > 0.4 * (cutSize[0] * cutSize[1] * cutSize[2]) && overlap[0] > 0 && overlap[2] > 0) {
-    const hole = [
-      [Math.max(keep.bbox[0][0], cut.bbox[0][0]), Math.max(keep.bbox[0][2], cut.bbox[0][2])],
-      [Math.min(keep.bbox[1][0], cut.bbox[1][0]), Math.max(keep.bbox[0][2], cut.bbox[0][2])],
-      [Math.min(keep.bbox[1][0], cut.bbox[1][0]), Math.min(keep.bbox[1][2], cut.bbox[1][2])],
-      [Math.max(keep.bbox[0][0], cut.bbox[0][0]), Math.min(keep.bbox[1][2], cut.bbox[1][2])],
-    ] as Vec2[]
-    return {
-      ...extrudeMesh(
-        [
-          [keep.bbox[0][0], keep.bbox[0][2]],
-          [keep.bbox[1][0], keep.bbox[0][2]],
-          [keep.bbox[1][0], keep.bbox[1][2]],
-          [keep.bbox[0][0], keep.bbox[1][2]],
-        ],
-        [hole],
-        keepSize[1],
-      ),
-      volume: next.volume,
-    }
-  }
-  return next
-}
-
-const intersectionApprox = (a: KernelMesh, b: KernelMesh): KernelMesh => {
-  if (!bboxOverlap(a, b)) return finishMesh([], [])
-  const min: Vec3 = [
-    Math.max(a.bbox[0][0], b.bbox[0][0]),
-    Math.max(a.bbox[0][1], b.bbox[0][1]),
-    Math.max(a.bbox[0][2], b.bbox[0][2]),
-  ]
-  const max: Vec3 = [
-    Math.min(a.bbox[1][0], b.bbox[1][0]),
-    Math.min(a.bbox[1][1], b.bbox[1][1]),
-    Math.min(a.bbox[1][2], b.bbox[1][2]),
-  ]
-  const size: Vec3 = [Math.max(0, max[0] - min[0]), Math.max(0, max[1] - min[1]), Math.max(0, max[2] - min[2])]
-  if (size[0] <= 0 || size[1] <= 0 || size[2] <= 0) return finishMesh([], [])
-  return applyTransforms(boxMesh(size), { op: 'box', size, translate: [ (min[0] + max[0]) / 2, min[1], (min[2] + max[2]) / 2 ] })
 }
 
 const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
@@ -388,19 +386,31 @@ const evaluateNode = (spec: CadSolidSpec): KernelMesh => {
     case 'revolve':
       mesh = revolveMesh(spec.profile, spec.angle)
       break
-    case 'union':
-      mesh = mergeMeshes(spec.children.map(evaluateNode))
+    case 'union': {
+      const [first, ...rest] = spec.children
+      if (!first) throw new Error('union needs a base solid.')
+      mesh = rest.reduce(
+        (current: KernelMesh, child: CadSolidSpec) => evaluateBoolean(current, evaluateNode(child), 'union'),
+        evaluateNode(first),
+      )
       break
+    }
     case 'difference': {
       const [first, ...rest] = spec.children
       if (!first) throw new Error('difference needs a base solid.')
-      mesh = rest.reduce((current: KernelMesh, child: CadSolidSpec) => differenceApprox(current, evaluateNode(child)), evaluateNode(first))
+      mesh = rest.reduce(
+        (current: KernelMesh, child: CadSolidSpec) => evaluateBoolean(current, evaluateNode(child), 'difference'),
+        evaluateNode(first),
+      )
       break
     }
     case 'intersection': {
       const [first, ...rest] = spec.children
       if (!first) throw new Error('intersection needs a base solid.')
-      mesh = rest.reduce((current: KernelMesh, child: CadSolidSpec) => intersectionApprox(current, evaluateNode(child)), evaluateNode(first))
+      mesh = rest.reduce(
+        (current: KernelMesh, child: CadSolidSpec) => evaluateBoolean(current, evaluateNode(child), 'intersection'),
+        evaluateNode(first),
+      )
       break
     }
     case 'mirror': {
