@@ -2,6 +2,7 @@
   "pistola_blueprint_check",
   "pistola_camera",
   "pistola_check",
+  "pistola_examples",
   "pistola_execute",
   "pistola_export_scene",
   "pistola_get_nodes",

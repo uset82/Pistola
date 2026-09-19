@@ -44,6 +44,7 @@ import {
   stepsFromBlueprint,
   type BlueprintV2,
 } from '../blueprint'
+import { getExample, searchExamples } from '../agent-examples'
 
 export const PISTOLA_API_VERSION = 1
 
@@ -88,6 +89,8 @@ const INVOKE_ALLOWLIST = new Set([
   'plan.check',
   'plan.checkScene',
   'plan.snap',
+  'examples.search',
+  'examples.get',
   'waitForIdle',
   'undo',
   'redo',
@@ -157,6 +160,10 @@ export const createPistolaAgentApi = () => {
       owner: 'ide',
       methods: ['create', 'get', 'updateStep', 'runStep', 'restoreBest', 'complete', 'undo', 'clear'],
       rule: 'Create a checklist before mutation. Pass {blueprint} to generate one step per part. Complete execution steps only through runStep. run and runStep embed a structure report. At most 2 typed retries, then a simpler technique.',
+    },
+    exampleLibrary: {
+      methods: ['search', 'get'],
+      rule: 'examples.search(query) then examples.get({id, params, at}). Returns editable actions with partIds and a blueprint fragment. Placeholders: $ref_* and LEVEL.',
     },
     capabilities: getAllCapabilities().map((capability) => ({
       type: capability.type,
@@ -548,6 +555,20 @@ export const createPistolaAgentApi = () => {
     validate,
     run,
     checkStructure: async () => checkStructure(),
+    examples: {
+      search: async (query?: string | { query?: string; kind?: string }) => {
+        if (query && typeof query === 'object') return searchExamples(query.query ?? '', query.kind as never)
+        return searchExamples(typeof query === 'string' ? query : '')
+      },
+      get: async (input: { id: string; params?: Record<string, unknown>; at?: [number, number, number] } | string) => {
+        if (typeof input === 'string') return getExample({ id: input })
+        return getExample({
+          id: input.id,
+          params: input.params as never,
+          at: input.at,
+        })
+      },
+    },
     plan: {
       check: async (blueprint: unknown) => checkBlueprint(blueprint),
       checkScene: async (blueprint?: unknown) => {
@@ -577,6 +598,14 @@ export const createPistolaAgentApi = () => {
       if (method.startsWith('taskPlan.')) {
         const name = method.slice('taskPlan.'.length) as keyof typeof taskPlan
         const fn = taskPlan[name]
+        if (typeof fn !== 'function') {
+          throw new Error(`Unknown pistola method "${method}".`)
+        }
+        return (fn as (...values: unknown[]) => unknown)(...payload)
+      }
+      if (method.startsWith('examples.')) {
+        const name = method.slice('examples.'.length) as keyof typeof api.examples
+        const fn = api.examples[name]
         if (typeof fn !== 'function') {
           throw new Error(`Unknown pistola method "${method}".`)
         }

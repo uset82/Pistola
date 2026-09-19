@@ -1,0 +1,883 @@
+{
+  "prompt": {
+    "slug": "bookshelf",
+    "prompt": "A rectangular bookshelf: two sides, a thin back, and four shelves.",
+    "overall_m": [
+      0.8,
+      1.2,
+      0.28
+    ],
+    "anchor": "floor",
+    "parts": [
+      "side-l",
+      "side-r",
+      "back",
+      "shelf-0",
+      "shelf-1",
+      "shelf-2",
+      "shelf-3"
+    ],
+    "relations": [
+      {
+        "a": "side-l",
+        "rel": "on_floor"
+      },
+      {
+        "a": "shelf-0",
+        "rel": "on_floor"
+      },
+      {
+        "a": "shelf-1",
+        "rel": "touches",
+        "b": "side-l"
+      }
+    ],
+    "set": "heldOut"
+  },
+  "gold": {
+    "slug": "bookshelf",
+    "partCount": 7
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "side-l",
+        "role": "side",
+        "assetId": "primitive-box",
+        "color": "#9a3412",
+        "parentId": null,
+        "position": [
+          -0.385,
+          0,
+          0
+        ],
+        "scale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "localPosition": [
+          -0.385,
+          0,
+          0
+        ],
+        "localScale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "box": {
+          "min": [
+            -0.4,
+            0,
+            -0.14
+          ],
+          "max": [
+            -0.37,
+            1.2,
+            0.14
+          ],
+          "size": [
+            0.03,
+            1.2,
+            0.28
+          ],
+          "center": [
+            -0.385,
+            0.6,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "side-r",
+        "role": "side",
+        "assetId": "primitive-box",
+        "color": "#9a3412",
+        "parentId": null,
+        "position": [
+          0.385,
+          0,
+          0
+        ],
+        "scale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "localPosition": [
+          0.385,
+          0,
+          0
+        ],
+        "localScale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "box": {
+          "min": [
+            0.37,
+            0,
+            -0.14
+          ],
+          "max": [
+            0.4,
+            1.2,
+            0.14
+          ],
+          "size": [
+            0.03,
+            1.2,
+            0.28
+          ],
+          "center": [
+            0.385,
+            0.6,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "back",
+        "role": "back",
+        "assetId": "primitive-box",
+        "color": "#7c2d12",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          -0.13
+        ],
+        "scale": [
+          0.8,
+          1.2,
+          0.02
+        ],
+        "localPosition": [
+          0,
+          0,
+          -0.13
+        ],
+        "localScale": [
+          0.8,
+          1.2,
+          0.02
+        ],
+        "box": {
+          "min": [
+            -0.4,
+            0,
+            -0.14
+          ],
+          "max": [
+            0.4,
+            1.2,
+            -0.12000000000000001
+          ],
+          "size": [
+            0.8,
+            1.2,
+            0.02
+          ],
+          "center": [
+            0,
+            0.6,
+            -0.13
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "shelf-0",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          0,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            0,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            0.03,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            0.015,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "shelf-1",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          0.39,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          0.39,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            0.39,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            0.42000000000000004,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            0.405,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "item_6",
+        "type": "item",
+        "name": "shelf-2",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          0.78,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          0.78,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            0.78,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            0.81,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            0.795,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "item_7",
+        "type": "item",
+        "name": "shelf-3",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          1.17,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          1.17,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            1.17,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            1.2,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            1.1849999999999998,
+            0.01
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "side-l",
+        "role": "side",
+        "assetId": "primitive-box",
+        "color": "#9a3412",
+        "parentId": null,
+        "position": [
+          -0.385,
+          0,
+          0
+        ],
+        "scale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "localPosition": [
+          -0.385,
+          0,
+          0
+        ],
+        "localScale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "box": {
+          "min": [
+            -0.4,
+            0,
+            -0.14
+          ],
+          "max": [
+            -0.37,
+            1.2,
+            0.14
+          ],
+          "size": [
+            0.03,
+            1.2,
+            0.28
+          ],
+          "center": [
+            -0.385,
+            0.6,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "side-r",
+        "role": "side",
+        "assetId": "primitive-box",
+        "color": "#9a3412",
+        "parentId": null,
+        "position": [
+          0.385,
+          0,
+          0
+        ],
+        "scale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "localPosition": [
+          0.385,
+          0,
+          0
+        ],
+        "localScale": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "box": {
+          "min": [
+            0.37,
+            0,
+            -0.14
+          ],
+          "max": [
+            0.4,
+            1.2,
+            0.14
+          ],
+          "size": [
+            0.03,
+            1.2,
+            0.28
+          ],
+          "center": [
+            0.385,
+            0.6,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "back",
+        "role": "back",
+        "assetId": "primitive-box",
+        "color": "#7c2d12",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          -0.13
+        ],
+        "scale": [
+          0.8,
+          1.2,
+          0.02
+        ],
+        "localPosition": [
+          0,
+          0,
+          -0.13
+        ],
+        "localScale": [
+          0.8,
+          1.2,
+          0.02
+        ],
+        "box": {
+          "min": [
+            -0.4,
+            0,
+            -0.14
+          ],
+          "max": [
+            0.4,
+            1.2,
+            -0.12000000000000001
+          ],
+          "size": [
+            0.8,
+            1.2,
+            0.02
+          ],
+          "center": [
+            0,
+            0.6,
+            -0.13
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "shelf-0",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          0,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            0,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            0.03,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            0.015,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "shelf-1",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          0.39,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          0.39,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            0.39,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            0.42000000000000004,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            0.405,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "item_6",
+        "type": "item",
+        "name": "shelf-2",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          0.78,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          0.78,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            0.78,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            0.81,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            0.795,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "item_7",
+        "type": "item",
+        "name": "shelf-3",
+        "role": "shelf",
+        "assetId": "primitive-box",
+        "color": "#fed7aa",
+        "parentId": null,
+        "position": [
+          0,
+          1.17,
+          0.01
+        ],
+        "scale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "localPosition": [
+          0,
+          1.17,
+          0.01
+        ],
+        "localScale": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "box": {
+          "min": [
+            -0.37,
+            1.17,
+            -0.12000000000000001
+          ],
+          "max": [
+            0.37,
+            1.2,
+            0.14
+          ],
+          "size": [
+            0.74,
+            0.03,
+            0.26
+          ],
+          "center": [
+            0,
+            1.1849999999999998,
+            0.01
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "bookshelf",
+    "set": "heldOut",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        0,
+        0
+      ],
+      "mean": 0
+    },
+    "perPartDimensionError": [
+      {
+        "name": "side-l",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "side-r",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "back",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "shelf-0",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "shelf-1",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "shelf-2",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "shelf-3",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 7,
+      "found": 7,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 1,
+    "actualOverall_m": [
+      0.8,
+      1.2,
+      0.28
+    ],
+    "partCount": 7
+  }
+}

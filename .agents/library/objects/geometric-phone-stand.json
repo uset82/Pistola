@@ -3,12 +3,29 @@
   "title": "Geometric blue phone stand",
   "approved": "2026-09-19",
   "keywords": ["phone stand", "desk accessory", "geometric", "A-frame", "blue"],
+  "exampleId": "library-geometric-phone-stand",
   "units": "m",
   "host": {
     "surface": "window.pistola",
     "cadRuntime": "browser-local build_cad_solid",
     "serverCadRuntime": "mock"
   },
+  "blueprint": {
+    "version": 2,
+    "title": "Geometric blue phone stand",
+    "overall_m": [0.16, 0.132, 0.18],
+    "anchor": "floor",
+    "parts": [
+      { "id": "base", "name": "Octagonal base", "role": "base", "technique": "primitive", "dims_m": [0.16, 0.012, 0.18], "position_m": [0, 0, 0], "parent": null },
+      { "id": "aframe-l", "name": "A-frame L", "role": "support", "technique": "primitive", "dims_m": [0.02, 0.12, 0.04], "position_m": [-0.035, 0.012, -0.02], "parent": "base" },
+      { "id": "aframe-r", "name": "A-frame R", "role": "support", "technique": "primitive", "dims_m": [0.02, 0.12, 0.04], "position_m": [0.035, 0.012, -0.02], "parent": "base" },
+      { "id": "rail", "name": "Retention rail", "role": "rail", "technique": "primitive", "dims_m": [0.112, 0.018, 0.018], "position_m": [0, 0.012, 0.07], "parent": "base" },
+      { "id": "pads", "name": "Contact pads", "role": "pad", "technique": "primitive", "dims_m": [0.08, 0.006, 0.04], "position_m": [0, 0.012, 0.03], "parent": "base" }
+    ]
+  },
+  "batches": [["$ref_* place_item actions from examples.get({id:'library-geometric-phone-stand'})"]],
+  "scores": null,
+  "renders": [],
   "parts": [
     { "name": "Octagonal base", "role": "stable footprint with cable notch" },
     { "name": "Open A-frame", "role": "angled structural support" },

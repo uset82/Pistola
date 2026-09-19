@@ -14,7 +14,7 @@ plan → examples → build per part → check → fix (≤2) → render → cri
 
 1. Open the workspace. Wait until `data-pistola-agent="ready"`.
 2. If a blueprint exists, run `plan.check` / `pistola_blueprint_check`, then `taskPlan.create({blueprint})` (one step per part, parents first). Otherwise create a checkbox `taskPlan` before the first mutation.
-3. Inspect, then validate each batch.
+3. Search examples with `examples.search` / `pistola_examples`, then `examples.get({id, params, at})`. Inspect, then validate each batch.
 4. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
 5. After each part, inspect. If a checker report exists, apply at most two typed fixes, then fall back to a simpler primitive.
 6. Complete the plan only with evidence.

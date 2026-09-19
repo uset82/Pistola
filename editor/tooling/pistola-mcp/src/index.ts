@@ -194,6 +194,39 @@ const tools: McpTool[] = [
     },
   },
   {
+    name: 'pistola_examples',
+    description:
+      'Search or instantiate retrieval examples (techniques, subassemblies, recipes, library). action=search|get.',
+    inputSchema: objectSchema({
+      action: { type: 'string' },
+      query: { type: 'string' },
+      id: { type: 'string' },
+      params: { type: 'object' },
+      at: { type: 'array' },
+      kind: { type: 'string' },
+    }),
+    handler: async (args) => {
+      try {
+        const action = typeof args.action === 'string' ? args.action : 'search'
+        if (action === 'get') {
+          if (typeof args.id !== 'string') throw new Error('pistola_examples get requires id.')
+          return jsonResult(
+            unwrap(
+              await invoke('examples.get', {
+                id: args.id,
+                params: args.params,
+                at: args.at,
+              }),
+            ),
+          )
+        }
+        return jsonResult(unwrap(await invoke('examples.search', { query: args.query, kind: args.kind })))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
     name: 'pistola_blueprint_check',
     description:
       'Validate a blueprint v2 before building (window.pistola.invoke plan.check). Returns structured issues (PART_MISSING, RELATION_VIOLATED, ACCEPTANCE_FAILED).',

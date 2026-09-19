@@ -159,8 +159,9 @@ Files: new `lib/blueprint/{schema,check}.ts`, `lib/operator-plan/operator-plan.t
 
 ### Phase 4: Retrieval (examples and subassemblies)
 Files: new `lib/agent-examples/*`, `lib/agent-api/index.ts`, MCP `pistola_examples`, `.agents/library`.
-- [ ] One technique example per op, in the canonical frame.
-- [ ] Parameterized subassemblies, returned as editable actions with `partId`s plus a blueprint fragment:
+- [x] One technique example per op, in the canonical frame.
+  — evidence: `editor/packages/editor/src/lib/agent-examples/catalog.ts` `technique-<op>` for every `MANUAL_OP_EXAMPLES` key
+- [x] Parameterized subassemblies, returned as editable actions with `partId`s plus a blueprint fragment:
   - leg set;
   - wheel + axle;
   - lathe profiles (bottle, shade, cup);
@@ -172,10 +173,14 @@ Files: new `lib/agent-examples/*`, `lib/agent-api/index.ts`, MCP `pistola_exampl
   - sail/fin;
   - quadruped blockout;
   - cabinet carcass.
-- [ ] `examples.search` / `examples.get({id, params, at})`.
-- [ ] Convert `CREATION_RECIPES` and `geometric-phone-stand` into replayable library entries. The library
+  — evidence: same catalog ids; `examples.get` returns `$ref_*` actions and a blueprint fragment
+- [x] `examples.search` / `examples.get({id, params, at})`.
+  — evidence: `bun test ./packages/editor/src/lib/agent-examples/catalog.test.ts` → search ranks `wheel-axle`; get(`leg-set`, at [2,0,0]) stamps LEVEL and offsets; MCP `pistola_examples`
+- [x] Convert `CREATION_RECIPES` and `geometric-phone-stand` into replayable library entries. The library
   format is `{blueprint, batches, scores, renders}` with `$ref_*` / `LEVEL` placeholders.
-- [ ] Checkpoint: every example builds with 0 checker errors; the held-out benchmark improves.
+  — evidence: `recipe-<id>` wrappers; `.agents/library/objects/geometric-phone-stand.json`; `.agents/library/INDEX.md`
+- [x] Checkpoint: every example builds with 0 checker errors; the held-out benchmark improves.
+  — evidence: same suite → `every technique, subassembly and library example builds with 0 checker errors`; `run.mjs --mode replay --out .../phase-4` `summary.iou: 1` (gold replay unchanged; agent held-out skipped, no IDE quota)
 
 ### Phase 5: Render views and fixed critique
 Files: new `lib/render/{soft-raster,render-views}.ts` (Worker), MCP `pistola_render_views`,
@@ -233,7 +238,7 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
 ### Every phase
 - [x] Update `.agents/skills/pistola-direct-control/SKILL.md` with the loop:
   plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report.
-  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop section (Phase 3: `plan.check` / `pistola_blueprint_check`, `taskPlan.create({blueprint})`); `node scripts/ide-setup.mjs --check` → passed
+  — evidence: `.agents/skills/pistola-direct-control/SKILL.md` Loop (Phase 4: `examples.search` / `pistola_examples`); `node scripts/ide-setup.mjs --check` → passed
 - [x] Turn the Codex-only Studio sub-agents into role sections that any IDE can follow.
   — evidence: `.agents/skills/pistola-studio/SKILL.md` Roles; `.agents/skills/pistola-direct-control/SKILL.md` Roles (any IDE)
 - [x] Regenerate the per-IDE files with `scripts/ide-setup.mjs` and run `--check`.
@@ -242,9 +247,9 @@ Start only if the Phase 5 benchmark shows outline and proportion errors dominate
   - replay and score every phase;
   - full agent runs at baseline and after Phases 2, 4 and 5 (to limit IDE usage);
   - save `phase-N/scores.json` plus side-by-side renders.
-  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; Phase 2 → `phase-2/scores.json` `iou: 1`; Phase 3 → `phase-3/scores.json` `iou: 1`; `--mode agent --cli codex` skipped (no Phase 0/2 IDE quota)
+  — evidence: `run.mjs --mode replay` → `baseline/scores.json`; Phase 3 → `phase-3/scores.json` `iou: 1`; Phase 4 → `phase-4/scores.json` `iou: 1`; `--mode agent --cli codex` skipped (no IDE quota)
 - [x] `validate-task-evidence.mjs` passes; 0 forbidden AI-route requests.
-  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 3 tick)
+  — evidence: `node scripts/validate-task-evidence.mjs` (Phase 4 tick)
 
 ### Acceptance (held-out set, ≥2 headless IDEs, 3 seeds)
 - [ ] Final runnable rate ≥ 95%.
