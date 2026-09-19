@@ -26,6 +26,7 @@ Format: `- YYYY-MM-DD: <what happened> → <what to do instead>`. Update existin
 - 2026-09-19: The in-app chat's `openrouter/free` model sometimes lands on a safety classifier ("User Safety: safe") or stalls for minutes → don't plan through the chat; run actions directly, or pick a paid model.
 - 2026-09-19: The ChatGPT Sites export has no API of its own, and its planning calls to pistola.canner.app can fail with "Failed to fetch" → use in-page execution surfaces, which need no API.
 - 2026-09-19: An OpenRouter key saved with "Save & Apply" on pistola.canner.app is wiped by every redeploy → keys belong in the host's environment variables.
+- 2026-09-19: `focus_camera_on_nodes` and Fit view did not visibly frame a roughly 0.18 m CAD assembly in the Sites editor, even when selected → add or verify a scaling-aware camera-framing path before relying on visual QA for small models.
 
 ## Archive
 

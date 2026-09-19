@@ -1,0 +1,22 @@
+{
+  "slug": "geometric-phone-stand",
+  "title": "Geometric blue phone stand",
+  "approved": "2026-09-19",
+  "keywords": ["phone stand", "desk accessory", "geometric", "A-frame", "blue"],
+  "units": "m",
+  "host": {
+    "surface": "window.pistola",
+    "cadRuntime": "browser-local build_cad_solid",
+    "serverCadRuntime": "mock"
+  },
+  "parts": [
+    { "name": "Octagonal base", "role": "stable footprint with cable notch" },
+    { "name": "Open A-frame", "role": "angled structural support" },
+    { "name": "Retention rail", "role": "prevents the phone sliding forward" },
+    { "name": "Contact pads", "role": "protects phone contact surfaces" }
+  ],
+  "knownGaps": [
+    "Hosted FreeCAD and MAC are mock previews; the created solids use the browser-local CAD kernel.",
+    "Camera focus and Fit view did not frame the approximately 0.18 m assembly reliably in the Sites editor."
+  ]
+}

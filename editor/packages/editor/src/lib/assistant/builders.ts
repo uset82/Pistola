@@ -349,6 +349,8 @@ export const focusCameraOnNodes = (
   const firstTarget = action.nodeIds[0] ? getNode(action.nodeIds[0]) : null
   if (firstTarget?.camera) {
     emitter.emit('camera-controls:view', { nodeId: firstTarget.id as AnyNodeId })
+  } else if (action.nodeIds.length > 0) {
+    emitter.emit('camera-controls:fit')
   }
   return action.nodeIds[0] ?? null
 }
