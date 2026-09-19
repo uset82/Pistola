@@ -1,6 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { TooltipProvider } from './../../../components/ui/primitives/tooltip'
 import { useReducedMotion } from './../../../hooks/use-reduced-motion'
 import { cn } from './../../../lib/utils'
@@ -13,6 +14,137 @@ import { ControlModes } from './control-modes'
 import { FurnishTools } from './furnish-tools'
 import { StructureTools } from './structure-tools'
 import { ViewToggles } from './view-toggles'
+
+const STORAGE_KEY = 'pistola-action-menu'
+const GUTTER = 16
+
+// Anchored by its bottom-left corner so rows that expand (catalog, CAD tools) grow upward.
+type Position = { x: number; bottom: number }
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+const clampPosition = (position: Position, width: number, height: number): Position => {
+  if (typeof window === 'undefined') return position
+  return {
+    x: clamp(position.x, GUTTER, Math.max(GUTTER, window.innerWidth - width - GUTTER)),
+    bottom: clamp(position.bottom, GUTTER, Math.max(GUTTER, window.innerHeight - height - GUTTER)),
+  }
+}
+
+const readStoredPosition = (): Position | null => {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { position?: { x?: unknown; bottom?: unknown } | null }
+    return parsed.position &&
+      typeof parsed.position.x === 'number' &&
+      typeof parsed.position.bottom === 'number'
+      ? { x: parsed.position.x, bottom: parsed.position.bottom }
+      : null
+  } catch {
+    return null
+  }
+}
+
+/** Drag state for the floating action menu. `null` position keeps the default bottom-center spot. */
+function useDraggableMenu() {
+  const menuRef = useRef<HTMLDivElement | null>(null)
+  const dragRef = useRef<{ pointerId: number; offsetX: number; offsetBottom: number } | null>(null)
+  const stopDragListeners = useRef<(() => void) | null>(null)
+  const [position, setPosition] = useState<Position | null>(null)
+  const [hydrated, setHydrated] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+
+  useEffect(() => {
+    setPosition(readStoredPosition())
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ position }))
+    } catch {
+      // Private browsing can block storage. The menu still moves for this session.
+    }
+  }, [hydrated, position])
+
+  // Keep the menu on screen when the window shrinks or a tool row makes it taller.
+  useEffect(() => {
+    const element = menuRef.current
+    if (!element) return
+    const reclamp = () => {
+      const rect = element.getBoundingClientRect()
+      setPosition((current) => (current ? clampPosition(current, rect.width, rect.height) : current))
+    }
+    const observer = new ResizeObserver(reclamp)
+    observer.observe(element)
+    window.addEventListener('resize', reclamp)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', reclamp)
+    }
+  }, [])
+
+  useEffect(() => () => stopDragListeners.current?.(), [])
+
+  const handleDragStart = (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return
+    const rect = menuRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetBottom: rect.bottom - event.clientY,
+    }
+    setPosition(
+      clampPosition({ x: rect.left, bottom: window.innerHeight - rect.bottom }, rect.width, rect.height),
+    )
+    setIsDragging(true)
+    event.preventDefault()
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== moveEvent.pointerId) return
+      const bounds = menuRef.current?.getBoundingClientRect()
+      setPosition(
+        clampPosition(
+          {
+            x: moveEvent.clientX - drag.offsetX,
+            bottom: window.innerHeight - (moveEvent.clientY + drag.offsetBottom),
+          },
+          bounds?.width ?? rect.width,
+          bounds?.height ?? rect.height,
+        ),
+      )
+    }
+    const handleUp = (upEvent: PointerEvent) => {
+      if (dragRef.current?.pointerId !== upEvent.pointerId) return
+      dragRef.current = null
+      setIsDragging(false)
+      stopDragListeners.current?.()
+      stopDragListeners.current = null
+    }
+    stopDragListeners.current?.()
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('pointercancel', handleUp)
+    stopDragListeners.current = () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('pointercancel', handleUp)
+    }
+  }
+
+  return {
+    handleDragStart,
+    isDragging,
+    menuRef,
+    position,
+    resetPosition: () => setPosition(null),
+  }
+}
 
 export function ActionMenu({
   className,
@@ -33,19 +165,44 @@ export function ActionMenu({
   const transition = reducedMotion
     ? { duration: 0 }
     : { type: 'spring' as const, bounce: 0.2, duration: 0.4 }
+  const { handleDragStart, isDragging, menuRef, position, resetPosition } = useDraggableMenu()
 
   return (
     <TooltipProvider>
       <motion.div
         className={cn(
-          'fixed bottom-6 left-1/2 z-50 -translate-x-1/2',
+          'fixed z-50',
+          !position && 'bottom-6 left-1/2 -translate-x-1/2',
           'rounded-2xl border border-border bg-background/90 shadow-2xl backdrop-blur-md',
           'transition-colors duration-200 ease-out',
           className,
         )}
-        layout
+        data-testid="action-menu"
+        layout={!isDragging}
+        ref={menuRef}
+        style={position ? { left: position.x, bottom: position.bottom } : undefined}
         transition={transition}
       >
+        <div
+          aria-label="Drag toolbar"
+          className={cn(
+            'group flex h-3.5 touch-none select-none items-center justify-center',
+            isDragging ? 'cursor-grabbing' : 'cursor-grab',
+          )}
+          data-testid="action-menu-drag-handle"
+          onDoubleClick={resetPosition}
+          onPointerDown={handleDragStart}
+          role="button"
+          tabIndex={0}
+          title="Drag to move toolbar · double-click to re-center"
+        >
+          <span
+            className={cn(
+              'h-1 w-8 rounded-full bg-muted-foreground/30 transition-colors group-hover:bg-muted-foreground/60',
+              isDragging && 'bg-muted-foreground/70',
+            )}
+          />
+        </div>
         {/* Item Catalog Row - Only show when in build mode with item tool */}
         <AnimatePresence>
           {isBuildMode && tool === 'item' && catalogCategory && (
