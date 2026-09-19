@@ -1,0 +1,414 @@
+{
+  "slug": "bookshelf",
+  "set": "heldOut",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "side-l",
+      "role": "side",
+      "assetId": "primitive-box",
+      "position": [
+        -0.385,
+        0,
+        0
+      ],
+      "scale": [
+        0.03,
+        1.2,
+        0.28
+      ],
+      "color": "#9a3412",
+      "box": {
+        "min": [
+          -0.4,
+          0,
+          -0.14
+        ],
+        "max": [
+          -0.37,
+          1.2,
+          0.14
+        ],
+        "size": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "center": [
+          -0.385,
+          0.6,
+          0
+        ]
+      }
+    },
+    {
+      "name": "side-r",
+      "role": "side",
+      "assetId": "primitive-box",
+      "position": [
+        0.385,
+        0,
+        0
+      ],
+      "scale": [
+        0.03,
+        1.2,
+        0.28
+      ],
+      "color": "#9a3412",
+      "box": {
+        "min": [
+          0.37,
+          0,
+          -0.14
+        ],
+        "max": [
+          0.4,
+          1.2,
+          0.14
+        ],
+        "size": [
+          0.03,
+          1.2,
+          0.28
+        ],
+        "center": [
+          0.385,
+          0.6,
+          0
+        ]
+      }
+    },
+    {
+      "name": "back",
+      "role": "back",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0,
+        -0.13
+      ],
+      "scale": [
+        0.8,
+        1.2,
+        0.02
+      ],
+      "color": "#7c2d12",
+      "box": {
+        "min": [
+          -0.4,
+          0,
+          -0.14
+        ],
+        "max": [
+          0.4,
+          1.2,
+          -0.12000000000000001
+        ],
+        "size": [
+          0.8,
+          1.2,
+          0.02
+        ],
+        "center": [
+          0,
+          0.6,
+          -0.13
+        ]
+      }
+    },
+    {
+      "name": "shelf-0",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "box": {
+        "min": [
+          -0.37,
+          0,
+          -0.12000000000000001
+        ],
+        "max": [
+          0.37,
+          0.03,
+          0.14
+        ],
+        "size": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "center": [
+          0,
+          0.015,
+          0.01
+        ]
+      }
+    },
+    {
+      "name": "shelf-1",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.39,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "box": {
+        "min": [
+          -0.37,
+          0.39,
+          -0.12000000000000001
+        ],
+        "max": [
+          0.37,
+          0.42000000000000004,
+          0.14
+        ],
+        "size": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "center": [
+          0,
+          0.405,
+          0.01
+        ]
+      }
+    },
+    {
+      "name": "shelf-2",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.78,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "box": {
+        "min": [
+          -0.37,
+          0.78,
+          -0.12000000000000001
+        ],
+        "max": [
+          0.37,
+          0.81,
+          0.14
+        ],
+        "size": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "center": [
+          0,
+          0.795,
+          0.01
+        ]
+      }
+    },
+    {
+      "name": "shelf-3",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        1.17,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "box": {
+        "min": [
+          -0.37,
+          1.17,
+          -0.12000000000000001
+        ],
+        "max": [
+          0.37,
+          1.2,
+          0.14
+        ],
+        "size": [
+          0.74,
+          0.03,
+          0.26
+        ],
+        "center": [
+          0,
+          1.1849999999999998,
+          0.01
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "side-l",
+      "role": "side",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.385,
+        0,
+        0
+      ],
+      "scale": [
+        0.03,
+        1.2,
+        0.28
+      ],
+      "color": "#9a3412",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "side-r",
+      "role": "side",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.385,
+        0,
+        0
+      ],
+      "scale": [
+        0.03,
+        1.2,
+        0.28
+      ],
+      "color": "#9a3412",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "back",
+      "role": "back",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0,
+        -0.13
+      ],
+      "scale": [
+        0.8,
+        1.2,
+        0.02
+      ],
+      "color": "#7c2d12",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "shelf-0",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "shelf-1",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.39,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "shelf-2",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.78,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "shelf-3",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        1.17,
+        0.01
+      ],
+      "scale": [
+        0.74,
+        0.03,
+        0.26
+      ],
+      "color": "#fed7aa",
+      "allowOverlap": true
+    }
+  ]
+}

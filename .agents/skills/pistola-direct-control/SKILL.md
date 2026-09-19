@@ -9,19 +9,36 @@ The IDE model is the planner. Pistola is a deterministic executor. Do not hand t
 
 ## Route order
 
-1. MCP default tools (`pistola_status`, `pistola_task_*`, `pistola_run`, `pistola_inspect`, `pistola_screenshot`).
+1. MCP default tools (`pistola_status`, `pistola_task_*`, `pistola_run`, `pistola_inspect`, `pistola_export_scene`, `pistola_screenshot`).
 2. The IDE browser calling `window.pistola.invoke(method, args)` after `data-pistola-agent="ready"`.
 3. Stop. Tell the user the host has no direct control.
 
 Never use `pistola_chat`, `pistola_plan`, `pistola_assistant_*`, `/api/assistant/*`, `/api/ai/test`, or a natural-language message in the Pistola chat box. If `invoke` or `taskPlan` is missing, stop. Do not fall back.
 
+## Roles (any IDE)
+
+Play these as sections in one thread. Codex may spawn matching sub-agents; other hosts should not wait for them.
+
+- **Orchestrator** — talk to the user, keep the checkbox plan, drive the live page.
+- **Scene planning** — parts, overall size, floor/wall anchor, and relations before the first `place_item`.
+- **Pascal integration** — map each part to a typed Pistola action (`place_item`, CAD solid, architecture).
+- **Quality** — inspect, structural check, screenshot/render, and at most two typed fixes per step.
+- **Learning** — write a short lesson only after delivery.
+
 ## Loop
 
+plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report
+
 1. `pistola_open` / wait for `dataset.pistolaAgent === "ready"`.
-2. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`).
-3. `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `screenshot` → tick the step with evidence.
-4. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
-5. Complete the plan only after every step has evidence. Report remaining gaps honestly.
+2. Create a checkbox `taskPlan` before the first mutation (`pistola_task_create` or `window.pistola.taskPlan.create`). If a blueprint exists, one step per part, parents first.
+3. Search examples when the host has `examples.search`. Otherwise skip.
+4. For each part: `inspect` → `validate` → `taskPlan.runStep` → `waitForIdle` → `inspect` / `exportScene` / `screenshot`.
+5. If a checker report exists, apply at most two typed patches, then fall back to a simpler primitive. Do not retry the same failing action.
+6. If a render/critique tool exists, at most two rounds. Keep the best snapshot. Report remaining gaps honestly.
+7. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.
+8. Complete the plan only after every step has evidence.
+
+Prefer world-space parts. Nested `parentId` children inherit parent scale; compensate or do not parent.
 
 ## Parent-relative nesting
 

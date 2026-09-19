@@ -1,0 +1,428 @@
+{
+  "prompt": {
+    "slug": "table-lamp",
+    "prompt": "A small table lamp: wide base, thin stem, conical shade sitting on the stem.",
+    "overall_m": [
+      0.24,
+      0.52,
+      0.24
+    ],
+    "anchor": "floor",
+    "parts": [
+      "base",
+      "stem",
+      "shade"
+    ],
+    "relations": [
+      {
+        "a": "base",
+        "rel": "on_floor"
+      },
+      {
+        "a": "stem",
+        "rel": "on_top_of",
+        "b": "base"
+      },
+      {
+        "a": "shade",
+        "rel": "on_top_of",
+        "b": "stem"
+      }
+    ],
+    "set": "dev"
+  },
+  "gold": {
+    "slug": "table-lamp",
+    "partCount": 3
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "base",
+        "role": "base",
+        "assetId": "primitive-cylinder",
+        "color": "#3f3f46",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.22,
+          0.04,
+          0.22
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.22,
+          0.04,
+          0.22
+        ],
+        "box": {
+          "min": [
+            -0.11,
+            0,
+            -0.11
+          ],
+          "max": [
+            0.11,
+            0.04,
+            0.11
+          ],
+          "size": [
+            0.22,
+            0.04,
+            0.22
+          ],
+          "center": [
+            0,
+            0.02,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "stem",
+        "role": "stem",
+        "assetId": "primitive-cylinder",
+        "color": "#71717a",
+        "parentId": null,
+        "position": [
+          0,
+          0.04,
+          0
+        ],
+        "scale": [
+          0.03,
+          0.32,
+          0.03
+        ],
+        "localPosition": [
+          0,
+          0.04,
+          0
+        ],
+        "localScale": [
+          0.03,
+          0.32,
+          0.03
+        ],
+        "box": {
+          "min": [
+            -0.015,
+            0.04,
+            -0.015
+          ],
+          "max": [
+            0.015,
+            0.36,
+            0.015
+          ],
+          "size": [
+            0.03,
+            0.32,
+            0.03
+          ],
+          "center": [
+            0,
+            0.2,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "shade",
+        "role": "shade",
+        "assetId": "primitive-cone",
+        "color": "#fde68a",
+        "parentId": null,
+        "position": [
+          0,
+          0.36,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.16,
+          0.24
+        ],
+        "localPosition": [
+          0,
+          0.36,
+          0
+        ],
+        "localScale": [
+          0.24,
+          0.16,
+          0.24
+        ],
+        "box": {
+          "min": [
+            -0.12,
+            0.36,
+            -0.12
+          ],
+          "max": [
+            0.12,
+            0.52,
+            0.12
+          ],
+          "size": [
+            0.24,
+            0.16,
+            0.24
+          ],
+          "center": [
+            0,
+            0.44,
+            0
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "base",
+        "role": "base",
+        "assetId": "primitive-cylinder",
+        "color": "#3f3f46",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.22,
+          0.04,
+          0.22
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.22,
+          0.04,
+          0.22
+        ],
+        "box": {
+          "min": [
+            -0.11,
+            0,
+            -0.11
+          ],
+          "max": [
+            0.11,
+            0.04,
+            0.11
+          ],
+          "size": [
+            0.22,
+            0.04,
+            0.22
+          ],
+          "center": [
+            0,
+            0.02,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "stem",
+        "role": "stem",
+        "assetId": "primitive-cylinder",
+        "color": "#71717a",
+        "parentId": null,
+        "position": [
+          0,
+          0.04,
+          0
+        ],
+        "scale": [
+          0.03,
+          0.32,
+          0.03
+        ],
+        "localPosition": [
+          0,
+          0.04,
+          0
+        ],
+        "localScale": [
+          0.03,
+          0.32,
+          0.03
+        ],
+        "box": {
+          "min": [
+            -0.015,
+            0.04,
+            -0.015
+          ],
+          "max": [
+            0.015,
+            0.36,
+            0.015
+          ],
+          "size": [
+            0.03,
+            0.32,
+            0.03
+          ],
+          "center": [
+            0,
+            0.2,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "shade",
+        "role": "shade",
+        "assetId": "primitive-cone",
+        "color": "#fde68a",
+        "parentId": null,
+        "position": [
+          0,
+          0.36,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.16,
+          0.24
+        ],
+        "localPosition": [
+          0,
+          0.36,
+          0
+        ],
+        "localScale": [
+          0.24,
+          0.16,
+          0.24
+        ],
+        "box": {
+          "min": [
+            -0.12,
+            0.36,
+            -0.12
+          ],
+          "max": [
+            0.12,
+            0.52,
+            0.12
+          ],
+          "size": [
+            0.24,
+            0.16,
+            0.24
+          ],
+          "center": [
+            0,
+            0.44,
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "table-lamp",
+    "set": "dev",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        0,
+        0
+      ],
+      "mean": 0
+    },
+    "perPartDimensionError": [
+      {
+        "name": "base",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "stem",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "shade",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 3,
+      "found": 3,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 2,
+    "actualOverall_m": [
+      0.24,
+      0.52,
+      0.24
+    ],
+    "partCount": 3
+  }
+}

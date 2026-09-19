@@ -1,0 +1,357 @@
+{
+  "slug": "toy-car",
+  "set": "dev",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "body",
+      "role": "body",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "scale": [
+        1.4,
+        0.28,
+        0.58
+      ],
+      "color": "#2563eb",
+      "box": {
+        "min": [
+          -0.7,
+          0.2,
+          -0.29
+        ],
+        "max": [
+          0.7,
+          0.48000000000000004,
+          0.29
+        ],
+        "size": [
+          1.4,
+          0.28,
+          0.58
+        ],
+        "center": [
+          0,
+          0.34,
+          0
+        ]
+      }
+    },
+    {
+      "name": "cabin",
+      "role": "cabin",
+      "assetId": "primitive-box",
+      "position": [
+        -0.15,
+        0.48,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.2,
+        0.54
+      ],
+      "color": "#93c5fd",
+      "box": {
+        "min": [
+          -0.5,
+          0.48,
+          -0.27
+        ],
+        "max": [
+          0.19999999999999998,
+          0.6799999999999999,
+          0.27
+        ],
+        "size": [
+          0.7,
+          0.2,
+          0.54
+        ],
+        "center": [
+          -0.15,
+          0.58,
+          0
+        ]
+      }
+    },
+    {
+      "name": "wheel-fl",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "position": [
+        0.45,
+        0,
+        0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "box": {
+        "min": [
+          0.34,
+          0,
+          0.27
+        ],
+        "max": [
+          0.56,
+          0.2,
+          0.37
+        ],
+        "size": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "center": [
+          0.45,
+          0.1,
+          0.32
+        ]
+      }
+    },
+    {
+      "name": "wheel-fr",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "position": [
+        0.45,
+        0,
+        -0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "box": {
+        "min": [
+          0.34,
+          0,
+          -0.37
+        ],
+        "max": [
+          0.56,
+          0.2,
+          -0.27
+        ],
+        "size": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "center": [
+          0.45,
+          0.1,
+          -0.32
+        ]
+      }
+    },
+    {
+      "name": "wheel-rl",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "position": [
+        -0.45,
+        0,
+        0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "box": {
+        "min": [
+          -0.56,
+          0,
+          0.27
+        ],
+        "max": [
+          -0.34,
+          0.2,
+          0.37
+        ],
+        "size": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "center": [
+          -0.45,
+          0.1,
+          0.32
+        ]
+      }
+    },
+    {
+      "name": "wheel-rr",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "position": [
+        -0.45,
+        0,
+        -0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "box": {
+        "min": [
+          -0.56,
+          0,
+          -0.37
+        ],
+        "max": [
+          -0.34,
+          0.2,
+          -0.27
+        ],
+        "size": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "center": [
+          -0.45,
+          0.1,
+          -0.32
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "body",
+      "role": "body",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.2,
+        0
+      ],
+      "scale": [
+        1.4,
+        0.28,
+        0.58
+      ],
+      "color": "#2563eb",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "cabin",
+      "role": "cabin",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.15,
+        0.48,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.2,
+        0.54
+      ],
+      "color": "#93c5fd",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "wheel-fl",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.45,
+        0,
+        0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "wheel-fr",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.45,
+        0,
+        -0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "wheel-rl",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.45,
+        0,
+        0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "wheel-rr",
+      "role": "wheel",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.45,
+        0,
+        -0.32
+      ],
+      "scale": [
+        0.22,
+        0.2,
+        0.1
+      ],
+      "color": "#18181b",
+      "allowOverlap": true
+    }
+  ]
+}

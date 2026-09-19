@@ -1,0 +1,156 @@
+{
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "dev": [
+    {
+      "slug": "chair",
+      "prompt": "A four-leg wooden chair with a flat seat and a simple rectangular backrest.",
+      "overall_m": [0.48, 0.9, 0.48],
+      "anchor": "floor",
+      "parts": ["seat", "back", "leg-fl", "leg-fr", "leg-bl", "leg-br"],
+      "relations": [
+        { "a": "leg-fl", "rel": "on_floor" },
+        { "a": "seat", "rel": "on_top_of", "b": "leg-fl" },
+        { "a": "back", "rel": "on_top_of", "b": "seat" }
+      ]
+    },
+    {
+      "slug": "table-lamp",
+      "prompt": "A small table lamp: wide base, thin stem, conical shade sitting on the stem.",
+      "overall_m": [0.24, 0.52, 0.24],
+      "anchor": "floor",
+      "parts": ["base", "stem", "shade"],
+      "relations": [
+        { "a": "base", "rel": "on_floor" },
+        { "a": "stem", "rel": "on_top_of", "b": "base" },
+        { "a": "shade", "rel": "on_top_of", "b": "stem" }
+      ]
+    },
+    {
+      "slug": "sailboat",
+      "prompt": "A toy sailboat: long hull, center keel, mast, and one triangular sail.",
+      "overall_m": [1.4, 2.6, 3.2],
+      "anchor": "floor",
+      "parts": ["hull", "keel", "mast", "sail"],
+      "relations": [
+        { "a": "hull", "rel": "on_floor" },
+        { "a": "keel", "rel": "touches", "b": "hull" },
+        { "a": "mast", "rel": "on_top_of", "b": "hull" },
+        { "a": "sail", "rel": "touches", "b": "mast" }
+      ]
+    },
+    {
+      "slug": "toy-car",
+      "prompt": "A blocky toy car with a cabin and four wheels sitting on the floor.",
+      "overall_m": [1.4, 0.68, 0.74],
+      "anchor": "floor",
+      "parts": ["body", "cabin", "wheel-fl", "wheel-fr", "wheel-rl", "wheel-rr"],
+      "relations": [
+        { "a": "wheel-fl", "rel": "on_floor" },
+        { "a": "body", "rel": "on_top_of", "b": "wheel-fl" },
+        { "a": "cabin", "rel": "on_top_of", "b": "body" }
+      ]
+    },
+    {
+      "slug": "wall-bracket",
+      "prompt": "A small wall bracket: a back plate, a short arm, and a shelf.",
+      "overall_m": [0.22, 0.18, 0.2],
+      "anchor": "wall",
+      "parts": ["plate", "arm", "shelf"],
+      "relations": [
+        { "a": "plate", "rel": "on_floor" },
+        { "a": "arm", "rel": "touches", "b": "plate" },
+        { "a": "shelf", "rel": "on_top_of", "b": "arm" }
+      ]
+    },
+    {
+      "slug": "dog",
+      "prompt": "A blocky standing dog: body, head, four legs, tail, and two ears.",
+      "overall_m": [0.66, 0.5, 0.22],
+      "anchor": "floor",
+      "parts": ["body", "head", "leg-fl", "leg-fr", "leg-rl", "leg-rr", "tail", "ear-l", "ear-r"],
+      "relations": [
+        { "a": "leg-fl", "rel": "on_floor" },
+        { "a": "body", "rel": "on_top_of", "b": "leg-fl" },
+        { "a": "head", "rel": "touches", "b": "body" }
+      ]
+    }
+  ],
+  "heldOut": [
+    {
+      "slug": "bench",
+      "prompt": "A backless park bench with a long seat and four legs.",
+      "overall_m": [1.2, 0.45, 0.38],
+      "anchor": "floor",
+      "parts": ["seat", "leg-fl", "leg-fr", "leg-bl", "leg-br"],
+      "relations": [
+        { "a": "leg-fl", "rel": "on_floor" },
+        { "a": "seat", "rel": "on_top_of", "b": "leg-fl" }
+      ]
+    },
+    {
+      "slug": "mug",
+      "prompt": "A cylindrical mug with a small rectangular handle on the right.",
+      "overall_m": [0.12, 0.1, 0.08],
+      "anchor": "floor",
+      "parts": ["body", "handle"],
+      "relations": [
+        { "a": "body", "rel": "on_floor" },
+        { "a": "handle", "rel": "touches", "b": "body" }
+      ]
+    },
+    {
+      "slug": "desk-fan",
+      "prompt": "A small desk fan: base, column, motor, and two crossing blades.",
+      "overall_m": [0.2, 0.32, 0.2],
+      "anchor": "floor",
+      "parts": ["base", "column", "motor", "blade-h", "blade-v"],
+      "relations": [
+        { "a": "base", "rel": "on_floor" },
+        { "a": "column", "rel": "on_top_of", "b": "base" },
+        { "a": "motor", "rel": "on_top_of", "b": "column" }
+      ]
+    },
+    {
+      "slug": "wheelbarrow",
+      "prompt": "A toy wheelbarrow: tub, one front wheel, two rear legs, and two handles.",
+      "overall_m": [1.1, 0.42, 0.42],
+      "anchor": "floor",
+      "parts": ["tub", "wheel", "leg-l", "leg-r", "handle-l", "handle-r"],
+      "relations": [
+        { "a": "wheel", "rel": "on_floor" },
+        { "a": "leg-l", "rel": "on_floor" },
+        { "a": "tub", "rel": "on_top_of", "b": "leg-l" }
+      ]
+    },
+    {
+      "slug": "rocket",
+      "prompt": "A toy rocket: cylindrical body, conical nose, and four fins on the floor.",
+      "overall_m": [0.4, 1.3, 0.4],
+      "anchor": "floor",
+      "parts": ["body", "nose", "fin-n", "fin-s", "fin-e", "fin-w"],
+      "relations": [
+        { "a": "fin-n", "rel": "on_floor" },
+        { "a": "body", "rel": "touches", "b": "fin-n" },
+        { "a": "nose", "rel": "on_top_of", "b": "body" }
+      ]
+    },
+    {
+      "slug": "bookshelf",
+      "prompt": "A rectangular bookshelf: two sides, a thin back, and four shelves.",
+      "overall_m": [0.8, 1.2, 0.28],
+      "anchor": "floor",
+      "parts": ["side-l", "side-r", "back", "shelf-0", "shelf-1", "shelf-2", "shelf-3"],
+      "relations": [
+        { "a": "side-l", "rel": "on_floor" },
+        { "a": "shelf-0", "rel": "on_floor" },
+        { "a": "shelf-1", "rel": "touches", "b": "side-l" }
+      ]
+    }
+  ]
+}

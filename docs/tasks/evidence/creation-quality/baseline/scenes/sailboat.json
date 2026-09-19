@@ -1,0 +1,547 @@
+{
+  "prompt": {
+    "slug": "sailboat",
+    "prompt": "A toy sailboat: long hull, center keel, mast, and one triangular sail.",
+    "overall_m": [
+      1.4,
+      2.6,
+      3.2
+    ],
+    "anchor": "floor",
+    "parts": [
+      "hull",
+      "keel",
+      "mast",
+      "sail"
+    ],
+    "relations": [
+      {
+        "a": "hull",
+        "rel": "on_floor"
+      },
+      {
+        "a": "keel",
+        "rel": "touches",
+        "b": "hull"
+      },
+      {
+        "a": "mast",
+        "rel": "on_top_of",
+        "b": "hull"
+      },
+      {
+        "a": "sail",
+        "rel": "touches",
+        "b": "mast"
+      }
+    ],
+    "set": "dev"
+  },
+  "gold": {
+    "slug": "sailboat",
+    "partCount": 4
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "hull",
+        "role": "hull",
+        "assetId": "primitive-box",
+        "color": "#8b5a2b",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.4,
+          3.2
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          1.4,
+          0.4,
+          3.2
+        ],
+        "box": {
+          "min": [
+            -0.7,
+            0,
+            -1.6
+          ],
+          "max": [
+            0.7,
+            0.4,
+            1.6
+          ],
+          "size": [
+            1.4,
+            0.4,
+            3.2
+          ],
+          "center": [
+            0,
+            0.2,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "keel",
+        "role": "keel",
+        "assetId": "primitive-box",
+        "color": "#4a3728",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.12,
+          0.28,
+          1.4
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.12,
+          0.28,
+          1.4
+        ],
+        "box": {
+          "min": [
+            -0.06,
+            0,
+            -0.7
+          ],
+          "max": [
+            0.06,
+            0.28,
+            0.7
+          ],
+          "size": [
+            0.12,
+            0.28,
+            1.4
+          ],
+          "center": [
+            0,
+            0.14,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "mast",
+        "role": "mast",
+        "assetId": "primitive-cylinder",
+        "color": "#d6c6a8",
+        "parentId": null,
+        "position": [
+          0,
+          0.4,
+          0.15
+        ],
+        "scale": [
+          0.08,
+          2.2,
+          0.08
+        ],
+        "localPosition": [
+          0,
+          0.4,
+          0.15
+        ],
+        "localScale": [
+          0.08,
+          2.2,
+          0.08
+        ],
+        "box": {
+          "min": [
+            -0.04,
+            0.4,
+            0.10999999999999999
+          ],
+          "max": [
+            0.04,
+            2.6,
+            0.19
+          ],
+          "size": [
+            0.08,
+            2.2,
+            0.08
+          ],
+          "center": [
+            0,
+            1.5,
+            0.15
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "sail",
+        "role": "sail",
+        "assetId": "primitive-wedge",
+        "color": "#f4f1ea",
+        "parentId": null,
+        "position": [
+          0.07,
+          0.55,
+          0.2
+        ],
+        "scale": [
+          0.06,
+          1.9,
+          1.5
+        ],
+        "localPosition": [
+          0.07,
+          0.55,
+          0.2
+        ],
+        "localScale": [
+          0.06,
+          1.9,
+          1.5
+        ],
+        "box": {
+          "min": [
+            0.04000000000000001,
+            0.55,
+            -0.55
+          ],
+          "max": [
+            0.1,
+            2.45,
+            0.95
+          ],
+          "size": [
+            0.06,
+            1.9,
+            1.5
+          ],
+          "center": [
+            0.07,
+            1.5,
+            0.2
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "hull",
+        "role": "hull",
+        "assetId": "primitive-box",
+        "color": "#8b5a2b",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.4,
+          3.2
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          1.4,
+          0.4,
+          3.2
+        ],
+        "box": {
+          "min": [
+            -0.7,
+            0,
+            -1.6
+          ],
+          "max": [
+            0.7,
+            0.4,
+            1.6
+          ],
+          "size": [
+            1.4,
+            0.4,
+            3.2
+          ],
+          "center": [
+            0,
+            0.2,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "keel",
+        "role": "keel",
+        "assetId": "primitive-box",
+        "color": "#4a3728",
+        "parentId": null,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.12,
+          0.28,
+          1.4
+        ],
+        "localPosition": [
+          0,
+          0,
+          0
+        ],
+        "localScale": [
+          0.12,
+          0.28,
+          1.4
+        ],
+        "box": {
+          "min": [
+            -0.06,
+            0,
+            -0.7
+          ],
+          "max": [
+            0.06,
+            0.28,
+            0.7
+          ],
+          "size": [
+            0.12,
+            0.28,
+            1.4
+          ],
+          "center": [
+            0,
+            0.14,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "mast",
+        "role": "mast",
+        "assetId": "primitive-cylinder",
+        "color": "#d6c6a8",
+        "parentId": null,
+        "position": [
+          0,
+          0.4,
+          0.15
+        ],
+        "scale": [
+          0.08,
+          2.2,
+          0.08
+        ],
+        "localPosition": [
+          0,
+          0.4,
+          0.15
+        ],
+        "localScale": [
+          0.08,
+          2.2,
+          0.08
+        ],
+        "box": {
+          "min": [
+            -0.04,
+            0.4,
+            0.10999999999999999
+          ],
+          "max": [
+            0.04,
+            2.6,
+            0.19
+          ],
+          "size": [
+            0.08,
+            2.2,
+            0.08
+          ],
+          "center": [
+            0,
+            1.5,
+            0.15
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "sail",
+        "role": "sail",
+        "assetId": "primitive-wedge",
+        "color": "#f4f1ea",
+        "parentId": null,
+        "position": [
+          0.07,
+          0.55,
+          0.2
+        ],
+        "scale": [
+          0.06,
+          1.9,
+          1.5
+        ],
+        "localPosition": [
+          0.07,
+          0.55,
+          0.2
+        ],
+        "localScale": [
+          0.06,
+          1.9,
+          1.5
+        ],
+        "box": {
+          "min": [
+            0.04000000000000001,
+            0.55,
+            -0.55
+          ],
+          "max": [
+            0.1,
+            2.45,
+            0.95
+          ],
+          "size": [
+            0.06,
+            1.9,
+            1.5
+          ],
+          "center": [
+            0.07,
+            1.5,
+            0.2
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "sailboat",
+    "set": "dev",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        0,
+        0
+      ],
+      "mean": 0
+    },
+    "perPartDimensionError": [
+      {
+        "name": "hull",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "keel",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "mast",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "sail",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 4,
+      "found": 4,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 2,
+    "actualOverall_m": [
+      1.4,
+      2.6,
+      3.2
+    ],
+    "partCount": 4
+  }
+}

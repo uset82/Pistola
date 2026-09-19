@@ -1,0 +1,129 @@
+{
+  "slug": "mug",
+  "set": "heldOut",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "body",
+      "role": "body",
+      "assetId": "primitive-cylinder",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.1,
+        0.08
+      ],
+      "color": "#f97316",
+      "box": {
+        "min": [
+          -0.04,
+          0,
+          -0.04
+        ],
+        "max": [
+          0.04,
+          0.1,
+          0.04
+        ],
+        "size": [
+          0.08,
+          0.1,
+          0.08
+        ],
+        "center": [
+          0,
+          0.05,
+          0
+        ]
+      }
+    },
+    {
+      "name": "handle",
+      "role": "handle",
+      "assetId": "primitive-box",
+      "position": [
+        0.05,
+        0.03,
+        0
+      ],
+      "scale": [
+        0.02,
+        0.05,
+        0.02
+      ],
+      "color": "#c2410c",
+      "box": {
+        "min": [
+          0.04,
+          0.03,
+          -0.01
+        ],
+        "max": [
+          0.060000000000000005,
+          0.08,
+          0.01
+        ],
+        "size": [
+          0.02,
+          0.05,
+          0.02
+        ],
+        "center": [
+          0.05,
+          0.055,
+          0
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "body",
+      "role": "body",
+      "assetId": "primitive-cylinder",
+      "placement": "explicit",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.1,
+        0.08
+      ],
+      "color": "#f97316",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "handle",
+      "role": "handle",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.05,
+        0.03,
+        0
+      ],
+      "scale": [
+        0.02,
+        0.05,
+        0.02
+      ],
+      "color": "#c2410c",
+      "allowOverlap": true
+    }
+  ]
+}

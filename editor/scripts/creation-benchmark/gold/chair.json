@@ -1,0 +1,357 @@
+{
+  "slug": "chair",
+  "set": "dev",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "seat",
+      "role": "seat",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.42,
+        0.02
+      ],
+      "scale": [
+        0.48,
+        0.05,
+        0.44
+      ],
+      "color": "#c4a574",
+      "box": {
+        "min": [
+          -0.24,
+          0.42,
+          -0.2
+        ],
+        "max": [
+          0.24,
+          0.47,
+          0.24
+        ],
+        "size": [
+          0.48,
+          0.05,
+          0.44
+        ],
+        "center": [
+          0,
+          0.445,
+          0.02
+        ]
+      }
+    },
+    {
+      "name": "back",
+      "role": "back",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.47,
+        -0.195
+      ],
+      "scale": [
+        0.48,
+        0.43,
+        0.05
+      ],
+      "color": "#b08958",
+      "box": {
+        "min": [
+          -0.24,
+          0.47,
+          -0.22
+        ],
+        "max": [
+          0.24,
+          0.8999999999999999,
+          -0.17
+        ],
+        "size": [
+          0.48,
+          0.43,
+          0.05
+        ],
+        "center": [
+          0,
+          0.6849999999999999,
+          -0.195
+        ]
+      }
+    },
+    {
+      "name": "leg-fl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.19,
+        0,
+        0.17
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "box": {
+        "min": [
+          -0.215,
+          0,
+          0.14500000000000002
+        ],
+        "max": [
+          -0.165,
+          0.42,
+          0.195
+        ],
+        "size": [
+          0.05,
+          0.42,
+          0.05
+        ],
+        "center": [
+          -0.19,
+          0.21,
+          0.17
+        ]
+      }
+    },
+    {
+      "name": "leg-fr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        0.19,
+        0,
+        0.17
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "box": {
+        "min": [
+          0.165,
+          0,
+          0.14500000000000002
+        ],
+        "max": [
+          0.215,
+          0.42,
+          0.195
+        ],
+        "size": [
+          0.05,
+          0.42,
+          0.05
+        ],
+        "center": [
+          0.19,
+          0.21,
+          0.17
+        ]
+      }
+    },
+    {
+      "name": "leg-bl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.19,
+        0,
+        -0.15
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "box": {
+        "min": [
+          -0.215,
+          0,
+          -0.175
+        ],
+        "max": [
+          -0.165,
+          0.42,
+          -0.125
+        ],
+        "size": [
+          0.05,
+          0.42,
+          0.05
+        ],
+        "center": [
+          -0.19,
+          0.21,
+          -0.15
+        ]
+      }
+    },
+    {
+      "name": "leg-br",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        0.19,
+        0,
+        -0.15
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "box": {
+        "min": [
+          0.165,
+          0,
+          -0.175
+        ],
+        "max": [
+          0.215,
+          0.42,
+          -0.125
+        ],
+        "size": [
+          0.05,
+          0.42,
+          0.05
+        ],
+        "center": [
+          0.19,
+          0.21,
+          -0.15
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "seat",
+      "role": "seat",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.42,
+        0.02
+      ],
+      "scale": [
+        0.48,
+        0.05,
+        0.44
+      ],
+      "color": "#c4a574",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "back",
+      "role": "back",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.47,
+        -0.195
+      ],
+      "scale": [
+        0.48,
+        0.43,
+        0.05
+      ],
+      "color": "#b08958",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-fl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.19,
+        0,
+        0.17
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-fr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.19,
+        0,
+        0.17
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-bl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.19,
+        0,
+        -0.15
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-br",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.19,
+        0,
+        -0.15
+      ],
+      "scale": [
+        0.05,
+        0.42,
+        0.05
+      ],
+      "color": "#8b5a2b",
+      "allowOverlap": true
+    }
+  ]
+}

@@ -9,12 +9,13 @@ Build what the user approves, not the first thing that comes to mind. A cheap im
 
 ## Roles
 
-- **You (main thread)** are Orchestrator and Builder. Only you talk to the user, call `image_gen`, and drive the Pistola page. Never let two agents touch the live editor.
-- **Sub-agents** (`.codex/agents/`) think and return JSON. Spawn them when their step starts:
-  - `pistola_blueprint`: approved image and silhouettes to a parts blueprint.
-  - `pistola_feature_guide`: blueprint to Pistola action batches.
-  - `pistola_critic`: render screenshot vs concept to a ranked fix list. Spawn two in parallel for complex objects, one with focus `silhouette` and one with focus `details`.
-  - `pistola_librarian`: saves lessons and the reusable blueprint after delivery.
+Any IDE can play these roles in one thread. Codex may spawn `.codex/agents/` for the same jobs; other hosts write the JSON themselves and keep driving the page.
+
+- **You (main thread)** are Orchestrator and Builder. Only you talk to the user and drive the live editor. Image generation is optional and host-specific (`image_gen` on Codex; Nano Banana / user upload elsewhere). Never let two writers touch the live editor.
+- **Scene planning** (`pistola_blueprint` when Codex can spawn it): approved image or a text brief → parts blueprint.
+- **Pascal integration** (`pistola_feature_guide`): blueprint → validated action batches.
+- **Quality** (`pistola_critic`): render vs concept to a ranked fix list. At most two critic rounds unless the user asks for more.
+- **Learning** (`pistola_librarian`): lessons and the reusable blueprint after delivery.
 
 ## Loop
 

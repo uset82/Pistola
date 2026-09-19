@@ -1,0 +1,300 @@
+{
+  "slug": "bench",
+  "set": "heldOut",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "seat",
+      "role": "seat",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.4,
+        0
+      ],
+      "scale": [
+        1.2,
+        0.05,
+        0.38
+      ],
+      "color": "#a16207",
+      "box": {
+        "min": [
+          -0.6,
+          0.4,
+          -0.19
+        ],
+        "max": [
+          0.6,
+          0.45,
+          0.19
+        ],
+        "size": [
+          1.2,
+          0.05,
+          0.38
+        ],
+        "center": [
+          0,
+          0.42500000000000004,
+          0
+        ]
+      }
+    },
+    {
+      "name": "leg-fl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.52,
+        0,
+        0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "box": {
+        "min": [
+          -0.55,
+          0,
+          0.11000000000000001
+        ],
+        "max": [
+          -0.49,
+          0.4,
+          0.17
+        ],
+        "size": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "center": [
+          -0.52,
+          0.2,
+          0.14
+        ]
+      }
+    },
+    {
+      "name": "leg-fr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        0.52,
+        0,
+        0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "box": {
+        "min": [
+          0.49,
+          0,
+          0.11000000000000001
+        ],
+        "max": [
+          0.55,
+          0.4,
+          0.17
+        ],
+        "size": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "center": [
+          0.52,
+          0.2,
+          0.14
+        ]
+      }
+    },
+    {
+      "name": "leg-bl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.52,
+        0,
+        -0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "box": {
+        "min": [
+          -0.55,
+          0,
+          -0.17
+        ],
+        "max": [
+          -0.49,
+          0.4,
+          -0.11000000000000001
+        ],
+        "size": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "center": [
+          -0.52,
+          0.2,
+          -0.14
+        ]
+      }
+    },
+    {
+      "name": "leg-br",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        0.52,
+        0,
+        -0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "box": {
+        "min": [
+          0.49,
+          0,
+          -0.17
+        ],
+        "max": [
+          0.55,
+          0.4,
+          -0.11000000000000001
+        ],
+        "size": [
+          0.06,
+          0.4,
+          0.06
+        ],
+        "center": [
+          0.52,
+          0.2,
+          -0.14
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "seat",
+      "role": "seat",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.4,
+        0
+      ],
+      "scale": [
+        1.2,
+        0.05,
+        0.38
+      ],
+      "color": "#a16207",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-fl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.52,
+        0,
+        0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-fr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.52,
+        0,
+        0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-bl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.52,
+        0,
+        -0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-br",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.52,
+        0,
+        -0.14
+      ],
+      "scale": [
+        0.06,
+        0.4,
+        0.06
+      ],
+      "color": "#713f12",
+      "allowOverlap": true
+    }
+  ]
+}

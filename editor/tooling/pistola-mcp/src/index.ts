@@ -122,6 +122,18 @@ const tools: McpTool[] = [
     },
   },
   {
+    name: 'pistola_export_scene',
+    description: 'Read-only dump of every scene node with ids, transforms, and bounds. Does not mutate the scene.',
+    inputSchema: objectSchema(),
+    handler: async () => {
+      try {
+        return jsonResult(unwrap(await invoke('exportScene')))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
     name: 'pistola_get_nodes',
     description: 'Read specific scene nodes by id.',
     inputSchema: objectSchema({ nodeIds: { type: 'array', items: { type: 'string' } } }, ['nodeIds']),

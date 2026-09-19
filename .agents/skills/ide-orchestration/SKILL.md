@@ -46,5 +46,5 @@ Pistola is driven from Claude Code, Codex, Cursor, Antigravity, WorkBuddy, or Qo
 
 1. Open the target (`local`, `canner`, or `sites`).
 2. Create a `taskPlan` checklist before the first mutation.
-3. Use only default tools: inspect, validate, run, task, screenshot. Never `pistola_chat`, `pistola_plan`, or `/api/assistant/*`.
+3. Use only default tools: inspect, export scene, validate, run, task, screenshot. Loop: plan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best. Never `pistola_chat`, `pistola_plan`, or `/api/assistant/*`.
 4. If `window.pistola.invoke` is missing, stop. Do not fall back to the in-app model.

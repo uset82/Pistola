@@ -7,6 +7,7 @@ import {
   executeAgentTool,
   inspectScene,
   getNodes,
+  getNodeBounds,
   measure,
   searchCatalog,
   listCapabilities,
@@ -58,6 +59,7 @@ const INVOKE_ALLOWLIST = new Set([
   'measure',
   'searchCatalog',
   'listRecipes',
+  'exportScene',
   'workspace',
   'validate',
   'run',
@@ -387,6 +389,37 @@ export const createPistolaAgentApi = () => {
     manual,
     inspect,
     getNodes: async (ids: string[]) => getNodes({ nodeIds: ids }),
+    exportScene: async () => {
+      const scene = useScene.getState()
+      const nodes = Object.values(scene.nodes).filter((node): node is NonNullable<typeof node> => Boolean(node))
+      return {
+        apiVersion: PISTOLA_API_VERSION,
+        frame: {
+          up: '+Y',
+          front: '+Z',
+          right: '+X',
+          units: 'meters',
+          origin: 'bottom-center',
+        },
+        rootNodeIds: scene.rootNodeIds ?? [],
+        count: nodes.length,
+        nodes: nodes.map((node) => {
+          const item = node.type === 'item' ? node : null
+          return {
+            id: node.id,
+            type: node.type,
+            name: node.name ?? null,
+            parentId: 'parentId' in node ? (node.parentId ?? null) : null,
+            position: 'position' in node ? (node.position ?? null) : null,
+            rotation: 'rotation' in node ? (node.rotation ?? null) : null,
+            scale: 'scale' in node ? (node.scale ?? null) : null,
+            assetId: item?.asset?.id ?? null,
+            color: item?.asset?.color ?? ('color' in node ? (node.color ?? null) : null),
+            bounds: getNodeBounds(node),
+          }
+        }),
+      }
+    },
     measure: async (params: Parameters<typeof measure>[0]) => measure(params),
     searchCatalog: async (query?: string) => searchCatalog({ query: query ?? '' }),
     listRecipes: async () => listCreationRecipes(),

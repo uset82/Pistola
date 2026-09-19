@@ -1,0 +1,186 @@
+{
+  "slug": "table-lamp",
+  "set": "dev",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "base",
+      "role": "base",
+      "assetId": "primitive-cylinder",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.22,
+        0.04,
+        0.22
+      ],
+      "color": "#3f3f46",
+      "box": {
+        "min": [
+          -0.11,
+          0,
+          -0.11
+        ],
+        "max": [
+          0.11,
+          0.04,
+          0.11
+        ],
+        "size": [
+          0.22,
+          0.04,
+          0.22
+        ],
+        "center": [
+          0,
+          0.02,
+          0
+        ]
+      }
+    },
+    {
+      "name": "stem",
+      "role": "stem",
+      "assetId": "primitive-cylinder",
+      "position": [
+        0,
+        0.04,
+        0
+      ],
+      "scale": [
+        0.03,
+        0.32,
+        0.03
+      ],
+      "color": "#71717a",
+      "box": {
+        "min": [
+          -0.015,
+          0.04,
+          -0.015
+        ],
+        "max": [
+          0.015,
+          0.36,
+          0.015
+        ],
+        "size": [
+          0.03,
+          0.32,
+          0.03
+        ],
+        "center": [
+          0,
+          0.2,
+          0
+        ]
+      }
+    },
+    {
+      "name": "shade",
+      "role": "shade",
+      "assetId": "primitive-cone",
+      "position": [
+        0,
+        0.36,
+        0
+      ],
+      "scale": [
+        0.24,
+        0.16,
+        0.24
+      ],
+      "color": "#fde68a",
+      "box": {
+        "min": [
+          -0.12,
+          0.36,
+          -0.12
+        ],
+        "max": [
+          0.12,
+          0.52,
+          0.12
+        ],
+        "size": [
+          0.24,
+          0.16,
+          0.24
+        ],
+        "center": [
+          0,
+          0.44,
+          0
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "base",
+      "role": "base",
+      "assetId": "primitive-cylinder",
+      "placement": "explicit",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.22,
+        0.04,
+        0.22
+      ],
+      "color": "#3f3f46",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "stem",
+      "role": "stem",
+      "assetId": "primitive-cylinder",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.04,
+        0
+      ],
+      "scale": [
+        0.03,
+        0.32,
+        0.03
+      ],
+      "color": "#71717a",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "shade",
+      "role": "shade",
+      "assetId": "primitive-cone",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.36,
+        0
+      ],
+      "scale": [
+        0.24,
+        0.16,
+        0.24
+      ],
+      "color": "#fde68a",
+      "allowOverlap": true
+    }
+  ]
+}

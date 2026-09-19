@@ -1,0 +1,411 @@
+{
+  "cli": "codex",
+  "seeds": 3,
+  "instructions": "# Creation-benchmark agent instructions\n\nYou are an IDE model driving Pistola. Pistola only executes typed actions.\n\nNever use `pistola_chat`, `pistola_plan`, `pistola_assistant_*`, `/api/assistant/*`, `/api/ai/test`, or the in-app chat box.\n\n## Frame\n\n+Y up, +Z front, +X right, meters, bottom-center origins. Prefer world-space parts. If you set `parentId`, child positions and scales are local and inherit parent scale.\n\n## Loop\n\nplan → examples → build per part → check → fix (≤2) → render → critique (≤2) → keep best → report\n\n1. Open the workspace. Wait until `data-pistola-agent=\"ready\"`.\n2. Create a checkbox `taskPlan` before the first mutation.\n3. Inspect, then validate each batch.\n4. Batches stay at or under 25 actions. Destructive actions need `confirmDestructive: true`.\n5. After each part, inspect. If a checker report exists, apply at most two typed fixes, then fall back to a simpler primitive.\n6. Complete the plan only with evidence.\n\n## Output\n\nFor each seed, write `exportScene` JSON and the action log. Do not invent APIs.\n",
+  "prompts": [
+    {
+      "slug": "chair",
+      "prompt": "A four-leg wooden chair with a flat seat and a simple rectangular backrest.",
+      "overall_m": [
+        0.48,
+        0.9,
+        0.48
+      ],
+      "anchor": "floor",
+      "parts": [
+        "seat",
+        "back",
+        "leg-fl",
+        "leg-fr",
+        "leg-bl",
+        "leg-br"
+      ],
+      "relations": [
+        {
+          "a": "leg-fl",
+          "rel": "on_floor"
+        },
+        {
+          "a": "seat",
+          "rel": "on_top_of",
+          "b": "leg-fl"
+        },
+        {
+          "a": "back",
+          "rel": "on_top_of",
+          "b": "seat"
+        }
+      ],
+      "set": "dev"
+    },
+    {
+      "slug": "table-lamp",
+      "prompt": "A small table lamp: wide base, thin stem, conical shade sitting on the stem.",
+      "overall_m": [
+        0.24,
+        0.52,
+        0.24
+      ],
+      "anchor": "floor",
+      "parts": [
+        "base",
+        "stem",
+        "shade"
+      ],
+      "relations": [
+        {
+          "a": "base",
+          "rel": "on_floor"
+        },
+        {
+          "a": "stem",
+          "rel": "on_top_of",
+          "b": "base"
+        },
+        {
+          "a": "shade",
+          "rel": "on_top_of",
+          "b": "stem"
+        }
+      ],
+      "set": "dev"
+    },
+    {
+      "slug": "sailboat",
+      "prompt": "A toy sailboat: long hull, center keel, mast, and one triangular sail.",
+      "overall_m": [
+        1.4,
+        2.6,
+        3.2
+      ],
+      "anchor": "floor",
+      "parts": [
+        "hull",
+        "keel",
+        "mast",
+        "sail"
+      ],
+      "relations": [
+        {
+          "a": "hull",
+          "rel": "on_floor"
+        },
+        {
+          "a": "keel",
+          "rel": "touches",
+          "b": "hull"
+        },
+        {
+          "a": "mast",
+          "rel": "on_top_of",
+          "b": "hull"
+        },
+        {
+          "a": "sail",
+          "rel": "touches",
+          "b": "mast"
+        }
+      ],
+      "set": "dev"
+    },
+    {
+      "slug": "toy-car",
+      "prompt": "A blocky toy car with a cabin and four wheels sitting on the floor.",
+      "overall_m": [
+        1.4,
+        0.68,
+        0.74
+      ],
+      "anchor": "floor",
+      "parts": [
+        "body",
+        "cabin",
+        "wheel-fl",
+        "wheel-fr",
+        "wheel-rl",
+        "wheel-rr"
+      ],
+      "relations": [
+        {
+          "a": "wheel-fl",
+          "rel": "on_floor"
+        },
+        {
+          "a": "body",
+          "rel": "on_top_of",
+          "b": "wheel-fl"
+        },
+        {
+          "a": "cabin",
+          "rel": "on_top_of",
+          "b": "body"
+        }
+      ],
+      "set": "dev"
+    },
+    {
+      "slug": "wall-bracket",
+      "prompt": "A small wall bracket: a back plate, a short arm, and a shelf.",
+      "overall_m": [
+        0.22,
+        0.18,
+        0.2
+      ],
+      "anchor": "wall",
+      "parts": [
+        "plate",
+        "arm",
+        "shelf"
+      ],
+      "relations": [
+        {
+          "a": "plate",
+          "rel": "on_floor"
+        },
+        {
+          "a": "arm",
+          "rel": "touches",
+          "b": "plate"
+        },
+        {
+          "a": "shelf",
+          "rel": "on_top_of",
+          "b": "arm"
+        }
+      ],
+      "set": "dev"
+    },
+    {
+      "slug": "dog",
+      "prompt": "A blocky standing dog: body, head, four legs, tail, and two ears.",
+      "overall_m": [
+        0.66,
+        0.5,
+        0.22
+      ],
+      "anchor": "floor",
+      "parts": [
+        "body",
+        "head",
+        "leg-fl",
+        "leg-fr",
+        "leg-rl",
+        "leg-rr",
+        "tail",
+        "ear-l",
+        "ear-r"
+      ],
+      "relations": [
+        {
+          "a": "leg-fl",
+          "rel": "on_floor"
+        },
+        {
+          "a": "body",
+          "rel": "on_top_of",
+          "b": "leg-fl"
+        },
+        {
+          "a": "head",
+          "rel": "touches",
+          "b": "body"
+        }
+      ],
+      "set": "dev"
+    },
+    {
+      "slug": "bench",
+      "prompt": "A backless park bench with a long seat and four legs.",
+      "overall_m": [
+        1.2,
+        0.45,
+        0.38
+      ],
+      "anchor": "floor",
+      "parts": [
+        "seat",
+        "leg-fl",
+        "leg-fr",
+        "leg-bl",
+        "leg-br"
+      ],
+      "relations": [
+        {
+          "a": "leg-fl",
+          "rel": "on_floor"
+        },
+        {
+          "a": "seat",
+          "rel": "on_top_of",
+          "b": "leg-fl"
+        }
+      ],
+      "set": "heldOut"
+    },
+    {
+      "slug": "mug",
+      "prompt": "A cylindrical mug with a small rectangular handle on the right.",
+      "overall_m": [
+        0.12,
+        0.1,
+        0.08
+      ],
+      "anchor": "floor",
+      "parts": [
+        "body",
+        "handle"
+      ],
+      "relations": [
+        {
+          "a": "body",
+          "rel": "on_floor"
+        },
+        {
+          "a": "handle",
+          "rel": "touches",
+          "b": "body"
+        }
+      ],
+      "set": "heldOut"
+    },
+    {
+      "slug": "desk-fan",
+      "prompt": "A small desk fan: base, column, motor, and two crossing blades.",
+      "overall_m": [
+        0.2,
+        0.32,
+        0.2
+      ],
+      "anchor": "floor",
+      "parts": [
+        "base",
+        "column",
+        "motor",
+        "blade-h",
+        "blade-v"
+      ],
+      "relations": [
+        {
+          "a": "base",
+          "rel": "on_floor"
+        },
+        {
+          "a": "column",
+          "rel": "on_top_of",
+          "b": "base"
+        },
+        {
+          "a": "motor",
+          "rel": "on_top_of",
+          "b": "column"
+        }
+      ],
+      "set": "heldOut"
+    },
+    {
+      "slug": "wheelbarrow",
+      "prompt": "A toy wheelbarrow: tub, one front wheel, two rear legs, and two handles.",
+      "overall_m": [
+        1.1,
+        0.42,
+        0.42
+      ],
+      "anchor": "floor",
+      "parts": [
+        "tub",
+        "wheel",
+        "leg-l",
+        "leg-r",
+        "handle-l",
+        "handle-r"
+      ],
+      "relations": [
+        {
+          "a": "wheel",
+          "rel": "on_floor"
+        },
+        {
+          "a": "leg-l",
+          "rel": "on_floor"
+        },
+        {
+          "a": "tub",
+          "rel": "on_top_of",
+          "b": "leg-l"
+        }
+      ],
+      "set": "heldOut"
+    },
+    {
+      "slug": "rocket",
+      "prompt": "A toy rocket: cylindrical body, conical nose, and four fins on the floor.",
+      "overall_m": [
+        0.4,
+        1.3,
+        0.4
+      ],
+      "anchor": "floor",
+      "parts": [
+        "body",
+        "nose",
+        "fin-n",
+        "fin-s",
+        "fin-e",
+        "fin-w"
+      ],
+      "relations": [
+        {
+          "a": "fin-n",
+          "rel": "on_floor"
+        },
+        {
+          "a": "body",
+          "rel": "touches",
+          "b": "fin-n"
+        },
+        {
+          "a": "nose",
+          "rel": "on_top_of",
+          "b": "body"
+        }
+      ],
+      "set": "heldOut"
+    },
+    {
+      "slug": "bookshelf",
+      "prompt": "A rectangular bookshelf: two sides, a thin back, and four shelves.",
+      "overall_m": [
+        0.8,
+        1.2,
+        0.28
+      ],
+      "anchor": "floor",
+      "parts": [
+        "side-l",
+        "side-r",
+        "back",
+        "shelf-0",
+        "shelf-1",
+        "shelf-2",
+        "shelf-3"
+      ],
+      "relations": [
+        {
+          "a": "side-l",
+          "rel": "on_floor"
+        },
+        {
+          "a": "shelf-0",
+          "rel": "on_floor"
+        },
+        {
+          "a": "shelf-1",
+          "rel": "touches",
+          "b": "side-l"
+        }
+      ],
+      "set": "heldOut"
+    }
+  ],
+  "note": "Headless agent runs are limited to baseline and phases 2/4/5. Cursor and Antigravity stay manual."
+}

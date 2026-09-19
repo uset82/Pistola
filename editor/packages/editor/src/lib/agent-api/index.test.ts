@@ -135,6 +135,36 @@ test('taskPlan rejects an over-limit batch without mutating the scene', async ()
   assert.equal(retry.plan.phases[0]?.steps[0]?.evidence?.actionCount, 1)
 })
 
+test('exportScene dumps nodes without mutating the scene', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  const levelId = Object.values(useScene.getState().nodes).find((node) => node.type === 'level')?.id
+  assert.ok(levelId)
+  await api.run([
+    {
+      type: 'place_item',
+      assetId: 'primitive-box',
+      name: 'Export probe',
+      levelId,
+      placement: 'explicit',
+      position: [1, 0, 0],
+      scale: [0.5, 0.4, 0.3],
+    },
+  ])
+  const before = structuredClone(useScene.getState().nodes)
+  const exported = (await api.invoke('exportScene')) as {
+    apiVersion: number
+    frame: { up: string }
+    nodes: Array<{ name: string | null; bounds: { size: number[] } | null }>
+  }
+  assert.equal(exported.apiVersion, 1)
+  assert.equal(exported.frame.up, '+Y')
+  const probe = exported.nodes.find((node) => node.name === 'Export probe')
+  assert.ok(probe)
+  assert.deepEqual(probe.bounds?.size, [0.5, 0.4, 0.3])
+  assert.deepEqual(useScene.getState().nodes, before)
+})
+
 test('invoke routes allowlisted methods and rejects unknown ones', async () => {
   reset()
   const api = createPistolaAgentApi()

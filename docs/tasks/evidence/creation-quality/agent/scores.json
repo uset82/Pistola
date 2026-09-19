@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-19T20:09:04.978Z",
+  "mode": "agent",
+  "skipped": true,
+  "reason": "CLI present, but Phase 0 does not spend IDE quota. Re-run after Phase 2.",
+  "cli": "codex",
+  "seeds": 3
+}

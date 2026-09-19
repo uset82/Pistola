@@ -33,12 +33,13 @@ Other env vars:
 - `PISTOLA_BROWSER_HEADLESS=0` — show the window
 - `PISTOLA_LOCAL_API_TOKEN` — only for `bridge`
 - `PISTOLA_MCP_ASSISTANT_TOOLS=1` — expose the in-app AI tools (off by default)
+- `PISTOLA_MCP_LOG=<path.jsonl>` — append one JSON line per `tools/call` (`tool`, `ok`, `error`, `code`, `ms`)
 
 ## Default tools
 
 Session: `pistola_status`, `pistola_open`, `pistola_manual`
 
-Reads: `pistola_inspect`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`
+Reads: `pistola_inspect`, `pistola_export_scene`, `pistola_get_nodes`, `pistola_measure`, `pistola_search_catalog`, `pistola_list_recipes`
 
 Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to false), deprecated `pistola_execute` (same check)
 

@@ -1,3 +1,5 @@
+import { appendMcpLog, errorCodeFromText } from './log.ts'
+
 export type McpTool = {
   name: string
   description: string
@@ -73,6 +75,14 @@ export const createStdioServer = (tools: McpTool[]) => {
       const name = String(message.params?.name ?? '')
       const tool = byName.get(name)
       if (!tool) {
+        await appendMcpLog({
+          ts: new Date().toISOString(),
+          tool: name,
+          ok: false,
+          error: `Unknown tool ${name}`,
+          code: -32601,
+          ms: 0,
+        })
         write({
           jsonrpc: '2.0',
           id: message.id,
@@ -80,16 +90,34 @@ export const createStdioServer = (tools: McpTool[]) => {
         })
         return
       }
+      const started = Date.now()
       try {
         const result = await tool.handler((message.params?.arguments ?? {}) as Record<string, unknown>)
+        await appendMcpLog({
+          ts: new Date().toISOString(),
+          tool: name,
+          ok: result.isError !== true,
+          error: result.isError ? result.content.find((item) => item.type === 'text')?.text ?? 'ERROR' : null,
+          code: errorCodeFromText(result.content.find((item) => item.type === 'text')?.text, result.isError === true),
+          ms: Date.now() - started,
+        })
         write({ jsonrpc: '2.0', id: message.id, result })
       } catch (error) {
+        const text = error instanceof Error ? error.message : String(error)
+        await appendMcpLog({
+          ts: new Date().toISOString(),
+          tool: name,
+          ok: false,
+          error: text,
+          code: 'THROW',
+          ms: Date.now() - started,
+        })
         write({
           jsonrpc: '2.0',
           id: message.id,
           result: {
             isError: true,
-            content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }],
+            content: [{ type: 'text', text }],
           },
         })
       }

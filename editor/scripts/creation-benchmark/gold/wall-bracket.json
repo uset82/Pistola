@@ -1,0 +1,186 @@
+{
+  "slug": "wall-bracket",
+  "set": "dev",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "plate",
+      "role": "plate",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.22,
+        0.18,
+        0.02
+      ],
+      "color": "#78716c",
+      "box": {
+        "min": [
+          -0.11,
+          0,
+          -0.01
+        ],
+        "max": [
+          0.11,
+          0.18,
+          0.01
+        ],
+        "size": [
+          0.22,
+          0.18,
+          0.02
+        ],
+        "center": [
+          0,
+          0.09,
+          0
+        ]
+      }
+    },
+    {
+      "name": "arm",
+      "role": "arm",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.07,
+        0.1
+      ],
+      "scale": [
+        0.04,
+        0.04,
+        0.18
+      ],
+      "color": "#57534e",
+      "box": {
+        "min": [
+          -0.02,
+          0.07,
+          0.010000000000000009
+        ],
+        "max": [
+          0.02,
+          0.11000000000000001,
+          0.19
+        ],
+        "size": [
+          0.04,
+          0.04,
+          0.18
+        ],
+        "center": [
+          0,
+          0.09000000000000001,
+          0.1
+        ]
+      }
+    },
+    {
+      "name": "shelf",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.11,
+        0.1
+      ],
+      "scale": [
+        0.2,
+        0.02,
+        0.16
+      ],
+      "color": "#d6d3d1",
+      "box": {
+        "min": [
+          -0.1,
+          0.11,
+          0.020000000000000004
+        ],
+        "max": [
+          0.1,
+          0.13,
+          0.18
+        ],
+        "size": [
+          0.2,
+          0.02,
+          0.16
+        ],
+        "center": [
+          0,
+          0.12,
+          0.1
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "plate",
+      "role": "plate",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.22,
+        0.18,
+        0.02
+      ],
+      "color": "#78716c",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "arm",
+      "role": "arm",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.07,
+        0.1
+      ],
+      "scale": [
+        0.04,
+        0.04,
+        0.18
+      ],
+      "color": "#57534e",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "shelf",
+      "role": "shelf",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.11,
+        0.1
+      ],
+      "scale": [
+        0.2,
+        0.02,
+        0.16
+      ],
+      "color": "#d6d3d1",
+      "allowOverlap": true
+    }
+  ]
+}

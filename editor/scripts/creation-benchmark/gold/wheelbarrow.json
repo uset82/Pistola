@@ -1,0 +1,357 @@
+{
+  "slug": "wheelbarrow",
+  "set": "heldOut",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "tub",
+      "role": "tub",
+      "assetId": "primitive-box",
+      "position": [
+        0.1,
+        0.2,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.22,
+        0.42
+      ],
+      "color": "#16a34a",
+      "box": {
+        "min": [
+          -0.24999999999999997,
+          0.2,
+          -0.21
+        ],
+        "max": [
+          0.44999999999999996,
+          0.42000000000000004,
+          0.21
+        ],
+        "size": [
+          0.7,
+          0.22,
+          0.42
+        ],
+        "center": [
+          0.1,
+          0.31,
+          0
+        ]
+      }
+    },
+    {
+      "name": "wheel",
+      "role": "wheel",
+      "assetId": "primitive-cylinder",
+      "position": [
+        0.48,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.28,
+        0.28
+      ],
+      "color": "#1c1917",
+      "box": {
+        "min": [
+          0.44,
+          0,
+          -0.14
+        ],
+        "max": [
+          0.52,
+          0.28,
+          0.14
+        ],
+        "size": [
+          0.08,
+          0.28,
+          0.28
+        ],
+        "center": [
+          0.48,
+          0.14,
+          0
+        ]
+      }
+    },
+    {
+      "name": "leg-l",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.22,
+        0,
+        0.14
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "color": "#365314",
+      "box": {
+        "min": [
+          -0.24,
+          0,
+          0.12000000000000001
+        ],
+        "max": [
+          -0.2,
+          0.2,
+          0.16
+        ],
+        "size": [
+          0.04,
+          0.2,
+          0.04
+        ],
+        "center": [
+          -0.22,
+          0.1,
+          0.14
+        ]
+      }
+    },
+    {
+      "name": "leg-r",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.22,
+        0,
+        -0.14
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "color": "#365314",
+      "box": {
+        "min": [
+          -0.24,
+          0,
+          -0.16
+        ],
+        "max": [
+          -0.2,
+          0.2,
+          -0.12000000000000001
+        ],
+        "size": [
+          0.04,
+          0.2,
+          0.04
+        ],
+        "center": [
+          -0.22,
+          0.1,
+          -0.14
+        ]
+      }
+    },
+    {
+      "name": "handle-l",
+      "role": "handle",
+      "assetId": "primitive-box",
+      "position": [
+        -0.1,
+        0.36,
+        0.16
+      ],
+      "scale": [
+        0.7,
+        0.04,
+        0.04
+      ],
+      "color": "#854d0e",
+      "box": {
+        "min": [
+          -0.44999999999999996,
+          0.36,
+          0.14
+        ],
+        "max": [
+          0.24999999999999997,
+          0.39999999999999997,
+          0.18
+        ],
+        "size": [
+          0.7,
+          0.04,
+          0.04
+        ],
+        "center": [
+          -0.1,
+          0.38,
+          0.16
+        ]
+      }
+    },
+    {
+      "name": "handle-r",
+      "role": "handle",
+      "assetId": "primitive-box",
+      "position": [
+        -0.1,
+        0.36,
+        -0.16
+      ],
+      "scale": [
+        0.7,
+        0.04,
+        0.04
+      ],
+      "color": "#854d0e",
+      "box": {
+        "min": [
+          -0.44999999999999996,
+          0.36,
+          -0.18
+        ],
+        "max": [
+          0.24999999999999997,
+          0.39999999999999997,
+          -0.14
+        ],
+        "size": [
+          0.7,
+          0.04,
+          0.04
+        ],
+        "center": [
+          -0.1,
+          0.38,
+          -0.16
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "tub",
+      "role": "tub",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.1,
+        0.2,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.22,
+        0.42
+      ],
+      "color": "#16a34a",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "wheel",
+      "role": "wheel",
+      "assetId": "primitive-cylinder",
+      "placement": "explicit",
+      "position": [
+        0.48,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.28,
+        0.28
+      ],
+      "color": "#1c1917",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-l",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.22,
+        0,
+        0.14
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "color": "#365314",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-r",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.22,
+        0,
+        -0.14
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "color": "#365314",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "handle-l",
+      "role": "handle",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.1,
+        0.36,
+        0.16
+      ],
+      "scale": [
+        0.7,
+        0.04,
+        0.04
+      ],
+      "color": "#854d0e",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "handle-r",
+      "role": "handle",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.1,
+        0.36,
+        -0.16
+      ],
+      "scale": [
+        0.7,
+        0.04,
+        0.04
+      ],
+      "color": "#854d0e",
+      "allowOverlap": true
+    }
+  ]
+}

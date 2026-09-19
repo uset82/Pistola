@@ -1,0 +1,528 @@
+{
+  "slug": "dog",
+  "set": "dev",
+  "frame": {
+    "up": "+Y",
+    "front": "+Z",
+    "right": "+X",
+    "units": "meters",
+    "origin": "bottom-center"
+  },
+  "parts": [
+    {
+      "name": "body",
+      "role": "body",
+      "assetId": "primitive-box",
+      "position": [
+        0,
+        0.22,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.18,
+        0.18
+      ],
+      "color": "#92400e",
+      "box": {
+        "min": [
+          -0.2,
+          0.22,
+          -0.09
+        ],
+        "max": [
+          0.2,
+          0.4,
+          0.09
+        ],
+        "size": [
+          0.4,
+          0.18,
+          0.18
+        ],
+        "center": [
+          0,
+          0.31,
+          0
+        ]
+      }
+    },
+    {
+      "name": "head",
+      "role": "head",
+      "assetId": "primitive-box",
+      "position": [
+        0.26,
+        0.28,
+        0
+      ],
+      "scale": [
+        0.16,
+        0.14,
+        0.14
+      ],
+      "color": "#b45309",
+      "box": {
+        "min": [
+          0.18,
+          0.28,
+          -0.07
+        ],
+        "max": [
+          0.34,
+          0.42000000000000004,
+          0.07
+        ],
+        "size": [
+          0.16,
+          0.14,
+          0.14
+        ],
+        "center": [
+          0.26,
+          0.35000000000000003,
+          0
+        ]
+      }
+    },
+    {
+      "name": "leg-fl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        0.12,
+        0,
+        0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "box": {
+        "min": [
+          0.09,
+          0,
+          0.05
+        ],
+        "max": [
+          0.15,
+          0.22,
+          0.11
+        ],
+        "size": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "center": [
+          0.12,
+          0.11,
+          0.08
+        ]
+      }
+    },
+    {
+      "name": "leg-fr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        0.12,
+        0,
+        -0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "box": {
+        "min": [
+          0.09,
+          0,
+          -0.11
+        ],
+        "max": [
+          0.15,
+          0.22,
+          -0.05
+        ],
+        "size": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "center": [
+          0.12,
+          0.11,
+          -0.08
+        ]
+      }
+    },
+    {
+      "name": "leg-rl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.12,
+        0,
+        0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "box": {
+        "min": [
+          -0.15,
+          0,
+          0.05
+        ],
+        "max": [
+          -0.09,
+          0.22,
+          0.11
+        ],
+        "size": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "center": [
+          -0.12,
+          0.11,
+          0.08
+        ]
+      }
+    },
+    {
+      "name": "leg-rr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "position": [
+        -0.12,
+        0,
+        -0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "box": {
+        "min": [
+          -0.15,
+          0,
+          -0.11
+        ],
+        "max": [
+          -0.09,
+          0.22,
+          -0.05
+        ],
+        "size": [
+          0.06,
+          0.22,
+          0.06
+        ],
+        "center": [
+          -0.12,
+          0.11,
+          -0.08
+        ]
+      }
+    },
+    {
+      "name": "tail",
+      "role": "tail",
+      "assetId": "primitive-box",
+      "position": [
+        -0.26,
+        0.3,
+        0
+      ],
+      "scale": [
+        0.14,
+        0.05,
+        0.05
+      ],
+      "color": "#92400e",
+      "box": {
+        "min": [
+          -0.33,
+          0.3,
+          -0.025
+        ],
+        "max": [
+          -0.19,
+          0.35,
+          0.025
+        ],
+        "size": [
+          0.14,
+          0.05,
+          0.05
+        ],
+        "center": [
+          -0.26,
+          0.325,
+          0
+        ]
+      }
+    },
+    {
+      "name": "ear-l",
+      "role": "ear",
+      "assetId": "primitive-box",
+      "position": [
+        0.24,
+        0.42,
+        0.05
+      ],
+      "scale": [
+        0.04,
+        0.08,
+        0.03
+      ],
+      "color": "#78350f",
+      "box": {
+        "min": [
+          0.22,
+          0.42,
+          0.035
+        ],
+        "max": [
+          0.26,
+          0.5,
+          0.065
+        ],
+        "size": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "center": [
+          0.24,
+          0.45999999999999996,
+          0.05
+        ]
+      }
+    },
+    {
+      "name": "ear-r",
+      "role": "ear",
+      "assetId": "primitive-box",
+      "position": [
+        0.24,
+        0.42,
+        -0.05
+      ],
+      "scale": [
+        0.04,
+        0.08,
+        0.03
+      ],
+      "color": "#78350f",
+      "box": {
+        "min": [
+          0.22,
+          0.42,
+          -0.065
+        ],
+        "max": [
+          0.26,
+          0.5,
+          -0.035
+        ],
+        "size": [
+          0.04,
+          0.08,
+          0.03
+        ],
+        "center": [
+          0.24,
+          0.45999999999999996,
+          -0.05
+        ]
+      }
+    }
+  ],
+  "actions": [
+    {
+      "type": "place_item",
+      "name": "body",
+      "role": "body",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0,
+        0.22,
+        0
+      ],
+      "scale": [
+        0.4,
+        0.18,
+        0.18
+      ],
+      "color": "#92400e",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "head",
+      "role": "head",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.26,
+        0.28,
+        0
+      ],
+      "scale": [
+        0.16,
+        0.14,
+        0.14
+      ],
+      "color": "#b45309",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-fl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.12,
+        0,
+        0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-fr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.12,
+        0,
+        -0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-rl",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.12,
+        0,
+        0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "leg-rr",
+      "role": "leg",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.12,
+        0,
+        -0.08
+      ],
+      "scale": [
+        0.06,
+        0.22,
+        0.06
+      ],
+      "color": "#78350f",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "tail",
+      "role": "tail",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        -0.26,
+        0.3,
+        0
+      ],
+      "scale": [
+        0.14,
+        0.05,
+        0.05
+      ],
+      "color": "#92400e",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "ear-l",
+      "role": "ear",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.24,
+        0.42,
+        0.05
+      ],
+      "scale": [
+        0.04,
+        0.08,
+        0.03
+      ],
+      "color": "#78350f",
+      "allowOverlap": true
+    },
+    {
+      "type": "place_item",
+      "name": "ear-r",
+      "role": "ear",
+      "assetId": "primitive-box",
+      "placement": "explicit",
+      "position": [
+        0.24,
+        0.42,
+        -0.05
+      ],
+      "scale": [
+        0.04,
+        0.08,
+        0.03
+      ],
+      "color": "#78350f",
+      "allowOverlap": true
+    }
+  ]
+}

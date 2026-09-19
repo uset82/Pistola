@@ -1,0 +1,770 @@
+{
+  "prompt": {
+    "slug": "toy-car",
+    "prompt": "A blocky toy car with a cabin and four wheels sitting on the floor.",
+    "overall_m": [
+      1.4,
+      0.68,
+      0.74
+    ],
+    "anchor": "floor",
+    "parts": [
+      "body",
+      "cabin",
+      "wheel-fl",
+      "wheel-fr",
+      "wheel-rl",
+      "wheel-rr"
+    ],
+    "relations": [
+      {
+        "a": "wheel-fl",
+        "rel": "on_floor"
+      },
+      {
+        "a": "body",
+        "rel": "on_top_of",
+        "b": "wheel-fl"
+      },
+      {
+        "a": "cabin",
+        "rel": "on_top_of",
+        "b": "body"
+      }
+    ],
+    "set": "dev"
+  },
+  "gold": {
+    "slug": "toy-car",
+    "partCount": 6
+  },
+  "scene": {
+    "ok": true,
+    "errors": [],
+    "parts": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "body",
+        "role": "body",
+        "assetId": "primitive-box",
+        "color": "#2563eb",
+        "parentId": null,
+        "position": [
+          0,
+          0.2,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.28,
+          0.58
+        ],
+        "localPosition": [
+          0,
+          0.2,
+          0
+        ],
+        "localScale": [
+          1.4,
+          0.28,
+          0.58
+        ],
+        "box": {
+          "min": [
+            -0.7,
+            0.2,
+            -0.29
+          ],
+          "max": [
+            0.7,
+            0.48000000000000004,
+            0.29
+          ],
+          "size": [
+            1.4,
+            0.28,
+            0.58
+          ],
+          "center": [
+            0,
+            0.34,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "cabin",
+        "role": "cabin",
+        "assetId": "primitive-box",
+        "color": "#93c5fd",
+        "parentId": null,
+        "position": [
+          -0.15,
+          0.48,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.2,
+          0.54
+        ],
+        "localPosition": [
+          -0.15,
+          0.48,
+          0
+        ],
+        "localScale": [
+          0.7,
+          0.2,
+          0.54
+        ],
+        "box": {
+          "min": [
+            -0.5,
+            0.48,
+            -0.27
+          ],
+          "max": [
+            0.19999999999999998,
+            0.6799999999999999,
+            0.27
+          ],
+          "size": [
+            0.7,
+            0.2,
+            0.54
+          ],
+          "center": [
+            -0.15,
+            0.58,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "wheel-fl",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          0.45,
+          0,
+          0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          0.45,
+          0,
+          0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            0.34,
+            0,
+            0.27
+          ],
+          "max": [
+            0.56,
+            0.2,
+            0.37
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            0.45,
+            0.1,
+            0.32
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "wheel-fr",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          0.45,
+          0,
+          -0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          0.45,
+          0,
+          -0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            0.34,
+            0,
+            -0.37
+          ],
+          "max": [
+            0.56,
+            0.2,
+            -0.27
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            0.45,
+            0.1,
+            -0.32
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "wheel-rl",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          -0.45,
+          0,
+          0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          -0.45,
+          0,
+          0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            -0.56,
+            0,
+            0.27
+          ],
+          "max": [
+            -0.34,
+            0.2,
+            0.37
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            -0.45,
+            0.1,
+            0.32
+          ]
+        }
+      },
+      {
+        "id": "item_6",
+        "type": "item",
+        "name": "wheel-rr",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          -0.45,
+          0,
+          -0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          -0.45,
+          0,
+          -0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            -0.56,
+            0,
+            -0.37
+          ],
+          "max": [
+            -0.34,
+            0.2,
+            -0.27
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            -0.45,
+            0.1,
+            -0.32
+          ]
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "item_1",
+        "type": "item",
+        "name": "body",
+        "role": "body",
+        "assetId": "primitive-box",
+        "color": "#2563eb",
+        "parentId": null,
+        "position": [
+          0,
+          0.2,
+          0
+        ],
+        "scale": [
+          1.4,
+          0.28,
+          0.58
+        ],
+        "localPosition": [
+          0,
+          0.2,
+          0
+        ],
+        "localScale": [
+          1.4,
+          0.28,
+          0.58
+        ],
+        "box": {
+          "min": [
+            -0.7,
+            0.2,
+            -0.29
+          ],
+          "max": [
+            0.7,
+            0.48000000000000004,
+            0.29
+          ],
+          "size": [
+            1.4,
+            0.28,
+            0.58
+          ],
+          "center": [
+            0,
+            0.34,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_2",
+        "type": "item",
+        "name": "cabin",
+        "role": "cabin",
+        "assetId": "primitive-box",
+        "color": "#93c5fd",
+        "parentId": null,
+        "position": [
+          -0.15,
+          0.48,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.2,
+          0.54
+        ],
+        "localPosition": [
+          -0.15,
+          0.48,
+          0
+        ],
+        "localScale": [
+          0.7,
+          0.2,
+          0.54
+        ],
+        "box": {
+          "min": [
+            -0.5,
+            0.48,
+            -0.27
+          ],
+          "max": [
+            0.19999999999999998,
+            0.6799999999999999,
+            0.27
+          ],
+          "size": [
+            0.7,
+            0.2,
+            0.54
+          ],
+          "center": [
+            -0.15,
+            0.58,
+            0
+          ]
+        }
+      },
+      {
+        "id": "item_3",
+        "type": "item",
+        "name": "wheel-fl",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          0.45,
+          0,
+          0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          0.45,
+          0,
+          0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            0.34,
+            0,
+            0.27
+          ],
+          "max": [
+            0.56,
+            0.2,
+            0.37
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            0.45,
+            0.1,
+            0.32
+          ]
+        }
+      },
+      {
+        "id": "item_4",
+        "type": "item",
+        "name": "wheel-fr",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          0.45,
+          0,
+          -0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          0.45,
+          0,
+          -0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            0.34,
+            0,
+            -0.37
+          ],
+          "max": [
+            0.56,
+            0.2,
+            -0.27
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            0.45,
+            0.1,
+            -0.32
+          ]
+        }
+      },
+      {
+        "id": "item_5",
+        "type": "item",
+        "name": "wheel-rl",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          -0.45,
+          0,
+          0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          -0.45,
+          0,
+          0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            -0.56,
+            0,
+            0.27
+          ],
+          "max": [
+            -0.34,
+            0.2,
+            0.37
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            -0.45,
+            0.1,
+            0.32
+          ]
+        }
+      },
+      {
+        "id": "item_6",
+        "type": "item",
+        "name": "wheel-rr",
+        "role": "wheel",
+        "assetId": "primitive-box",
+        "color": "#18181b",
+        "parentId": null,
+        "position": [
+          -0.45,
+          0,
+          -0.32
+        ],
+        "scale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "localPosition": [
+          -0.45,
+          0,
+          -0.32
+        ],
+        "localScale": [
+          0.22,
+          0.2,
+          0.1
+        ],
+        "box": {
+          "min": [
+            -0.56,
+            0,
+            -0.37
+          ],
+          "max": [
+            -0.34,
+            0.2,
+            -0.27
+          ],
+          "size": [
+            0.22,
+            0.2,
+            0.1
+          ],
+          "center": [
+            -0.45,
+            0.1,
+            -0.32
+          ]
+        }
+      }
+    ]
+  },
+  "score": {
+    "slug": "toy-car",
+    "set": "dev",
+    "runnableFirstTry": 1,
+    "runnableFinal": 1,
+    "retriesPerPart": 0,
+    "floatingParts": [],
+    "ungroundedParts": [],
+    "belowFloorParts": [],
+    "overallDimensionError": {
+      "perAxis": [
+        0,
+        1.6326809185664065e-16,
+        0
+      ],
+      "mean": 5.442269728554689e-17
+    },
+    "perPartDimensionError": [
+      {
+        "name": "body",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "cabin",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "wheel-fl",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "wheel-fr",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "wheel-rl",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      },
+      {
+        "name": "wheel-rr",
+        "error": {
+          "perAxis": [
+            0,
+            0,
+            0
+          ],
+          "mean": 0
+        }
+      }
+    ],
+    "partCoverage": {
+      "required": 6,
+      "found": 6,
+      "missing": [],
+      "ratio": 1
+    },
+    "iou": {
+      "mean": 1,
+      "views": {
+        "front": 1,
+        "side": 1,
+        "top": 1
+      }
+    },
+    "rubric": null,
+    "toolCalls": 0,
+    "timeMs": 1,
+    "actualOverall_m": [
+      1.4,
+      0.6799999999999999,
+      0.74
+    ],
+    "partCount": 6
+  }
+}
