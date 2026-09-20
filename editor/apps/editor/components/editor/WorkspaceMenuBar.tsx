@@ -8,6 +8,8 @@ import {
 } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import { useEffect, useRef, useState } from 'react'
+import { fileLooksLikeGltf } from '../../lib/import-glb'
+import { importGlbFileAsItem } from '../../lib/import-glb-item'
 import {
   captureCanvasScreenshot,
   copyShareLink,
@@ -81,23 +83,36 @@ export function WorkspaceMenuBar() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const content = event.target?.result
-      if (typeof content === 'string') {
-        const res = loadProjectFromJson(content)
-        if (res.success) {
-          setSaveStatusText('Project Loaded!')
+    void (async () => {
+      if (await fileLooksLikeGltf(file)) {
+        const result = await importGlbFileAsItem(file)
+        if (result.success) {
+          setSaveStatusText('Model imported')
           setTimeout(() => setSaveStatusText(null), 2500)
         } else {
-          alert(res.error || 'Failed to open project file.')
+          alert(result.error)
+        }
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const content = event.target?.result
+        if (typeof content === 'string') {
+          const res = loadProjectFromJson(content)
+          if (res.success) {
+            setSaveStatusText('Project Loaded!')
+            setTimeout(() => setSaveStatusText(null), 2500)
+          } else {
+            alert(res.error || 'Failed to open project file.')
+          }
         }
       }
-    }
-    reader.readAsText(file)
-    e.target.value = ''
+      reader.readAsText(file)
+    })()
   }
 
   const handleExport = async (format: 'glb' | 'step' | 'ifc' | 'json' | 'screenshot') => {
@@ -198,7 +213,7 @@ export function WorkspaceMenuBar() {
         action: () => setActiveModal('new-project'),
       },
       {
-        label: 'Open Project JSON...',
+        label: 'Open...',
         shortcut: 'Ctrl+O',
         action: () => fileInputRef.current?.click(),
       },
@@ -521,7 +536,7 @@ export function WorkspaceMenuBar() {
     <>
       {/* Hidden file input for Open Project */}
       <input
-        accept=".json,application/json"
+        accept=".json,.pistola.json,application/json,.glb,.gltf,model/gltf-binary,model/gltf+json"
         className="hidden"
         onChange={handleFileChange}
         ref={fileInputRef}

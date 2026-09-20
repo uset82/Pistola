@@ -14,9 +14,10 @@ import { useGLTF } from '@react-three/drei/core/Gltf'
 import { useFrame } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import type { AnimationAction, Group, Material, Mesh } from 'three'
-import { MathUtils } from 'three'
+import { MathUtils, MeshBasicMaterial, MeshStandardMaterial } from 'three'
 import { positionLocal, smoothstep, time } from 'three/tsl'
 import { DoubleSide, MeshStandardNodeMaterial } from 'three/webgpu'
+import { useAssetUrl } from '../../../hooks/use-asset-url'
 import { useNodeEvents } from '../../../hooks/use-node-events'
 import { resolveCdnUrl } from '../../../lib/asset-url'
 import { useItemLightPool } from '../../../store/use-item-light-pool'
@@ -47,21 +48,58 @@ const getMaterialForOriginal = (original: Material): MeshStandardNodeMaterial =>
   return defaultMaterial
 }
 
+/** Keep the GLB's color and maps. WebGPU still needs a node material, not the white catalog stand-in. */
+const importedNodeMaterial = (original: Material): Material => {
+  if (original instanceof MeshStandardNodeMaterial) return original
+  const next = new MeshStandardNodeMaterial()
+  next.name = original.name
+  next.opacity = original.opacity
+  next.transparent = original.transparent || original.opacity < 1
+  next.side = original.side
+  next.depthWrite = original.depthWrite
+  if (original instanceof MeshStandardMaterial || original instanceof MeshBasicMaterial) {
+    next.color.copy(original.color)
+    next.map = original.map
+    next.alphaMap = original.alphaMap
+  }
+  if (original instanceof MeshStandardMaterial) {
+    next.normalMap = original.normalMap
+    next.roughnessMap = original.roughnessMap
+    next.metalnessMap = original.metalnessMap
+    next.aoMap = original.aoMap
+    next.emissive.copy(original.emissive)
+    next.emissiveMap = original.emissiveMap
+    next.emissiveIntensity = original.emissiveIntensity
+    next.roughness = original.roughness
+    next.metalness = original.metalness
+  }
+  return next
+}
+
+const keepsImportedLook = (node: ItemNode) =>
+  node.asset.category === 'imported' || node.asset.src.startsWith('asset://')
+
 const isProceduralItem = (node: ItemNode) => Boolean(node.asset.primitive)
 
 export const ItemRenderer = ({ node }: { node: ItemNode }) => {
   const ref = useRef<Group>(null!)
+  const procedural = isProceduralItem(node)
+  const storedSrc = !procedural && node.asset.src.startsWith('asset://') ? node.asset.src : ''
+  const storedUrl = useAssetUrl(storedSrc)
+  const modelUrl = procedural ? null : storedSrc ? storedUrl : resolveCdnUrl(node.asset.src)
 
   useRegistry(node.id, node.type, ref)
 
   return (
     <group position={node.position} ref={ref} rotation={node.rotation} visible={node.visible}>
-      {isProceduralItem(node) ? (
+      {procedural ? (
         <ProceduralItemRenderer node={node} />
-      ) : (
+      ) : modelUrl ? (
         <Suspense fallback={<PreviewModel node={node} />}>
-          <ModelRenderer node={node} />
+          <ModelRenderer node={node} url={modelUrl} />
         </Suspense>
+      ) : (
+        <PreviewModel node={node} />
       )}
       {node.children?.map((childId) => (
         <NodeRenderer key={childId} nodeId={childId} />
@@ -173,12 +211,13 @@ const ProceduralItemRenderer = ({ node }: { node: ItemNode }) => {
   )
 }
 
-const ModelRenderer = ({ node }: { node: ItemNode }) => {
-  const { scene, nodes, animations } = useGLTF(resolveCdnUrl(node.asset.src) || '')
+const ModelRenderer = ({ node, url }: { node: ItemNode; url: string }) => {
+  const { scene, nodes, animations } = useGLTF(url)
   const ref = useRef<Group>(null!)
   const { actions } = useAnimations(animations, ref)
   // Freeze the interactive definition at mount — asset schemas don't change at runtime
   const interactiveRef = useRef(node.asset.interactive)
+  const keepImportedLook = keepsImportedLook(node)
 
   if (nodes.cutout) {
     nodes.cutout.visible = false
@@ -207,6 +246,15 @@ const ModelRenderer = ({ node }: { node: ItemNode }) => {
           return
         }
 
+        if (keepImportedLook) {
+          mesh.material = Array.isArray(mesh.material)
+            ? mesh.material.map((material) => importedNodeMaterial(material))
+            : importedNodeMaterial(mesh.material)
+          mesh.castShadow = true
+          mesh.receiveShadow = true
+          return
+        }
+
         let hasGlass = false
 
         // Handle both single material and material array cases
@@ -221,7 +269,7 @@ const ModelRenderer = ({ node }: { node: ItemNode }) => {
         mesh.receiveShadow = !hasGlass
       }
     })
-  }, [scene])
+  }, [keepImportedLook, scene])
 
   const interactive = interactiveRef.current
   const animEffect =

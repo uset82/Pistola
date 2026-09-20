@@ -8,6 +8,7 @@ import {
 } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import { create } from 'zustand'
+import { GLTF_IMPORT_HINT, isGltfJsonDocument, textLooksLikeGltf } from './import-glb'
 
 export type ActiveProjectModal =
   | 'new-project'
@@ -136,7 +137,14 @@ export function loadProjectFromJson(jsonString: string): { success: boolean; err
       rootNodeIds?: string[]
     }
 
-    if (!parsed.nodes || typeof parsed.nodes !== 'object') {
+    if (isGltfJsonDocument(parsed)) {
+      return {
+        success: false,
+        error: `This file is a glTF mesh, not a Pistola project. ${GLTF_IMPORT_HINT}`,
+      }
+    }
+
+    if (!parsed.nodes || typeof parsed.nodes !== 'object' || Array.isArray(parsed.nodes)) {
       return { success: false, error: 'Invalid project file: missing nodes.' }
     }
 
@@ -153,7 +161,11 @@ export function loadProjectFromJson(jsonString: string): { success: boolean; err
     useProjectStore.getState().markSaved()
     return { success: true }
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : 'Failed to parse project JSON.' }
+    const message = err instanceof Error ? err.message : 'Failed to parse project JSON.'
+    if (textLooksLikeGltf(jsonString)) {
+      return { success: false, error: `${message}. ${GLTF_IMPORT_HINT}` }
+    }
+    return { success: false, error: message }
   }
 }
 

@@ -44,6 +44,29 @@ test('loadProjectFromJson parses valid project and rejects invalid structure', (
   assert.ok(failResult.error?.includes('missing nodes'))
 })
 
+test('loadProjectFromJson rejects glTF documents and binary glTF text', () => {
+  const gltfJson = JSON.stringify({
+    asset: { version: '2.0' },
+    meshes: [{ primitives: [] }],
+    nodes: [{ mesh: 0 }],
+  })
+  const gltfResult = loadProjectFromJson(gltfJson)
+  assert.equal(gltfResult.success, false)
+  assert.match(gltfResult.error ?? '', /not a Pistola project/)
+  assert.match(gltfResult.error ?? '', /\.glb/)
+
+  const binaryText = 'glTF\u0000\u0000\u0002 not json'
+  const binaryResult = loadProjectFromJson(binaryText)
+  assert.equal(binaryResult.success, false)
+  assert.match(binaryResult.error ?? '', /glTF/)
+  assert.match(binaryResult.error ?? '', /\.glb/)
+
+  const arrayNodes = JSON.stringify({ nodes: [{ id: 'node_1' }] })
+  const arrayResult = loadProjectFromJson(arrayNodes)
+  assert.equal(arrayResult.success, false)
+  assert.match(arrayResult.error ?? '', /missing nodes/)
+})
+
 test('createNewProject resets name and marks project saved', () => {
   useProjectStore.getState().setProjectName('Before Reset')
   useProjectStore.getState().markDirty(true)
