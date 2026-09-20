@@ -50,6 +50,7 @@ export const AI_PROVIDERS: Record<
 }
 
 const PINNED_MODELS_STORAGE_KEY = 'pistola:assistant-pinned-models'
+const CATALOG_CLIENT_TTL_MS = 60 * 1000
 
 const readPinnedModelIds = () => {
   if (typeof window === 'undefined') return [FREE_ROUTER_MODEL_ID]
@@ -100,6 +101,7 @@ type AiSettingsState = {
   catalogProvider: AiProvider | null
   catalogStatus: 'idle' | 'loading' | 'ready'
   catalogIsFallback: boolean
+  catalogFetchedAt: number | null
   pinnedIds: string[]
   loadConfig: () => Promise<void>
   loadCatalog: (options?: { force?: boolean }) => Promise<void>
@@ -123,6 +125,7 @@ export const useAiSettings = create<AiSettingsState>((set, get) => ({
   catalogProvider: null,
   catalogStatus: 'idle',
   catalogIsFallback: false,
+  catalogFetchedAt: null,
   pinnedIds: readPinnedModelIds(),
 
   loadConfig: async () => {
@@ -147,14 +150,27 @@ export const useAiSettings = create<AiSettingsState>((set, get) => ({
   },
 
   loadCatalog: async ({ force = false } = {}) => {
-    const { activeProvider, catalogProvider, catalogStatus, config } = get()
-    if (!force && catalogProvider === activeProvider && catalogStatus !== 'idle') return
+    const { activeProvider, catalogProvider, catalogStatus, catalogFetchedAt, catalogIsFallback, config } =
+      get()
+    if (catalogStatus === 'loading' && !force) return
+    const catalogIsFresh =
+      !catalogIsFallback &&
+      catalogProvider === activeProvider &&
+      catalogStatus === 'ready' &&
+      catalogFetchedAt != null &&
+      Date.now() - catalogFetchedAt < CATALOG_CLIENT_TTL_MS
+    if (!force && catalogIsFresh) return
 
     set({ catalogStatus: 'loading', catalogProvider: activeProvider })
     const finish = (models: OpenRouterModelOption[], isFallback: boolean) => {
       // A provider switch while loading makes this response stale.
       if (get().catalogProvider !== activeProvider) return
-      set({ catalog: models, catalogStatus: 'ready', catalogIsFallback: isFallback })
+      set({
+        catalog: models,
+        catalogStatus: 'ready',
+        catalogIsFallback: isFallback,
+        catalogFetchedAt: Date.now(),
+      })
     }
 
     try {
@@ -244,7 +260,12 @@ export const useAiSettings = create<AiSettingsState>((set, get) => ({
         activeProvider,
         activeModel: config.model ?? AI_PROVIDERS[activeProvider].model,
         ...(providerChanged
-          ? { catalog: [], catalogProvider: null, catalogStatus: 'idle' as const }
+          ? {
+              catalog: [],
+              catalogProvider: null,
+              catalogStatus: 'idle' as const,
+              catalogFetchedAt: null,
+            }
           : {}),
       })
       void get().loadCatalog({ force: true })

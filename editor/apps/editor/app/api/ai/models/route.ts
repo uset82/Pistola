@@ -7,6 +7,7 @@ import { pistolaCorsPreflight, withPistolaCors } from '@/lib/http/cors'
 import {
   FALLBACK_OPENROUTER_MODELS,
   fetchOpenRouterModelCatalog,
+  fetchOpenRouterModelCount,
   type OpenRouterModelOption,
 } from '@/lib/openrouter-model-catalog'
 
@@ -15,9 +16,12 @@ export type ModelOption = OpenRouterModelOption
 let openRouterCache: {
   models: ModelOption[]
   timestamp: number
+  catalogCount: number
 } | null = null
 
-const CACHE_TTL_MS = 10 * 60 * 1000
+const CACHE_TTL_MS = 60 * 1000
+const CACHE_REVALIDATE_MS = 10 * 60 * 1000
+const CACHE_MAX_MS = 24 * 60 * 60 * 1000
 
 const OPENAI_MODELS: ModelOption[] = [
   {
@@ -76,34 +80,74 @@ export async function GET(request: Request) {
     }
 
     const now = Date.now()
-    if (!forceRefresh && openRouterCache && now - openRouterCache.timestamp < CACHE_TTL_MS) {
-      const freeCount = openRouterCache.models.filter((model) => model.isFree).length
-      return json({
-        ok: true,
-        provider: 'openrouter',
-        cached: true,
-        count: openRouterCache.models.length,
-        freeCount,
-        models: openRouterCache.models,
-      })
-    }
-
     const installed = readInstalledAiConfig()
     const baseUrl = (installed?.baseUrl || DEFAULT_INSTALLED_OPENROUTER_BASE_URL)
       .trim()
       .replace(/\/+$/u, '')
     const apiKey = installed?.apiKey?.trim() || ''
 
+    if (!forceRefresh && openRouterCache) {
+      const age = now - openRouterCache.timestamp
+      if (age < CACHE_TTL_MS) {
+        return json({
+          ok: true,
+          provider: 'openrouter',
+          cached: true,
+          count: openRouterCache.models.length,
+          freeCount: openRouterCache.models.filter((model) => model.isFree).length,
+          updatedAt: openRouterCache.timestamp,
+          models: openRouterCache.models,
+        })
+      }
+
+      try {
+        const liveCount = await fetchOpenRouterModelCount({
+          baseUrl,
+          apiKey,
+          signal: AbortSignal.timeout(8_000),
+        })
+        if (liveCount === openRouterCache.catalogCount && age < CACHE_REVALIDATE_MS) {
+          return json({
+            ok: true,
+            provider: 'openrouter',
+            cached: true,
+            count: openRouterCache.models.length,
+            freeCount: openRouterCache.models.filter((model) => model.isFree).length,
+            updatedAt: openRouterCache.timestamp,
+            models: openRouterCache.models,
+          })
+        }
+      } catch {
+        if (age < CACHE_MAX_MS) {
+          return json({
+            ok: true,
+            provider: 'openrouter',
+            cached: true,
+            count: openRouterCache.models.length,
+            freeCount: openRouterCache.models.filter((model) => model.isFree).length,
+            updatedAt: openRouterCache.timestamp,
+            models: openRouterCache.models,
+          })
+        }
+      }
+    }
+
     try {
       const parsedModels = await fetchOpenRouterModelCatalog({
         baseUrl,
         apiKey,
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(20_000),
       })
+      const catalogCount = await fetchOpenRouterModelCount({
+        baseUrl,
+        apiKey,
+        signal: AbortSignal.timeout(8_000),
+      }).catch(() => parsedModels.length)
 
       openRouterCache = {
         models: parsedModels,
         timestamp: now,
+        catalogCount,
       }
 
       return json({
@@ -112,10 +156,22 @@ export async function GET(request: Request) {
         cached: false,
         count: parsedModels.length,
         freeCount: parsedModels.filter((model) => model.isFree).length,
+        updatedAt: now,
         models: parsedModels,
       })
     } catch (networkError) {
       console.warn('Failed to fetch live OpenRouter models, returning fallback list:', networkError)
+      if (openRouterCache) {
+        return json({
+          ok: true,
+          provider: 'openrouter',
+          cached: true,
+          count: openRouterCache.models.length,
+          freeCount: openRouterCache.models.filter((model) => model.isFree).length,
+          updatedAt: openRouterCache.timestamp,
+          models: openRouterCache.models,
+        })
+      }
       return json({
         ok: true,
         provider: 'openrouter',

@@ -369,7 +369,7 @@ export function ModelPicker({
         <span className="shrink-0">{providerLabel}</span>
         <span className="min-w-0 truncate font-mono text-[11px] text-as-faint">
           {keyState}
-          {catalogIsFallback ? ' · offline list' : ''}
+          {catalogIsFallback ? ' · offline list' : ' · live OpenRouter'}
         </span>
         <span className="flex-1" />
         <button

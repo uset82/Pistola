@@ -11,7 +11,36 @@ export type OpenRouterModelOption = {
   }
 }
 
+type OpenRouterCatalogItem = {
+  id: string
+  name?: string
+  description?: string
+  context_length?: number
+  pricing?: {
+    prompt?: string
+    completion?: string
+  }
+}
+
+type OpenRouterModelsResponse = {
+  data?: OpenRouterCatalogItem[]
+  total_count?: number
+  links?: { next?: string | null }
+}
+
+type OpenRouterCountResponse = {
+  data?: { count?: number }
+  count?: number
+}
+
 const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
+const CATALOG_PAGE_SIZE = 1000
+const CATALOG_PAGE_LIMIT = 25
+
+/** Full catalog, not the default text-only list. */
+export const OPENROUTER_CATALOG_QUERY = `output_modalities=all&limit=${CATALOG_PAGE_SIZE}`
+export const OPENROUTER_FREE_VARIANT_QUERY = `output_modalities=all&q=free&limit=${CATALOG_PAGE_SIZE}`
+export const OPENROUTER_CATALOG_COUNT_QUERY = 'output_modalities=all'
 
 export const RECOMMENDED_OPENROUTER_IDS = new Set([
   'openrouter/free',
@@ -136,26 +165,25 @@ export const FALLBACK_OPENROUTER_MODELS: OpenRouterModelOption[] = [
   },
 ]
 
-const isFreeOpenRouterModel = (
-  id: string,
-  pricing?: { prompt?: string; completion?: string },
-) =>
-  id === 'openrouter/free' ||
-  id.endsWith(':free') ||
-  (pricing?.prompt === '0' && pricing?.completion === '0')
+const FREE_ROUTER_FALLBACK: OpenRouterCatalogItem = {
+  id: 'openrouter/free',
+  name: 'OpenRouter: Free Models Router',
+  description: 'Auto-routes requests to the best available free model on OpenRouter.',
+  context_length: 200000,
+  pricing: { prompt: '0', completion: '0' },
+}
 
-export const mapOpenRouterModels = (
-  items: Array<{
-    id: string
-    name?: string
-    description?: string
-    context_length?: number
-    pricing?: {
-      prompt?: string
-      completion?: string
-    }
-  }>,
-): OpenRouterModelOption[] => {
+/** OpenRouter "Free variant" entries, not $0 token prices on billed image/video models. */
+export const isFreeOpenRouterModel = (id: string, name?: string) =>
+  id === 'openrouter/free' || id.endsWith(':free') || /\(\s*free\s*\)\s*$/i.test(name ?? '')
+
+export const resolveOpenRouterCatalogUrl = (pathOrUrl: string, baseUrl: string) => {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl
+  const origin = new URL(baseUrl).origin
+  return new URL(pathOrUrl, origin).toString()
+}
+
+export const mapOpenRouterModels = (items: OpenRouterCatalogItem[]): OpenRouterModelOption[] => {
   const parsedModels = items.map((item) => {
     const id = item.id
     return {
@@ -163,7 +191,7 @@ export const mapOpenRouterModels = (
       name: item.name || id,
       description: item.description?.slice(0, 250) || '',
       contextLength: item.context_length || null,
-      isFree: isFreeOpenRouterModel(id, item.pricing),
+      isFree: isFreeOpenRouterModel(id, item.name),
       isRecommended: RECOMMENDED_OPENROUTER_IDS.has(id),
       pricing: item.pricing
         ? {
@@ -187,46 +215,128 @@ export const mapOpenRouterModels = (
   return parsedModels
 }
 
-export const fetchOpenRouterModelCatalog = async ({
-  baseUrl = DEFAULT_OPENROUTER_BASE_URL,
-  apiKey,
-  signal,
-}: {
-  baseUrl?: string
-  apiKey?: string
-  signal?: AbortSignal
-} = {}): Promise<OpenRouterModelOption[]> => {
-  const normalized = (baseUrl || DEFAULT_OPENROUTER_BASE_URL).trim().replace(/\/+$/u, '')
+const catalogHeaders = (apiKey?: string) => {
   const headers: Record<string, string> = {}
   if (apiKey?.trim()) {
     headers.Authorization = `Bearer ${apiKey.trim()}`
   }
+  return headers
+}
 
-  const response = await fetch(`${normalized}/models`, {
-    headers,
+const readModelsResponse = async (response: Response): Promise<OpenRouterModelsResponse> => {
+  if (!response.ok) {
+    throw new Error(`OpenRouter returned status ${response.status}`)
+  }
+  return (await response.json()) as OpenRouterModelsResponse
+}
+
+const collectCatalogItems = async ({
+  startUrl,
+  baseUrl,
+  headers,
+  signal,
+  fetcher,
+}: {
+  startUrl: string
+  baseUrl: string
+  headers: Record<string, string>
+  signal?: AbortSignal
+  fetcher: typeof fetch
+}) => {
+  const collected = new Map<string, OpenRouterCatalogItem>()
+  let url = startUrl
+  let expected: number | null = null
+
+  for (let page = 0; page < CATALOG_PAGE_LIMIT; page += 1) {
+    const raw = await readModelsResponse(
+      await fetcher(url, { headers, cache: 'no-store', signal }),
+    )
+    if (!Array.isArray(raw.data)) {
+      throw new Error('Invalid or empty models data from OpenRouter')
+    }
+    if (typeof raw.total_count === 'number') expected = raw.total_count
+    for (const item of raw.data) {
+      if (item?.id) collected.set(item.id, item)
+    }
+    if (!raw.links?.next) break
+    url = resolveOpenRouterCatalogUrl(raw.links.next, baseUrl)
+  }
+
+  return { collected, expected }
+}
+
+export const fetchOpenRouterModelCount = async ({
+  baseUrl = DEFAULT_OPENROUTER_BASE_URL,
+  apiKey,
+  signal,
+  fetcher = fetch,
+}: {
+  baseUrl?: string
+  apiKey?: string
+  signal?: AbortSignal
+  fetcher?: typeof fetch
+} = {}): Promise<number> => {
+  const normalized = (baseUrl || DEFAULT_OPENROUTER_BASE_URL).trim().replace(/\/+$/u, '')
+  const response = await fetcher(`${normalized}/models/count?${OPENROUTER_CATALOG_COUNT_QUERY}`, {
+    headers: catalogHeaders(apiKey),
     cache: 'no-store',
     signal,
   })
   if (!response.ok) {
     throw new Error(`OpenRouter returned status ${response.status}`)
   }
+  const raw = (await response.json()) as OpenRouterCountResponse
+  const count = raw.data?.count ?? raw.count
+  if (typeof count !== 'number' || !Number.isFinite(count) || count < 0) {
+    throw new Error('Invalid model count from OpenRouter')
+  }
+  return count
+}
 
-  const raw = (await response.json()) as {
-    data?: Array<{
-      id: string
-      name?: string
-      description?: string
-      context_length?: number
-      pricing?: {
-        prompt?: string
-        completion?: string
-      }
-    }>
+export const fetchOpenRouterModelCatalog = async ({
+  baseUrl = DEFAULT_OPENROUTER_BASE_URL,
+  apiKey,
+  signal,
+  fetcher = fetch,
+}: {
+  baseUrl?: string
+  apiKey?: string
+  signal?: AbortSignal
+  fetcher?: typeof fetch
+} = {}): Promise<OpenRouterModelOption[]> => {
+  const normalized = (baseUrl || DEFAULT_OPENROUTER_BASE_URL).trim().replace(/\/+$/u, '')
+  const headers = catalogHeaders(apiKey)
+
+  const { collected } = await collectCatalogItems({
+    startUrl: `${normalized}/models?${OPENROUTER_CATALOG_QUERY}`,
+    baseUrl: normalized,
+    headers,
+    signal,
+    fetcher,
+  })
+
+  try {
+    const freePage = await collectCatalogItems({
+      startUrl: `${normalized}/models?${OPENROUTER_FREE_VARIANT_QUERY}`,
+      baseUrl: normalized,
+      headers,
+      signal,
+      fetcher,
+    })
+    for (const [id, item] of freePage.collected) {
+      collected.set(id, item)
+    }
+  } catch {
+    // The full catalog is enough when the free-variant query is unavailable.
   }
 
-  if (!Array.isArray(raw.data) || raw.data.length === 0) {
+  if (!collected.has('openrouter/free')) {
+    collected.set('openrouter/free', FREE_ROUTER_FALLBACK)
+  }
+
+  if (collected.size === 0) {
     throw new Error('Invalid or empty models data from OpenRouter')
   }
 
-  return mapOpenRouterModels(raw.data)
+  return mapOpenRouterModels([...collected.values()])
 }
