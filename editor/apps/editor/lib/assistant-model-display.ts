@@ -2,6 +2,8 @@ import type { OpenRouterModelOption } from './openrouter-model-catalog'
 
 export type AssistantModelFilter = 'recommended' | 'free' | 'all'
 
+export type AssistantModelOrder = 'default' | 'intelligence'
+
 export type AssistantModelGroup = {
   id: 'pinned' | 'recommended' | 'free' | 'paid'
   label: string
@@ -51,6 +53,31 @@ const formatPerMillion = (perToken: string | undefined) => {
   return perMillion < 1 ? perMillion.toFixed(2) : String(Number(perMillion.toPrecision(3)))
 }
 
+/** Artificial Analysis score as shown on OpenRouter's intelligence sort. */
+export const formatIntelligenceIndex = (score?: number | null) => {
+  if (score == null || !Number.isFinite(score)) return null
+  return Number.isInteger(score) ? String(score) : String(Number(score.toFixed(1)))
+}
+
+export const hasIntelligenceIndex = (model: OpenRouterModelOption) =>
+  !model.id.endsWith(':batch') &&
+  typeof model.intelligenceIndex === 'number' &&
+  Number.isFinite(model.intelligenceIndex)
+
+const byIntelligence = (left: OpenRouterModelOption, right: OpenRouterModelOption) => {
+  const leftHas = typeof left.intelligenceIndex === 'number'
+  const rightHas = typeof right.intelligenceIndex === 'number'
+  if (leftHas && rightHas) {
+    const scoreDelta = (right.intelligenceIndex ?? 0) - (left.intelligenceIndex ?? 0)
+    if (scoreDelta !== 0) return scoreDelta
+  } else if (leftHas) {
+    return -1
+  } else if (rightHas) {
+    return 1
+  }
+  return left.name.localeCompare(right.name)
+}
+
 /** "free", or input/output dollars per million tokens, e.g. "$3/$15". */
 export const formatModelPrice = (model: OpenRouterModelOption) => {
   if (model.isFree) return 'free'
@@ -73,15 +100,18 @@ export const groupAssistantModels = ({
   filter,
   query,
   pinnedIds,
+  order = 'default',
 }: {
   models: OpenRouterModelOption[]
   filter: AssistantModelFilter
   query: string
   pinnedIds: string[]
+  order?: AssistantModelOrder
 }): AssistantModelGroup[] => {
   const normalizedQuery = query.trim().toLowerCase()
   const byId = new Map(models.map((model) => [model.id, model]))
   const pinnedSet = new Set(pinnedIds)
+  const rankByIntelligence = order === 'intelligence'
 
   const pinned = pinnedIds
     .map((id) => byId.get(id))
@@ -100,10 +130,18 @@ export const groupAssistantModels = ({
     })
   } else if (filter === 'free') {
     groups.push({ id: 'free', label: 'Free', models: rest.filter((model) => model.isFree) })
+  } else if (rankByIntelligence) {
+    groups.push({ id: 'paid', label: 'All', models: rest })
   } else {
     groups.push({ id: 'free', label: 'Free', models: rest.filter((model) => model.isFree) })
     groups.push({ id: 'paid', label: 'Paid', models: rest.filter((model) => !model.isFree) })
   }
 
-  return groups.filter((group) => group.models.length > 0)
+  return groups
+    .map((group) =>
+      rankByIntelligence && group.id !== 'pinned'
+        ? { ...group, models: group.models.slice().sort(byIntelligence) }
+        : group,
+    )
+    .filter((group) => group.models.length > 0)
 }

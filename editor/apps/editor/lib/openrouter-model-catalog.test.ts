@@ -14,11 +14,20 @@ test('maps OpenRouter models and puts free router first', () => {
     { id: 'openai/gpt-4o', name: 'GPT-4o', pricing: { prompt: '1', completion: '1' } },
     { id: 'openrouter/free', name: 'Free Router' },
     { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama free' },
+    {
+      id: 'anthropic/claude-fable-5.1',
+      name: 'Claude Fable 5.1',
+      benchmarks: { artificial_analysis: { intelligence_index: 53.4 } },
+    },
   ])
 
   assert.equal(models[0]?.id, 'openrouter/free')
   assert.equal(models.find((model) => model.id.endsWith(':free'))?.isFree, true)
   assert.equal(models.find((model) => model.id === 'openai/gpt-4o')?.isFree, false)
+  assert.equal(
+    models.find((model) => model.id === 'anthropic/claude-fable-5.1')?.intelligenceIndex,
+    53.4,
+  )
 })
 
 test('treats OpenRouter free variants as free, not zero-priced billed models', () => {

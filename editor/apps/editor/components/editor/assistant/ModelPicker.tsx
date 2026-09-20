@@ -4,9 +4,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEve
 import {
   describeModelName,
   formatContextLength,
+  formatIntelligenceIndex,
   formatModelPrice,
   groupAssistantModels,
   type AssistantModelFilter,
+  type AssistantModelOrder,
 } from '../../../lib/assistant-model-display'
 import type { OpenRouterModelOption } from '../../../lib/openrouter-model-catalog'
 import { AI_PROVIDERS, useAiSettings } from './ai-settings-store'
@@ -29,6 +31,16 @@ const FILTERS: Array<{ id: AssistantModelFilter; label: string }> = [
   { id: 'free', label: 'Free' },
   { id: 'all', label: 'All' },
 ]
+
+const ORDERS: Array<{ id: AssistantModelOrder; label: string }> = [
+  { id: 'default', label: 'Default' },
+  { id: 'intelligence', label: 'Intelligence' },
+]
+
+const chipClass = (pressed: boolean) =>
+  `inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] px-2.5 font-medium text-[12px] transition-colors ${
+    pressed ? 'bg-as-selected text-as-text' : 'text-as-faint hover:text-as-text'
+  }`
 
 /**
  * Model picker popover, anchored to the composer. It floats over the
@@ -55,6 +67,7 @@ export function ModelPicker({
   const togglePin = useAiSettings((state) => state.togglePin)
 
   const [filter, setFilter] = useState<AssistantModelFilter>('free')
+  const [order, setOrder] = useState<AssistantModelOrder>('default')
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -110,7 +123,7 @@ export function ModelPicker({
       })
     }
 
-    for (const group of groupAssistantModels({ models: catalog, filter, query, pinnedIds })) {
+    for (const group of groupAssistantModels({ models: catalog, filter, query, pinnedIds, order })) {
       result.push({
         id: group.id,
         label: group.label,
@@ -127,7 +140,7 @@ export function ModelPicker({
       })
     }
     return result
-  }, [activeModel, catalog, filter, pinnedIds, query])
+  }, [activeModel, catalog, filter, order, pinnedIds, query])
 
   const rows = useMemo(() => sections.flatMap((section) => section.rows), [sections])
 
@@ -177,7 +190,8 @@ export function ModelPicker({
   }
 
   const freeCount = catalog.filter((model) => model.isFree).length
-  const showPrice = filter !== 'free'
+  const showPrice = filter !== 'free' && order !== 'intelligence'
+  const showIntelligence = order === 'intelligence'
   const providerLabel = AI_PROVIDERS[activeProvider].label
   const keyState =
     config?.installed && config.provider === activeProvider ? 'key saved' : 'no key saved'
@@ -222,30 +236,49 @@ export function ModelPicker({
         </kbd>
       </div>
 
-      <div aria-label="Filter models" className="flex shrink-0 gap-1 px-2 pt-2 pb-0.5" role="group">
-        {FILTERS.map((option) => {
-          const count =
-            option.id === 'free' ? freeCount : option.id === 'all' ? catalog.length : null
-          return (
+      <div className="flex shrink-0 flex-col gap-0.5 px-2 pt-1.5 pb-0.5">
+        <div aria-label="Filter models" className="flex gap-1" role="group">
+          {FILTERS.map((option) => {
+            const count =
+              option.id === 'free' ? freeCount : option.id === 'all' ? catalog.length : null
+            return (
+              <button
+                aria-pressed={filter === option.id}
+                className={chipClass(filter === option.id)}
+                key={option.id}
+                onClick={() => {
+                  setFilter(option.id)
+                  searchRef.current?.focus()
+                }}
+                type="button"
+              >
+                {option.label}
+                {count ? <span className="font-mono text-[11px] text-as-faint">{count}</span> : null}
+              </button>
+            )
+          })}
+        </div>
+        <div aria-label="Order models" className="flex gap-1" role="group">
+          {ORDERS.map((option) => (
             <button
-              aria-pressed={filter === option.id}
-              className={`inline-flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 font-medium text-[12px] transition-colors ${
-                filter === option.id
-                  ? 'bg-as-selected text-as-text'
-                  : 'text-as-faint hover:text-as-text'
-              }`}
+              aria-pressed={order === option.id}
+              className={chipClass(order === option.id)}
               key={option.id}
               onClick={() => {
-                setFilter(option.id)
+                setOrder(option.id)
                 searchRef.current?.focus()
               }}
+              title={
+                option.id === 'intelligence'
+                  ? 'OpenRouter intelligence, high to low'
+                  : 'Catalog order'
+              }
               type="button"
             >
               {option.label}
-              {count ? <span className="font-mono text-[11px] text-as-faint">{count}</span> : null}
             </button>
-          )
-        })}
+          ))}
+        </div>
       </div>
 
       <div
@@ -320,6 +353,14 @@ export function ModelPicker({
                           {context}
                         </span>
                       ) : null}
+                      {showIntelligence && !custom ? (
+                        <span
+                          className="w-[36px] shrink-0 truncate text-right font-mono text-[11px] text-as-muted"
+                          title="OpenRouter intelligence index"
+                        >
+                          {formatIntelligenceIndex(model.intelligenceIndex) ?? '—'}
+                        </span>
+                      ) : null}
                       {showPrice && !custom ? (
                         <span className="w-[62px] shrink-0 truncate text-right font-mono text-[11px] text-as-muted">
                           {formatModelPrice(model)}
@@ -369,7 +410,7 @@ export function ModelPicker({
         <span className="shrink-0">{providerLabel}</span>
         <span className="min-w-0 truncate font-mono text-[11px] text-as-faint">
           {keyState}
-          {catalogIsFallback ? ' · offline list' : ' · live OpenRouter'}
+          {catalogIsFallback ? ' · offline' : ' · live'}
         </span>
         <span className="flex-1" />
         <button

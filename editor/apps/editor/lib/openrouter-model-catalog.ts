@@ -5,6 +5,7 @@ export type OpenRouterModelOption = {
   contextLength?: number | null
   isFree: boolean
   isRecommended?: boolean
+  intelligenceIndex?: number | null
   pricing?: {
     prompt: string
     completion: string
@@ -19,6 +20,11 @@ type OpenRouterCatalogItem = {
   pricing?: {
     prompt?: string
     completion?: string
+  }
+  benchmarks?: {
+    artificial_analysis?: {
+      intelligence_index?: number
+    }
   }
 }
 
@@ -177,6 +183,11 @@ const FREE_ROUTER_FALLBACK: OpenRouterCatalogItem = {
 export const isFreeOpenRouterModel = (id: string, name?: string) =>
   id === 'openrouter/free' || id.endsWith(':free') || /\(\s*free\s*\)\s*$/i.test(name ?? '')
 
+const readIntelligenceIndex = (item: OpenRouterCatalogItem) => {
+  const value = item.benchmarks?.artificial_analysis?.intelligence_index
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 export const resolveOpenRouterCatalogUrl = (pathOrUrl: string, baseUrl: string) => {
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl
   const origin = new URL(baseUrl).origin
@@ -193,6 +204,7 @@ export const mapOpenRouterModels = (items: OpenRouterCatalogItem[]): OpenRouterM
       contextLength: item.context_length || null,
       isFree: isFreeOpenRouterModel(id, item.name),
       isRecommended: RECOMMENDED_OPENROUTER_IDS.has(id),
+      intelligenceIndex: readIntelligenceIndex(item),
       pricing: item.pricing
         ? {
             prompt: item.pricing.prompt ?? '0',

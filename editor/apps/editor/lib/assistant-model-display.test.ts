@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   describeModelName,
   formatContextLength,
+  formatIntelligenceIndex,
   formatModelPrice,
   groupAssistantModels,
 } from './assistant-model-display'
@@ -17,9 +18,28 @@ const models: OpenRouterModelOption[] = [
     name: 'OpenAI: GPT-4o',
     isFree: false,
     isRecommended: true,
+    intelligenceIndex: 20,
     pricing: { prompt: '0.0000025', completion: '0.00001' },
   },
   { id: 'acme/paid-model', name: 'Acme: Paid Model', isFree: false },
+  {
+    id: 'anthropic/claude-fable-5.1',
+    name: 'Anthropic: Claude Fable 5.1',
+    isFree: false,
+    intelligenceIndex: 53.4,
+  },
+  {
+    id: 'anthropic/claude-fable-5.1:batch',
+    name: 'Anthropic: Claude Fable 5.1 (batch)',
+    isFree: false,
+    intelligenceIndex: 53.4,
+  },
+  {
+    id: 'openai/gpt-6-astra',
+    name: 'OpenAI: GPT-6 Astra',
+    isFree: false,
+    intelligenceIndex: 52.7,
+  },
 ]
 
 test('describeModelName splits vendor prefixes and drops the free suffix', () => {
@@ -77,5 +97,50 @@ test('groupAssistantModels keeps pinned models first and filters the rest', () =
   assert.deepEqual(
     recommended[1]?.models.map((model) => model.id),
     ['openai/gpt-4o'],
+  )
+})
+
+test('formatIntelligenceIndex keeps OpenRouter one-decimal scores', () => {
+  assert.equal(formatIntelligenceIndex(53.4), '53.4')
+  assert.equal(formatIntelligenceIndex(47), '47')
+  assert.equal(formatIntelligenceIndex(null), null)
+})
+
+test('groupAssistantModels can order the current filter by OpenRouter intelligence', () => {
+  const all = groupAssistantModels({
+    models,
+    filter: 'all',
+    query: '',
+    pinnedIds: [],
+    order: 'intelligence',
+  })
+  assert.deepEqual(
+    all.map((group) => [group.id, group.models.map((model) => model.id)]),
+    [
+      [
+        'paid',
+        [
+          'anthropic/claude-fable-5.1',
+          'anthropic/claude-fable-5.1:batch',
+          'openai/gpt-6-astra',
+          'openai/gpt-4o',
+          'acme/paid-model',
+          'cohere/north-mini-code:free',
+          'openrouter/free',
+        ],
+      ],
+    ],
+  )
+
+  const recommended = groupAssistantModels({
+    models,
+    filter: 'recommended',
+    query: '',
+    pinnedIds: [],
+    order: 'intelligence',
+  })
+  assert.deepEqual(
+    recommended[0]?.models.map((model) => model.id),
+    ['openai/gpt-4o', 'openrouter/free'],
   )
 })
