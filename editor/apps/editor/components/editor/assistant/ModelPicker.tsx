@@ -32,11 +32,6 @@ const FILTERS: Array<{ id: AssistantModelFilter; label: string }> = [
   { id: 'all', label: 'All' },
 ]
 
-const ORDERS: Array<{ id: AssistantModelOrder; label: string }> = [
-  { id: 'default', label: 'Default' },
-  { id: 'intelligence', label: 'Intelligence' },
-]
-
 const chipClass = (pressed: boolean) =>
   `inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[7px] px-2.5 font-medium text-[12px] transition-colors ${
     pressed ? 'bg-as-selected text-as-text' : 'text-as-faint hover:text-as-text'
@@ -236,8 +231,8 @@ export function ModelPicker({
         </kbd>
       </div>
 
-      <div className="flex shrink-0 flex-col gap-0.5 px-2 pt-1.5 pb-0.5">
-        <div aria-label="Filter models" className="flex gap-1" role="group">
+      <div className="flex shrink-0 items-center gap-1 px-2 pt-2 pb-0.5">
+        <div aria-label="Filter models" className="flex min-w-0 flex-wrap gap-1" role="group">
           {FILTERS.map((option) => {
             const count =
               option.id === 'free' ? freeCount : option.id === 'all' ? catalog.length : null
@@ -258,27 +253,18 @@ export function ModelPicker({
             )
           })}
         </div>
-        <div aria-label="Order models" className="flex gap-1" role="group">
-          {ORDERS.map((option) => (
-            <button
-              aria-pressed={order === option.id}
-              className={chipClass(order === option.id)}
-              key={option.id}
-              onClick={() => {
-                setOrder(option.id)
-                searchRef.current?.focus()
-              }}
-              title={
-                option.id === 'intelligence'
-                  ? 'OpenRouter intelligence, high to low'
-                  : 'Catalog order'
-              }
-              type="button"
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <button
+          aria-pressed={order === 'intelligence'}
+          className={`${chipClass(order === 'intelligence')} ml-auto`}
+          onClick={() => {
+            setOrder(order === 'intelligence' ? 'default' : 'intelligence')
+            searchRef.current?.focus()
+          }}
+          title="OpenRouter intelligence, high to low"
+          type="button"
+        >
+          Intelligence
+        </button>
       </div>
 
       <div
