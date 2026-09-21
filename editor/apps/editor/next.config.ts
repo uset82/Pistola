@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
       three$: path.join(appNodeModules, 'three', 'build', 'three.module.js'),
       'three/webgpu': path.join(appNodeModules, 'three', 'build', 'three.webgpu.js'),
       'three/tsl': path.join(appNodeModules, 'three', 'build', 'three.tsl.js'),
+      'three-mesh-bvh': path.join(appNodeModules, 'three-mesh-bvh'),
       '@react-three/fiber': path.join(appNodeModules, '@react-three', 'fiber'),
       '@react-three/drei': path.join(appNodeModules, '@react-three', 'drei'),
     }
