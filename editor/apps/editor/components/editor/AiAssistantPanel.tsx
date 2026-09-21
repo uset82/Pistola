@@ -2065,21 +2065,34 @@ export function AiAssistantPanel() {
 
   if (collapsed) {
     return (
-      <button
-        className={`pointer-events-auto fixed z-[130] inline-flex h-10 items-center gap-2 rounded-full border border-as-line bg-as-panel/95 pr-4 pl-2 font-medium text-[13px] text-as-text shadow-[0_2px_6px_rgba(0,0,0,0.12),0_16px_40px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-colors hover:bg-as-surface ${
-          floatingPanel.positionStyle ? '' : 'right-4 bottom-4'
-        }`}
+      <div
+        aria-label="Open assistant"
+        className={`pointer-events-auto fixed z-[130] inline-flex h-10 touch-none select-none items-center gap-2 rounded-full border border-as-line bg-as-panel/95 pr-4 pl-2 font-medium text-[13px] text-as-text shadow-[0_2px_6px_rgba(0,0,0,0.12),0_16px_40px_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-colors hover:bg-as-surface ${
+          floatingPanel.isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        } ${floatingPanel.positionStyle ? '' : 'right-4 bottom-4'}`}
         data-testid="assistant-toggle"
-        onClick={() => setCollapsed(false)}
+        onClick={() => {
+          if (floatingPanel.consumeDragClickSuppression()) return
+          setCollapsed(false)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setCollapsed(false)
+          }
+        }}
+        onPointerDown={(event) => floatingPanel.startDrag(event, { allowInteractive: true })}
         ref={floatingPanel.assignRef}
+        role="button"
         style={floatingPanel.positionStyle}
-        type="button"
+        tabIndex={0}
+        title="Drag to move · click to open"
       >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-as-line bg-as-surface text-as-accent">
+        <span className="pointer-events-none flex h-6 w-6 items-center justify-center rounded-full border border-as-line bg-as-surface text-as-accent">
           <AssistantMarkIcon size={13} />
         </span>
         Assistant
-      </button>
+      </div>
     )
   }
 

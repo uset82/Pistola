@@ -68,7 +68,15 @@ export function useFloatingPanel() {
   const [isDragging, setIsDragging] = useState(false)
   const [element, setElement] = useState<HTMLElement | null>(null)
   const elementRef = useRef<HTMLElement | null>(null)
-  const dragStateRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null)
+  const dragStateRef = useRef<{
+    pointerId: number
+    offsetX: number
+    offsetY: number
+    startX: number
+    startY: number
+    moved: boolean
+  } | null>(null)
+  const suppressClickRef = useRef(false)
 
   useEffect(() => {
     const stored = readStoredPanelState()
@@ -93,6 +101,14 @@ export function useFloatingPanel() {
       const dragState = dragStateRef.current
       const rect = elementRef.current?.getBoundingClientRect()
       if (!dragState || dragState.pointerId !== event.pointerId || !rect) return
+
+      if (!dragState.moved) {
+        const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY)
+        if (distance < 4) return
+        dragState.moved = true
+        suppressClickRef.current = true
+        event.preventDefault()
+      }
 
       const next = clampPanelPosition(
         { x: event.clientX - dragState.offsetX, y: event.clientY - dragState.offsetY },
@@ -153,16 +169,24 @@ export function useFloatingPanel() {
     setElement(node)
   }
 
-  const startDrag = (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.button !== 0 || isInteractiveDragTarget(event.target)) return
+  const startDrag = (
+    event: ReactPointerEvent<HTMLElement>,
+    options: { allowInteractive?: boolean } = {},
+  ) => {
+    if (event.button !== 0) return
+    if (!options.allowInteractive && isInteractiveDragTarget(event.target)) return
 
     const rect = elementRef.current?.getBoundingClientRect()
     if (!rect) return
 
+    suppressClickRef.current = false
     dragStateRef.current = {
       pointerId: event.pointerId,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
     }
     setPosition(
       clampPanelPosition(
@@ -172,7 +196,14 @@ export function useFloatingPanel() {
       ),
     )
     setIsDragging(true)
-    event.preventDefault()
+    // Do not preventDefault here — a click on the collapsed pill must still open it.
+  }
+
+  /** True after a real drag; clears so the next click can open the panel. */
+  const consumeDragClickSuppression = () => {
+    if (!suppressClickRef.current) return false
+    suppressClickRef.current = false
+    return true
   }
 
   const dockLeft = () => {
@@ -195,6 +226,7 @@ export function useFloatingPanel() {
     isDragging,
     assignRef,
     startDrag,
+    consumeDragClickSuppression,
     dockLeft,
     /** Undefined while the panel keeps its default bottom-right anchor. */
     positionStyle: position
