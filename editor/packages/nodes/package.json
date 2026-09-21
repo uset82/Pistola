@@ -1,0 +1,23 @@
+{
+  "name": "@pascal-app/nodes",
+  "version": "0.2.0",
+  "description": "Built-in node plugin for Pistola's Pascal editor (kinds registered via loadPlugin)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@pascal-app/core": "*",
+    "react": "^18 || ^19",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@pascal/typescript-config": "*",
+    "typescript": "5.9.3"
+  }
+}

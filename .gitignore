@@ -22,6 +22,9 @@ __pycache__/
 
 # Pistola Studio concept images and renders (public repo)
 .pistola/studio/
+# Temporary upstream clone for Pascal sync comparisons
+.pistola/upstream-pascal-editor/
+.pistola/pascal-update-baseline.md
 
 # Logs
 *.log

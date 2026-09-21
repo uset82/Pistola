@@ -15,6 +15,10 @@ Format: `- YYYY-MM-DD: <what happened> → <what to do instead>`. Update existin
 
 ## Features
 
+- 2026-09-21: Structure contact samples the later part's vertices against the earlier mesh, and a box only has corner vertices → create the upper part after its support and seat those corners on the support face, about 1 cm inside. Capsule and ellipsoid poles are often missed, so a rounded end reads as floating even when the bounds overlap.
+- 2026-09-21: A horizontal ring or an inner core fails `BURIED_PART` because the test compares axis-aligned overlap volume with the smaller solid's volume → keep a proud piece whose corners only kiss the surface, or accept the false positive.
+- 2026-09-21: CAD space draws an axes helper through the origin, and build mode draws a blue cursor column → `set_mode` to `select` before a portrait, and offset the assembly so the green Y axis does not run through the body.
+
 - 2026-09-19: A part stacked on another part rolled back the whole batch with `cannot be placed at the requested floor position` → the fix is **not** `allowOverlap`, which the schema now rejects. `place_item` is `additionalProperties: false`, and a primitive with `position[1] > 0` is treated as stacked and skips the floor check by itself (`builders.ts:776`). Give every part an explicit y.
 - 2026-09-19: `place_item` **does** accept `color` as a hex on primitives (`agent-api/index.ts:111`). The old "colors are pending, everything renders blue" note was wrong → pass a hex per part and let the critic judge color.
 - 2026-09-19: A rotated primitive does not spin in place. The mesh sits at `position-y={h/2}` inside a scaled group, and `rotation` applies on the outer group at `position` (`item-renderer.tsx:58,135`), so it pivots about **bottom-center** and the part swings sideways and drops. For `rotation: [0, 0, ±π/2]` on a capsule of length `L`, use `position [x0 + L/2, centerY, z]` — a horizontal body wanted `[0.38, 0.44, 0]`, not `[0, 0.31, 0]`.

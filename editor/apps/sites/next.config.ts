@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
   },
   output: 'export',
   outputFileTracingRoot: path.resolve(appRoot, '../..'),
-  transpilePackages: ['@pascal-app/viewer', '@pascal-app/core', '@pascal-app/editor'],
+  transpilePackages: [
+    '@pascal-app/viewer',
+    '@pascal-app/core',
+    '@pascal-app/editor',
+    '@pascal-app/nodes',
+  ],
   webpack: (config) => {
     config.resolve ??= {}
     config.resolve.alias = {

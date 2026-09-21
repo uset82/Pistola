@@ -29,6 +29,18 @@ export { emitter, eventSuffixes } from './events/bus'
 // Hooks
 export { sceneRegistry } from './hooks/scene-registry/scene-registry'
 export { useRegistry } from './hooks/scene-registry/use-registry'
+export {
+  getNodePluginId,
+  getRegistryVersion,
+  getSelectableKinds,
+  loadPlugin,
+  nodeRegistry,
+  onRegistryChange,
+  registerNode,
+  type AnyNodeDefinition,
+  type NodeDefinition,
+  type Plugin,
+} from './registry'
 export { pointInPolygon, spatialGridManager } from './hooks/spatial-grid/spatial-grid-manager'
 export {
   initSpatialGridSync,

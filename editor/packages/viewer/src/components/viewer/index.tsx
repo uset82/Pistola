@@ -25,8 +25,10 @@ import { GroundOccluder } from './ground-occluder'
 import { Lights } from './lights'
 import { PerfMonitor } from './perf-monitor'
 import PostProcessing from './post-processing'
+import { SceneEnvironment } from './scene-environment'
 import { SelectionManager } from './selection-manager'
 import { ViewerCamera } from './viewer-camera'
+import { themeFromViewerAppearance } from '../../lib/scene-themes'
 
 function AnimatedBackground({ isDark }: { isDark: boolean }) {
   const targetColor = useMemo(() => new THREE.Color(), [])
@@ -100,6 +102,7 @@ const Viewer: React.FC<ViewerProps> = ({
   perf = false,
 }) => {
   const theme = useViewer((state) => state.theme)
+  const sceneTheme = themeFromViewerAppearance(theme)
 
   return (
     <Canvas
@@ -109,7 +112,7 @@ const Viewer: React.FC<ViewerProps> = ({
       gl={(props) => {
         const renderer = new THREE.WebGPURenderer(props as any)
         renderer.toneMapping = THREE.ACESFilmicToneMapping
-        renderer.toneMappingExposure = 0.9
+        renderer.toneMappingExposure = sceneTheme.toneMappingExposure
         return renderer
       }}
       shadows={{
@@ -117,12 +120,9 @@ const Viewer: React.FC<ViewerProps> = ({
         enabled: true,
       }}
     >
-      {/* <AnimatedBackground isDark={theme === 'dark'} /> */}
       <GroundOccluder />
       <ViewerCamera />
-
-      {/* <directionalLight position={[10, 10, 5]} intensity={0.5} castShadow
-        /> */}
+      <SceneEnvironment />
       <Lights />
       <Bvh>
         <SceneRenderer />

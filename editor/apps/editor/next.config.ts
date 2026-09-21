@@ -10,7 +10,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   serverExternalPackages: ['@openai/codex', '@openai/codex-sdk'],
-  transpilePackages: ['three', '@pascal-app/viewer', '@pascal-app/core', '@pascal-app/editor'],
+  transpilePackages: [
+    'three',
+    '@pascal-app/viewer',
+    '@pascal-app/core',
+    '@pascal-app/editor',
+    '@pascal-app/nodes',
+  ],
   webpack: (config) => {
     config.resolve ??= {}
     config.resolve.alias = {

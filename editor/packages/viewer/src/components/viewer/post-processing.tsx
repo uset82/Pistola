@@ -27,17 +27,17 @@ import { RenderPipeline, type WebGPURenderer } from 'three/webgpu'
 import { SCENE_LAYER, ZONE_LAYER } from '../../lib/layers'
 import useViewer from '../../store/use-viewer'
 
-// SSGI Parameters - adjust these to fine-tune global illumination and ambient occlusion
+// SSGI Parameters — laptop-budget values from pascalorg/editor main lighting pass
 export const SSGI_PARAMS = {
   enabled: true,
-  sliceCount: 1,
-  stepCount: 4,
-  radius: 1,
+  sliceCount: 2,
+  stepCount: 6,
+  radius: 1.6,
   expFactor: 1.5,
   thickness: 0.5,
   backfaceLighting: 0.5,
-  aoIntensity: 1.5,
-  giIntensity: 0,
+  aoIntensity: 1.7,
+  giIntensity: 2,
   useLinearThickness: false,
   useScreenSpaceSampling: true,
   useTemporalFiltering: false,
