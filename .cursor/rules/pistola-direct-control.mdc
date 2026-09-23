@@ -59,6 +59,8 @@ Local MCP uses the bridge driver (`PISTOLA_TRANSPORT=bridge`). The build appears
 
 WorkBuddy's `codebuddy` CLI calls Pistola tools through `DeferExecuteTool`. That call is denied in non-interactive mode unless `.workbuddy/settings.json` allows `DeferExecuteTool` and `mcp__pistola__*`. `scripts/ide-setup.mjs` writes that allow list. The MCP config also needs `honoured: true`.
 
+Claude Code does not treat `enabledMcpjsonServers` in a committed `.claude/settings.json` as approval. `claude mcp get pistola` stays pending until `~/.claude/settings.json` lists `pistola` under `enabledMcpjsonServers`. `scripts/ide-setup.mjs --install-user` writes that entry. Do not run `claude mcp reset-project-choices`; it clears the approval.
+
 ## Render
 
 `pistola_render`, `pistola_render_sheet`, `pistola_render_eight_views`, and `pistola_screenshot` return real PNG pixels. `mode: 'layout'` keeps the old bounding-box sheet. Review the labeled eight-view sheet after each assembly milestone. `pistola_task_undo_step` restores one step; `pistola_replay` rebuilds from `exportActions()`.

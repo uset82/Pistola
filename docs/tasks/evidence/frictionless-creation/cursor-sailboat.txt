@@ -1,0 +1,20 @@
+{
+  "sessionId": "99f3b71d-a2d6-477d-b88e-886cdfe2c7ad",
+  "host": "172.19.128.1",
+  "code": 0,
+  "fresh": [
+    {
+      "name": "1790165354759-eight-views.png",
+      "size": 749723
+    },
+    {
+      "name": "1790165329363-step.png",
+      "size": 165579
+    }
+  ],
+  "copied": "D:\\Proyectos\\pistolacodex\\docs\\tasks\\evidence\\frictionless-creation\\cursor-sailboat.png"
+}
+
+Render: `/mnt/d/Proyectos/pistolacodex/.pistola/renders/1790165354759-eight-views.png`  
+Part count: **4**
+

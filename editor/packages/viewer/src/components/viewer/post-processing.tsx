@@ -41,7 +41,7 @@ export const SSGI_PARAMS = {
   giIntensity: 2,
   useLinearThickness: false,
   useScreenSpaceSampling: true,
-  useTemporalFiltering: false,
+  useTemporalFiltering: true,
 }
 
 const MAX_PIPELINE_RETRIES = 3

@@ -199,6 +199,12 @@ for (const name of ruleNames) {
 }
 
 if (installUser && !checkOnly) {
+  // Claude Code ignores project `.claude/settings.json` approvals for `.mcp.json`
+  // servers. The user settings file is the approval that `claude mcp get` reads.
+  await mergeJson(path.join(os.homedir(), '.claude/settings.json'), (current) => ({
+    ...current,
+    enabledMcpjsonServers: Array.from(new Set([...(current.enabledMcpjsonServers ?? []), 'pistola'])),
+  }))
   // Antigravity stores MCP config in the user profile (~/.gemini/config/mcp_config.json).
   // It has no portable project path, so this block runs only for --install-user.
   await mergeJson(path.join(os.homedir(), '.gemini/config/mcp_config.json'), (current) => ({

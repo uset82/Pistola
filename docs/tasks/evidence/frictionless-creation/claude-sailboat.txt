@@ -1,0 +1,14 @@
+{
+  "sessionId": "80beafa5-08db-410b-af43-56ad77a309b5",
+  "code": 0,
+  "parts": 4,
+  "tools": ["pistola_status", "pistola_open", "pistola_task_create", "pistola_task_run_step", "pistola_render_eight_views"],
+  "render": "docs/tasks/evidence/frictionless-creation/claude-sailboat.png",
+  "source": ".pistola/renders/1790162284086-step.png"
+}
+
+claude mcp get pistola: Connected.
+Pinned stand-in 80beafa5-08db-410b-af43-56ad77a309b5. Claude called pistola_open, then placed the hull, keel, mast, and sail, and reported 4 parts.
+The evidence PNG is the 512x512 step preview (brown hull, mast, white sail).
+pistola_render_eight_views was called with cell 0. The page turned that into a 1px cell and saved a 4x58 sheet (1790162293266-eight-views.png). Values below 64 are now ignored in the MCP tool so the 384px default is used.
+A later rerun on stand-in 143e32c8 timed out after drawing only the hull, so that partial image was not kept.

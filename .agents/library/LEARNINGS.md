@@ -29,7 +29,8 @@ Format: `- YYYY-MM-DD: <what happened> → <what to do instead>`. Update existin
 
 ## Hosts
 
-- 2026-09-23: WorkBuddy's headless `codebuddy` CLI sees Pistola but calls it through `DeferExecuteTool`, which non-interactive mode denies → allow `DeferExecuteTool` and `mcp__pistola__*` in `.workbuddy/settings.json`, and keep `honoured: true` on `.workbuddy/mcp.json`. `scripts/ide-setup.mjs` writes both.
+- 2026-09-23: Cursor's `cursor-agent` runs in WSL, where `127.0.0.1:3002` is not the Windows editor. Set `PISTOLA_BASE_URL` to the WSL default gateway (`ip route show default`, the address after `via`) and pin `PISTOLA_SESSION_ID`. `--approve-mcps` clears the "needs approval" state.
+- 2026-09-23: `pistola_render_eight_views` with `cell: 0` used to become a 1px cell (a 4×58 sheet). Values below 64 are now ignored so the 384px default is used.
 - 2026-09-19: pistola.canner.app and the Sites export still mock hosted FreeCAD/MAC. `generate_mac_part` throws; use `build_cad_solid` for visible geometry. Check `/api/cad/health` and `/api/mac/health`.
 - 2026-09-19: The in-app chat's `openrouter/free` model sometimes lands on a safety classifier ("User Safety: safe") or stalls for minutes → don't plan through the chat; run actions directly, or pick a paid model.
 - 2026-09-19: The ChatGPT Sites export has no API of its own, and its planning calls to pistola.canner.app can fail with "Failed to fetch" → use in-page execution surfaces, which need no API.

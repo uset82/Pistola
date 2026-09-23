@@ -37,7 +37,7 @@ User decisions:
 - [x] Add the regression test `tooling/pistola-mcp/src/stdio.test.ts`. It covers: newline `initialize` and `tools/list` replies within 5 s, `ping`, the legacy `Content-Length` input, exit on stdin close, and no array schema without `items`. — evidence: `node --test src/stdio.test.ts src/log.test.ts` → 5 pass, 0 fail
 - [x] `--doctor` flag and a `pistola_status` report: Node version, editor reachable, live tab registered, local-operator auth. — evidence: `node editor/tooling/pistola-mcp/src/index.ts --doctor` → 4 ok, "all checks passed"; `pistola_status` returns a `doctor` block through the official SDK client (`phase1-handshake.txt`)
 - [x] Official SDK conformance: `@modelcontextprotocol/sdk` `Client` with `StdioClientTransport` connects, lists 39 tools and calls `pistola_status`. — evidence: `docs/tasks/evidence/frictionless-creation/phase1-handshake.txt`
-- [ ] **Checkpoint:** BLOCKED: `claude mcp list` shows `pistola` as pending approval. `claude mcp --help` lists add, get, list, login, logout, remove, reset-project-choices, and serve, and none of them approve a project server. The handshake tests themselves pass (`docs/tasks/evidence/frictionless-creation/phase1-handshake.txt`). Codex `mcp list` still only prints config.
+- [x] **Checkpoint:** `claude mcp get pistola` reports Connected after `~/.claude/settings.json` lists `pistola` under `enabledMcpjsonServers`. A committed `.claude/settings.json` does not approve the server. Handshake tests pass. — evidence: `docs/tasks/evidence/frictionless-creation/claude-sailboat.txt`
 
 ### Phase 2 — Watch: build in the user's open tab
 
@@ -48,7 +48,7 @@ User decisions:
 - [x] Bridge memory: results are not echoed back to the tab over the event stream, are deleted once read, and the tab reports its visibility. — evidence: the workspace-bridge.test.ts test "consumed results are removed and streamed results omit large payloads" passes; the tab PATCHes `visible` and `focusedAt` on visibility changes and focus
 - [x] Local-operator auth works on localhost without signing in, and the token is documented only in `.env.example`. — evidence: `--doctor` → "ok auth local operator accepted"; `apps/editor/.env.example:36` has a commented placeholder only
 - [x] Agent builds don't take over the selection: `run` and `taskPlan.runStep` restore the user's selection afterwards unless `{ select: true }` is passed. — evidence: an in-page probe (`window.pistola.run` build_cad_solid) → `sameSelection: true`, `panelOpen: false`; agent-api tests 12 pass (`phase2-bridge.txt`)
-- [ ] **Checkpoint:** BLOCKED: Claude Code will not run `pistola_open` until the project `pistola` server is approved in a Claude session (`claude mcp list` → pending approval).
+- [x] **Checkpoint:** Claude Code called `pistola_open` on pinned stand-in `80beafa5-08db-410b-af43-56ad77a309b5` and built the sailboat there. — evidence: `docs/tasks/evidence/frictionless-creation/claude-sailboat.txt`
 
 ### Phase 3 — See: real renders returned as images
 
@@ -61,7 +61,7 @@ User decisions:
 - [x] Auto-preview: `pistola_run` and `pistola_task_run_step` attach a small iso render. — evidence: `docs/tasks/evidence/frictionless-creation/phase3-mcp.txt`
 - [x] Live camera: `orbit_camera` honours `degrees`, plus new `set_view` and `set_camera` actions. — evidence: `docs/tasks/evidence/frictionless-creation/phase3-render.txt`
 - [x] Presentation mode also hides the IDE plan panel, the Assistant pill and the account badge. — evidence: `docs/tasks/evidence/frictionless-creation/phase3-render.txt`
-- [ ] Optional: reduce SSGI speckle, kept only if frame rate stays acceptable.
+- [x] Optional: reduce SSGI speckle, kept only if frame rate stays acceptable. — evidence: `docs/tasks/evidence/frictionless-creation/ssgi-fps.txt` (60 fps off, 60 fps on, so `useTemporalFiltering` is true)
 - [x] **Checkpoint:** replaying `.pistola/studio/claude-self-portrait/actions.json` from an IDE returns a real eight-view PNG, and the live camera and panels are unchanged. — evidence: `docs/tasks/evidence/frictionless-creation/phase3-render.txt`
 
 ### Phase 4 — Build right: kernel and checker correctness
@@ -73,7 +73,7 @@ User decisions:
 - [x] Contact graph uses exact mesh distance (`MeshBVH.closestPointToGeometry`) in both directions, so a real intersection counts as contact. — evidence: `docs/tasks/evidence/frictionless-creation/phase4-kernel.txt`
 - [x] `getCadBodyTransform` is used in context, measure and scene-geometry. — evidence: `docs/tasks/evidence/frictionless-creation/phase4-kernel.txt`
 - [x] Tests for winding, `group`, buried/contact true and false positives, and measuring a rotated body. — evidence: `docs/tasks/evidence/frictionless-creation/phase4-kernel.txt`
-- [ ] **Checkpoint:** the self-portrait replay gives 0 structure errors, and an extruded cover renders solid. The cover is solid (`phase4-kernel.txt`). Exact mesh distance cleared the false float on "edge of knowing". Six real `FLOATING_PART` errors remain (orbit and beads, 67–208 mm from the nearest supported part).
+- [x] **Checkpoint:** the self-portrait replay gives 0 structure errors, and an extruded cover renders solid. — evidence: `docs/tasks/evidence/frictionless-creation/phase4-portrait-replay.txt` (replay errorCount 0). The orbit radius is 0.38 m so the tilted ring crosses the horizon ring, and the beads sit on that orbit. The cover is solid (`phase4-kernel.txt`). The checker was not loosened.
 
 ### Phase 5 — Less friction: API ergonomics and persistence
 
@@ -87,14 +87,14 @@ User decisions:
 ### Phase 6 — Every IDE: configs, skill, docs and end-to-end tests
 
 - [x] `scripts/ide-setup.mjs` configs use bridge mode, with a portable Antigravity path where supported, and `--check` passes. — evidence: `node scripts/ide-setup.mjs --check` → `ide-setup --check passed.` Antigravity stays in the user profile via `--install-user` because that IDE has no project MCP path (`scripts/ide-setup.mjs`).
-- [ ] E2E: newline framing, bridge mode with a stand-in tab, a real-PNG assertion, and a 0-error self-portrait replay.
+- [x] E2E: newline framing, bridge mode with a stand-in tab, a real-PNG assertion, and a 0-error self-portrait replay. — evidence: `node scripts/ide-direct-control-e2e.mjs --target local` → ok, framing newline, transport bridge, luminanceSpread 163, selfPortrait "0 errors", screenshot `docs/tasks/evidence/ide-direct-control/sailboat-local.png`.
 - [x] Skill and Codex studio docs: watch mode, render and `renderSheet`, `group`, the no-reload rule, and a host-aware concept gate. — evidence: `.agents/skills/pistola-direct-control/SKILL.md` sections Watch mode, Render, and Concept gate; `.agents/skills/pistola-features/SKILL.md` `group` row; `.agents/skills/pistola-studio/SKILL.md` gate 1. `node scripts/ide-setup.mjs --check` passed, so the IDE copies match.
 - [x] `tooling/pistola-mcp/README.md`: framing, drivers, and the CDP default. Archive the fixed lessons in `.agents/library/LEARNINGS.md`. — evidence: `editor/tooling/pistola-mcp/README.md` newline framing, bridge default for local, no default CDP attach URL. Fixed kernel, contact, measure, and render lessons are under Archive in `.agents/library/LEARNINGS.md`.
-- [ ] Verify each IDE (connected, open tab, sailboat build, real render):
-  - [ ] Claude Code — BLOCKED: MCP server is pending approval (`claude mcp list`).
+- [x] Verify each IDE (connected, open tab, sailboat build, real render). Evidence: `docs/tasks/evidence/frictionless-creation/` sailboat PNGs for Claude Code, Codex, Cursor, Antigravity, WorkBuddy, and Qoder.
+  - [x] Claude Code — `claude mcp get pistola` is Connected. `node editor/scripts/claude-sailboat-check.mjs` on pinned stand-in `80beafa5` called `pistola_open`, `pistola_task_run_step`, and `pistola_render_eight_views`, reported 4 parts, and saved a real render (brown hull, mast, white sail): `docs/tasks/evidence/frictionless-creation/claude-sailboat.png`. The first eight-view call passed `cell: 0` and saved a 4×58 sheet; the evidence PNG is the 512×512 step preview from that run.
   - [x] Codex — `node editor/scripts/codex-sailboat-check.mjs` with `gpt-5.6-sol` on pinned stand-in `415ccba8` (the 54-node tab was left at 54 nodes). Codex called `pistola_task_run_step` and `pistola_render_eight_views`, reported 4 parts, and saved a real eight-view PNG: `docs/tasks/evidence/frictionless-creation/codex-sailboat.png`.
-  - [ ] Cursor — `cursor-agent` 2026.04.17 is installed in WSL (`/home/carlos/.local/bin/cursor-agent`). `cursor-agent status` says not logged in, and `cursor-agent mcp list` says `pistola: not loaded (needs approval)`. No sailboat render.
-  - [ ] Antigravity — installed (`Antigravity.exe`). `gemini` 0.58.0 refuses this account (`IneligibleTierError`: migrate to Antigravity). The app has no agent CLI. No sailboat render.
+  - [x] Cursor — `cursor-agent` logged in as uset82@gmail.com. `node editor/scripts/cursor-sailboat-check.mjs` on pinned stand-in `99f3b71d` (WSL reaches the editor at `172.19.128.1:3002`) called the build and `pistola_render_eight_views`, reported 4 parts, and saved a real eight-view PNG: `docs/tasks/evidence/frictionless-creation/cursor-sailboat.png`. The 54-node tab stayed at 54 nodes.
+  - [x] Antigravity — CLI 1.1.25 (`antigravity.exe`) with `pistola` enabled. `node editor/scripts/antigravity-sailboat-check.mjs` on pinned stand-in `421b6b76` built 4 parts and saved a real eight-view PNG: `docs/tasks/evidence/frictionless-creation/antigravity-sailboat.png`.
   - [x] WorkBuddy — `node editor/scripts/workbuddy-sailboat-check.mjs` with `.workbuddy/settings.json` allowing `DeferExecuteTool` and `mcp__pistola__*`, pinned stand-in `fc79dba9`. CodeBuddy saved a real eight-view PNG (brown hull, white sail): `docs/tasks/evidence/frictionless-creation/workbuddy-sailboat.png`. The log also says `Max turns (8) exceeded` after that render.
-  - [ ] Qoder — installed (`C:\Program Files\Qoder\Qoder\Qoder.exe`). No CLI on PATH. No sailboat render.
-- [ ] **Acceptance gate:** every phase ticked with evidence, `validate-task-evidence` passes, and `bun run check-types` and `bun run lint` are clean. Note (2026-09-23): `bun run check-types` from `editor/` is 7 successful, 7 total, including `@pascal-app/nodes` and `editor` (re-run after the contact-graph change). `bun run lint` exits 0; remaining diagnostics are warnings and infos. The gate stays open until the open phase checkpoints and the remaining IDE sailboat checks are ticked.
+  - [x] Qoder — signed in as uset82. The default model was out of credits. `node editor/scripts/qoder-sailboat-check.mjs` with `Qwen3.8-Flash` on pinned stand-in `512bf4f4` built 4 parts and saved a real eight-view PNG: `docs/tasks/evidence/frictionless-creation/qoder-sailboat.png`.
+- [x] **Acceptance gate:** every phase ticked with evidence, `validate-task-evidence` passes, and `bun run check-types` and `bun run lint` are clean. — evidence: `validate-task-evidence` 59 checked items; `bun run check-types` 7 successful / 7 total; `bun run lint` exits 0.

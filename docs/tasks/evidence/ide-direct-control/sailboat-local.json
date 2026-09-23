@@ -2,16 +2,42 @@
   "pageUrl": "http://127.0.0.1:3002/workspace",
   "status": {
     "ok": true,
-    "target": {
-      "name": "custom",
-      "url": "http://127.0.0.1:3002/workspace"
+    "doctor": {
+      "ok": true,
+      "checks": [
+        {
+          "name": "node",
+          "ok": true,
+          "detail": "v22.22.0 (the server runs .ts directly and needs Node 22.18 or newer)"
+        },
+        {
+          "name": "editor",
+          "ok": true,
+          "detail": "http://127.0.0.1:3002 responded 200"
+        },
+        {
+          "name": "auth",
+          "ok": true,
+          "detail": "local operator accepted"
+        },
+        {
+          "name": "tab",
+          "ok": true,
+          "detail": "a live workspace tab is registered"
+        }
+      ]
     },
-    "transport": "browser",
+    "target": {
+      "name": "local",
+      "url": "http://127.0.0.1:3002"
+    },
+    "transport": "bridge",
     "apiVersion": 1,
     "signInRequired": false,
     "forbiddenRequestCount": 0,
     "forbiddenHits": [],
-    "assistantTools": false
+    "assistantTools": false,
+    "saveWarning": null
   },
   "plan": {
     "id": "sailboat-local",
@@ -30,9 +56,9 @@
             "status": "done",
             "evidence": {
               "kind": "observation",
-              "summary": "Using level level_0oax1bczxmu2pu24."
+              "summary": "Using level level_r332mw5jmaes1u9q."
             },
-            "completedAt": 1789840986184
+            "completedAt": 1790168352870
           },
           {
             "id": "build",
@@ -41,18 +67,103 @@
             "status": "done",
             "evidence": {
               "kind": "execution",
-              "summary": "4 actions completed.",
+              "summary": "4 actions completed. structure 0 error(s).",
               "actionCount": 4,
               "createdNodeIds": [
-                "item_u0esrm8vw760xpjc",
-                "item_4abwg2sg4y531dsi",
-                "item_gbjg83bkhiuz5ohu",
-                "item_ajw9nsw5zrmo4324"
+                "item_qzyhanhqbo91vet0",
+                "item_3c4dz19p4srqh9ql",
+                "item_on894i81v8isabqb",
+                "item_006hb6l8x9vv2qx8"
               ],
-              "warnings": []
+              "warnings": [
+                "BELOW_FLOOR",
+                "EXCESSIVE_OVERLAP"
+              ],
+              "actions": [
+                {
+                  "type": "place_item",
+                  "name": "Sailboat Hull",
+                  "assetId": "primitive-box",
+                  "placement": "explicit",
+                  "position": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "scale": [
+                    1.4,
+                    0.45,
+                    3.2
+                  ],
+                  "color": "#8b5a2b",
+                  "allowOverlap": true,
+                  "levelId": "level_r332mw5jmaes1u9q",
+                  "refId": "$ref_sailboat_hull"
+                },
+                {
+                  "type": "place_item",
+                  "name": "Sailboat Keel",
+                  "assetId": "primitive-box",
+                  "placement": "explicit",
+                  "position": [
+                    0,
+                    -0.35,
+                    0
+                  ],
+                  "scale": [
+                    0.12,
+                    0.7,
+                    1.4
+                  ],
+                  "color": "#4a3728",
+                  "allowOverlap": true,
+                  "levelId": "level_r332mw5jmaes1u9q",
+                  "parentId": "$ref_sailboat_hull"
+                },
+                {
+                  "type": "place_item",
+                  "name": "Sailboat Mast",
+                  "assetId": "primitive-cylinder",
+                  "placement": "explicit",
+                  "position": [
+                    0,
+                    0.45,
+                    0.2
+                  ],
+                  "scale": [
+                    0.1,
+                    2.4,
+                    0.1
+                  ],
+                  "color": "#d6c6a8",
+                  "allowOverlap": true,
+                  "levelId": "level_r332mw5jmaes1u9q",
+                  "parentId": "$ref_sailboat_hull"
+                },
+                {
+                  "type": "place_item",
+                  "name": "Sailboat Sail",
+                  "assetId": "primitive-wedge",
+                  "placement": "explicit",
+                  "position": [
+                    0.15,
+                    0.9,
+                    0.4
+                  ],
+                  "scale": [
+                    0.08,
+                    1.8,
+                    1.4
+                  ],
+                  "color": "#f4f1ea",
+                  "allowOverlap": true,
+                  "levelId": "level_r332mw5jmaes1u9q",
+                  "parentId": "$ref_sailboat_hull"
+                }
+              ]
             },
-            "startedAt": 1789840986209,
-            "completedAt": 1789840986569
+            "startedAt": 1790168353159,
+            "completedAt": 1790168353443
           },
           {
             "id": "verify",
@@ -63,14 +174,14 @@
               "kind": "observation",
               "summary": "Inspect found 4 bodies."
             },
-            "completedAt": 1789840986856
+            "completedAt": 1790168354835
           }
         ]
       }
     ],
-    "createdAt": 1789840986158,
-    "updatedAt": 1789840986856,
-    "undoAvailable": false
+    "createdAt": 1790168352545,
+    "updatedAt": 1790168354835,
+    "undoAvailable": true
   },
   "built": {
     "ok": true,
@@ -91,9 +202,9 @@
               "status": "done",
               "evidence": {
                 "kind": "observation",
-                "summary": "Using level level_0oax1bczxmu2pu24."
+                "summary": "Using level level_r332mw5jmaes1u9q."
               },
-              "completedAt": 1789840986184
+              "completedAt": 1790168352870
             },
             {
               "id": "build",
@@ -102,18 +213,103 @@
               "status": "done",
               "evidence": {
                 "kind": "execution",
-                "summary": "4 actions completed.",
+                "summary": "4 actions completed. structure 0 error(s).",
                 "actionCount": 4,
                 "createdNodeIds": [
-                  "item_u0esrm8vw760xpjc",
-                  "item_4abwg2sg4y531dsi",
-                  "item_gbjg83bkhiuz5ohu",
-                  "item_ajw9nsw5zrmo4324"
+                  "item_qzyhanhqbo91vet0",
+                  "item_3c4dz19p4srqh9ql",
+                  "item_on894i81v8isabqb",
+                  "item_006hb6l8x9vv2qx8"
                 ],
-                "warnings": []
+                "warnings": [
+                  "BELOW_FLOOR",
+                  "EXCESSIVE_OVERLAP"
+                ],
+                "actions": [
+                  {
+                    "type": "place_item",
+                    "name": "Sailboat Hull",
+                    "assetId": "primitive-box",
+                    "placement": "explicit",
+                    "position": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "scale": [
+                      1.4,
+                      0.45,
+                      3.2
+                    ],
+                    "color": "#8b5a2b",
+                    "allowOverlap": true,
+                    "levelId": "level_r332mw5jmaes1u9q",
+                    "refId": "$ref_sailboat_hull"
+                  },
+                  {
+                    "type": "place_item",
+                    "name": "Sailboat Keel",
+                    "assetId": "primitive-box",
+                    "placement": "explicit",
+                    "position": [
+                      0,
+                      -0.35,
+                      0
+                    ],
+                    "scale": [
+                      0.12,
+                      0.7,
+                      1.4
+                    ],
+                    "color": "#4a3728",
+                    "allowOverlap": true,
+                    "levelId": "level_r332mw5jmaes1u9q",
+                    "parentId": "$ref_sailboat_hull"
+                  },
+                  {
+                    "type": "place_item",
+                    "name": "Sailboat Mast",
+                    "assetId": "primitive-cylinder",
+                    "placement": "explicit",
+                    "position": [
+                      0,
+                      0.45,
+                      0.2
+                    ],
+                    "scale": [
+                      0.1,
+                      2.4,
+                      0.1
+                    ],
+                    "color": "#d6c6a8",
+                    "allowOverlap": true,
+                    "levelId": "level_r332mw5jmaes1u9q",
+                    "parentId": "$ref_sailboat_hull"
+                  },
+                  {
+                    "type": "place_item",
+                    "name": "Sailboat Sail",
+                    "assetId": "primitive-wedge",
+                    "placement": "explicit",
+                    "position": [
+                      0.15,
+                      0.9,
+                      0.4
+                    ],
+                    "scale": [
+                      0.08,
+                      1.8,
+                      1.4
+                    ],
+                    "color": "#f4f1ea",
+                    "allowOverlap": true,
+                    "levelId": "level_r332mw5jmaes1u9q",
+                    "parentId": "$ref_sailboat_hull"
+                  }
+                ]
               },
-              "startedAt": 1789840986209,
-              "completedAt": 1789840986569
+              "startedAt": 1790168353159,
+              "completedAt": 1790168353443
             },
             {
               "id": "verify",
@@ -124,8 +320,8 @@
           ]
         }
       ],
-      "createdAt": 1789840986158,
-      "updatedAt": 1789840986569,
+      "createdAt": 1790168352545,
+      "updatedAt": 1790168353443,
       "undoAvailable": true
     },
     "validation": {
@@ -143,21 +339,101 @@
       "failureKind": null,
       "failedActionIndex": null,
       "resolvedForwardRefs": {
-        "$ref_sailboat_hull": "item_u0esrm8vw760xpjc"
+        "$ref_sailboat_hull": "item_qzyhanhqbo91vet0"
       },
       "completedActionCount": 4,
       "requiresReview": true,
       "destructiveActionCount": 0,
       "snapshotRestored": false,
       "createdNodeIds": [
-        "item_u0esrm8vw760xpjc",
-        "item_4abwg2sg4y531dsi",
-        "item_gbjg83bkhiuz5ohu",
-        "item_ajw9nsw5zrmo4324"
+        "item_qzyhanhqbo91vet0",
+        "item_3c4dz19p4srqh9ql",
+        "item_on894i81v8isabqb",
+        "item_006hb6l8x9vv2qx8"
       ],
       "bodyIds": [],
-      "sketchIds": []
-    }
+      "sketchIds": [],
+      "structure": {
+        "ok": true,
+        "errorCount": 0,
+        "warningCount": 2,
+        "issues": [
+          {
+            "code": "BELOW_FLOOR",
+            "severity": "warning",
+            "partId": "item_3c4dz19p4srqh9ql",
+            "measured": {
+              "minY": -0.1575,
+              "maxY": 0.1575
+            },
+            "fix": {
+              "hint": "The part crosses the floor. Lift it if that was not intended.",
+              "patch": {
+                "type": "move_target",
+                "nodeId": "item_3c4dz19p4srqh9ql",
+                "delta": [
+                  0,
+                  0.1575,
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "code": "EXCESSIVE_OVERLAP",
+            "severity": "warning",
+            "partId": "item_qzyhanhqbo91vet0",
+            "otherPartId": "item_3c4dz19p4srqh9ql",
+            "measured": {
+              "overlap": 0.084672
+            }
+          }
+        ],
+        "partCount": 4,
+        "tolerance": 0.030500491799313658
+      }
+    },
+    "structure": {
+      "ok": true,
+      "errorCount": 0,
+      "warningCount": 2,
+      "issues": [
+        {
+          "code": "BELOW_FLOOR",
+          "severity": "warning",
+          "partId": "item_3c4dz19p4srqh9ql",
+          "measured": {
+            "minY": -0.1575,
+            "maxY": 0.1575
+          },
+          "fix": {
+            "hint": "The part crosses the floor. Lift it if that was not intended.",
+            "patch": {
+              "type": "move_target",
+              "nodeId": "item_3c4dz19p4srqh9ql",
+              "delta": [
+                0,
+                0.1575,
+                0
+              ]
+            }
+          }
+        },
+        {
+          "code": "EXCESSIVE_OVERLAP",
+          "severity": "warning",
+          "partId": "item_qzyhanhqbo91vet0",
+          "otherPartId": "item_3c4dz19p4srqh9ql",
+          "measured": {
+            "overlap": 0.084672
+          }
+        }
+      ],
+      "partCount": 4,
+      "tolerance": 0.030500491799313658
+    },
+    "regression": false,
+    "previewPath": "D:\\Proyectos\\pistolacodex\\.pistola\\renders\\1790168354534-step.png"
   },
   "inspect": {
     "total": 4,
@@ -166,10 +442,10 @@
     "hasMore": false,
     "nodes": [
       {
-        "id": "item_u0esrm8vw760xpjc",
+        "id": "item_qzyhanhqbo91vet0",
         "type": "item",
         "name": "Sailboat Hull",
-        "parentId": "level_0oax1bczxmu2pu24",
+        "parentId": "level_r332mw5jmaes1u9q",
         "position": [
           0,
           0,
@@ -199,10 +475,10 @@
         }
       },
       {
-        "id": "item_4abwg2sg4y531dsi",
+        "id": "item_3c4dz19p4srqh9ql",
         "type": "item",
         "name": "Sailboat Keel",
-        "parentId": "item_u0esrm8vw760xpjc",
+        "parentId": "item_qzyhanhqbo91vet0",
         "position": [
           0,
           -0.35,
@@ -232,10 +508,10 @@
         }
       },
       {
-        "id": "item_gbjg83bkhiuz5ohu",
+        "id": "item_on894i81v8isabqb",
         "type": "item",
         "name": "Sailboat Mast",
-        "parentId": "item_u0esrm8vw760xpjc",
+        "parentId": "item_qzyhanhqbo91vet0",
         "position": [
           0,
           0.45,
@@ -265,10 +541,10 @@
         }
       },
       {
-        "id": "item_ajw9nsw5zrmo4324",
+        "id": "item_006hb6l8x9vv2qx8",
         "type": "item",
         "name": "Sailboat Sail",
-        "parentId": "item_u0esrm8vw760xpjc",
+        "parentId": "item_qzyhanhqbo91vet0",
         "position": [
           0.15,
           0.9,

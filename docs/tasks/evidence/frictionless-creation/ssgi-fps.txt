@@ -1,0 +1,6 @@
+Workspace page, headless Chrome, 1280x800, 2 second requestAnimationFrame sample.
+
+SSGI temporal filtering off: 60 fps
+SSGI temporal filtering on: 60 fps (one script patched in that tab only; the string useTemporalFiltering was flipped before the page initialized)
+
+The on sample stayed at the display cap, so the filter was kept. The connected 30-node tab was not edited until this source change.

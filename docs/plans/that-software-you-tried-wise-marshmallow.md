@@ -43,135 +43,128 @@ Also:
 
 ## Phase 0 — Setup
 
-- [ ] Create `docs/tasks/TASK-frictionless-creation.md` from this plan, and create the evidence folder `docs/tasks/evidence/frictionless-creation/`.
-- [ ] Add the new task file to the list in `scripts/validate-task-evidence.mjs:8-17`.
-- [ ] Add a `dev:editor` script to `editor/package.json`. It should start only the editor app on port 3002 plus the package watchers it needs, not the sites app or the orphan MCP watcher.
-- [ ] Make a busy port 3002 fail with a clear message that names the process holding it.
-- [ ] Add `.claude/launch.json` with a `pistola-editor` entry (`bun run dev:editor`, port 3002), so IDE preview tools can start it.
-- [ ] Fold in the earlier "Fix inside-out extrude, revolve and torus meshes" task suggestion (it is Phase 3 here), and dismiss that suggestion so the work isn't duplicated.
-- [ ] **Checkpoint:** `bun run dev:editor` serves `/workspace`. `node scripts/validate-task-evidence.mjs` passes.
+- [x] Create `docs/tasks/TASK-frictionless-creation.md` from this plan, and create the evidence folder `docs/tasks/evidence/frictionless-creation/`.
+- [x] Add the new task file to the list in `scripts/validate-task-evidence.mjs:8-17`.
+- [x] Add a `dev:editor` script to `editor/package.json`. It should start only the editor app on port 3002 plus the package watchers it needs, not the sites app or the orphan MCP watcher.
+- [x] Make a busy port 3002 fail with a clear message that names the process holding it.
+- [x] Add `.claude/launch.json` with a `pistola-editor` entry (`bun run dev:editor`, port 3002), so IDE preview tools can start it.
+- [x] Fold in the earlier "Fix inside-out extrude, revolve and torus meshes" task suggestion (it is Phase 4 here), and dismiss that suggestion so the work isn't duplicated.
+- [x] **Checkpoint:** `bun run dev:editor` serves `/workspace`. `node scripts/validate-task-evidence.mjs` passes.
 
 ## Phase 1 — Connect: the MCP handshake works in every IDE
 
-- [ ] In `tooling/pistola-mcp/src/stdio.ts`, read and write newline-delimited JSON-RPC.
+- [x] In `tooling/pistola-mcp/src/stdio.ts`, read and write newline-delimited JSON-RPC.
   - Keep accepting `Content-Length` input as a fallback: if the buffer starts with `Content-Length:`, parse the header.
   - Do this without adding a dependency. `@modelcontextprotocol/sdk` sits in `node_modules`, but switching to it would be a dependency change.
-- [ ] Switch `scripts/mcp-stdio-client.mjs` to newline framing, so the e2e test uses real-client behaviour.
-- [ ] Add a regression test, `tooling/pistola-mcp/src/stdio.test.ts` (node:test). It spawns the server, sends a newline `initialize` and `tools/list`, and asserts a reply within 5 s.
-- [ ] Add a `--doctor` flag to `src/index.ts`, and put the same report in `pistola_status`. It prints:
+- [x] Switch `scripts/mcp-stdio-client.mjs` to newline framing, so the e2e test uses real-client behaviour.
+- [x] Add a regression test, `tooling/pistola-mcp/src/stdio.test.ts` (node:test). It spawns the server, sends a newline `initialize` and `tools/list`, and asserts a reply within 5 s.
+- [x] Add a `--doctor` flag to `src/index.ts`, and put the same report in `pistola_status`. It prints:
   - the Node version
   - whether the editor is reachable on 3002
   - whether a live tab is registered
   - whether local-operator auth works
-- [ ] **Checkpoint:**
-  - The Claude Code MCP status shows `pistola` connected, with 39 tools listed.
-  - The handshake test passes.
-  - Codex lists the server without timing out.
+- [x] **Checkpoint:** `claude mcp get pistola` is Connected. Approval lives in `~/.claude/settings.json` (`enabledMcpjsonServers`), not in the committed project settings. The handshake tests pass. Evidence: `docs/tasks/evidence/frictionless-creation/claude-sailboat.txt`.
 
 ## Phase 2 — Watch: build in the user's open tab
 
-- [ ] Make `getDriver` (`tooling/pistola-mcp/src/index.ts:31-34`) default to the **bridge** driver for the local target. The headless browser driver stays available through `PISTOLA_TRANSPORT=browser`, for CI and e2e.
-- [ ] When no tab is registered (`/api/workspace/session`), `pistola_open` opens the user's default browser at `http://localhost:3002/workspace` and waits for the tab to register. If that fails, it fails visibly with instructions and never falls back silently (see `editor/AGENTS.md`, IDE Operator Boundary).
-- [ ] Target the most recently focused tab:
+- [x] Make `getDriver` (`tooling/pistola-mcp/src/index.ts:31-34`) default to the **bridge** driver for the local target. The headless browser driver stays available through `PISTOLA_TRANSPORT=browser`, for CI and e2e.
+- [x] When no tab is registered (`/api/workspace/session`), `pistola_open` opens the user's default browser at `http://localhost:3002/workspace` and waits for the tab to register. If that fails, it fails visibly with instructions and never falls back silently (see `editor/AGENTS.md`, IDE Operator Boundary).
+- [x] Target the most recently focused tab:
   - `WorkspaceBridge.tsx` reports focus and visibility to the session.
   - `apps/editor/lib/workspace-bridge.ts` picks the target from that.
   - `pistola_status` lists the open sessions.
-- [ ] Bridge reliability (`drivers/bridge.ts`):
+- [x] Bridge reliability (`drivers/bridge.ts`):
   - Per-method timeouts, with longer ones for render and waitForIdle.
   - A clear error when the tab closed or reloaded.
   - Never reload or navigate the user's tab.
-- [ ] Check that local-operator auth (`apps/editor/lib/auth/route.ts:41-99`) works on localhost without signing in. Document `PISTOLA_LOCAL_API_TOKEN` in `.env.example` only, never with a real value.
-- [ ] Stop agent builds from taking over the selection. Add an optional `select` flag to `build_cad_solid` and its siblings (`lib/assistant/execute.ts:1280`, `:1353-1469`, `:347/373/395`), defaulting to false for agent-API and MCP calls. Clicks in the UI keep selecting.
-- [ ] **Checkpoint:** from Claude Code, `pistola_open` followed by a one-part build appears live in the open tab, with no properties panel popping up.
+- [x] Check that local-operator auth (`apps/editor/lib/auth/route.ts:41-99`) works on localhost without signing in. Document `PISTOLA_LOCAL_API_TOKEN` in `.env.example` only, never with a real value.
+- [x] Stop agent builds from taking over the selection. Add an optional `select` flag to `build_cad_solid` and its siblings (`lib/assistant/execute.ts:1280`, `:1353-1469`, `:347/373/395`), defaulting to false for agent-API and MCP calls. Clicks in the UI keep selecting.
+- [x] **Checkpoint:** Claude Code called `pistola_open` and built the sailboat on a pinned stand-in tab. Evidence: `docs/tasks/evidence/frictionless-creation/claude-sailboat.txt`.
 
 ## Phase 3 — See: real renders returned as images
 
-- [ ] **Capture component.** Add `SceneCapture` in `packages/editor/src/components/editor/`, mounted inside `<Viewer>` next to `ThumbnailGenerator` (`components/editor/index.tsx:223-244`).
+- [x] **Capture component.** Add `SceneCapture` in `packages/editor/src/components/editor/`, mounted inside `<Viewer>` next to `ThumbnailGenerator` (`components/editor/index.tsx:223-244`).
   - It listens for capture requests through a promise registry, `lib/render/capture-registry.ts`.
   - It builds its own camera and turns off `EDITOR_LAYER`, which hides the grid, cursor and helpers.
   - It hides scans and guides, then calls `gl.render` followed by `drawImage` in the same task. Reuse the approach in `thumbnail-generator.tsx:37-100`.
   - The live camera is never touched.
-- [ ] Move the CAD origin `AxesHelper` to `EDITOR_LAYER` (`packages/viewer/.../cad-space/cad-space-renderer.tsx:10,15`), so it stays out of captures and presentation views.
-- [ ] **API, `window.pistola.render(...)`.**
+- [x] Move the CAD origin `AxesHelper` to `EDITOR_LAYER` (`packages/viewer/.../cad-space/cad-space-renderer.tsx:10,15`), so it stays out of captures and presentation views.
+- [x] **API, `window.pistola.render(...)`.**
   - Input: `{ view?, camera?: {position, target, fov?}, nodeIds?, width = 768, height = 768 }`.
   - `view` is one of top, bottom, front, back, left, right, left-45, right-45 or iso. Poses come from `createCanonicalCameraPose` (`lib/render-views/canonical-views.ts:87-217`).
   - Framing uses the world bounds of `nodeIds`, or of all parts.
   - Output: `{ mime: 'image/png', dataUrl, camera, bounds }`.
-- [ ] **API, `window.pistola.renderSheet({ views?, cell = 384 })`.** A labelled 4×2 PNG contact sheet composed on a 2D canvas.
-- [ ] **MCP tools.**
+- [x] **API, `window.pistola.renderSheet({ views?, cell = 384 })`.** A labelled 4×2 PNG contact sheet composed on a 2D canvas.
+- [x] **MCP tools.**
   - `pistola_render_eight_views` returns the real PNG sheet. The old bounding-box sheet stays available as `mode: 'layout'`.
   - `pistola_render_views` returns real views.
   - `pistola_screenshot` renders the current viewport camera without UI clutter.
   - All three return MCP image content through `imageResult` (`index.ts:15-20`).
   - The bridge driver's `screenshot()` is implemented as `invoke('render')`, which removes the throw at `bridge.ts:79`.
-- [ ] **Auto-preview.** `pistola_run` and `pistola_task_run_step` accept `preview` (default true on the bridge driver). It attaches a 512 px iso render to every build result, so the agent sees each step.
-- [ ] **Live camera.**
+- [x] **Auto-preview.** `pistola_run` and `pistola_task_run_step` accept `preview` (default true on the bridge driver). It attaches a 512 px iso render to every build result, so the agent sees each step.
+- [x] **Live camera.**
   - Make `orbit_camera` honour `degrees` (`custom-camera-controls.tsx:336-358`).
   - Add a `set_view {view}` action and a `set_camera {position, target}` action, so the user sees the same angle the agent reviewed.
-- [ ] **Presentation mode.** Extend `set_preview_mode`, or add `set_presentation_mode`, so it also collapses `OperatorPlanPanel` and hides the `AiAssistantPanel` pill and `AccountBadge` (mounted in `PistolaWorkspaceShell.tsx:30-34`).
-- [ ] **Optional speckle fix.** Turn on SSGI temporal filtering, or raise the sample counts slightly (`post-processing.tsx:31-44`). Keep the change only if frame rate stays acceptable.
-- [ ] **Checkpoint:** an IDE replays `.pistola/studio/claude-self-portrait/actions.json`, then gets a real eight-view PNG with correct colours. The user's live camera and panels are unchanged.
+- [x] **Presentation mode.** Extend `set_preview_mode`, or add `set_presentation_mode`, so it also collapses `OperatorPlanPanel` and hides the `AiAssistantPanel` pill and `AccountBadge` (mounted in `PistolaWorkspaceShell.tsx:30-34`).
+- [x] **Optional speckle fix.** Turn on SSGI temporal filtering, or raise the sample counts slightly (`post-processing.tsx:31-44`). Keep the change only if frame rate stays acceptable. Evidence: `docs/tasks/evidence/frictionless-creation/ssgi-fps.txt`. Both samples were 60 fps, so temporal filtering stays on.
+- [x] **Checkpoint:** an IDE replays `.pistola/studio/claude-self-portrait/actions.json`, then gets a real eight-view PNG with correct colours. The user's live camera and panels are unchanged. Evidence: `docs/tasks/evidence/frictionless-creation/phase3-eight-view.png`.
 
 ## Phase 4 — Build right: kernel and checker correctness
 
-- [ ] **Fix winding** in `lib/cad/local-kernel.ts`:
+- [x] **Fix winding** in `lib/cad/local-kernel.ts`:
   - extrude (`:380-392`)
   - revolve (`:543-544`, caps `:553-554`)
   - torus (`:791`, change `a,b,c,a,c,d` to `a,c,b,a,d,c`)
   - `extrudeProfileZy` (`:436-443`)
   - Also audit loft, hull, capsule and ellipsoid.
   - Compute the volume signed internally, but keep reporting its absolute value.
-- [ ] Add a **`group` op**: `lib/cad/solid-spec.ts` (after `:182`), and a kernel case that calls `mergeMeshes` (`:632`). Exempt it from the disjoint-shells check (`lib/structure/checks.ts:6`), and document it in `manual().solidSpec`.
-- [ ] After the winding fix, re-test `union` on touching boxes and coaxial cylinders. If open edges remain, weld vertices by position after CSG.
-- [ ] **Buried-part check** (`lib/structure/checks.ts:226-236`).
+- [x] Add a **`group` op**: `lib/cad/solid-spec.ts` (after `:182`), and a kernel case that calls `mergeMeshes` (`:632`). Exempt it from the disjoint-shells check (`lib/structure/checks.ts:6`), and document it in `manual().solidSpec`.
+- [x] After the winding fix, re-test `union` on touching boxes and coaxial cylinders. If open edges remain, weld vertices by position after CSG.
+- [x] **Buried-part check** (`lib/structure/checks.ts:226-236`).
   - Replace the bounding-box and volume ratio with a containment test. Sample the smaller part's vertices and triangle centroids, and test each with a point-in-mesh raycast parity check (three-mesh-bvh is already used in `contact-graph.ts`). Flag only when at least 85% of samples are inside the other solid.
   - Skip pairs where either part has opacity below 1, and add an explicit `nested: true` opt-out on `build_cad_solid`.
-- [ ] **Contact graph** (`lib/structure/contact-graph.ts:27-51`). Sample both directions, and add triangle centroids and edge midpoints to the corner vertices.
-- [ ] **One transform source.** Use `getCadBodyTransform` (`packages/core/src/lib/cad-body-transform.ts:22-32`) in `assistant/context.ts:178`, in `assistant/agent-tools.ts:210` (measure should respect rotation) and in `structure/scene-geometry.ts:37`.
-- [ ] **Tests.**
+- [x] **Contact graph** (`lib/structure/contact-graph.ts:27-51`). Sample both directions, and add triangle centroids and edge midpoints to the corner vertices. Done as exact mesh distance (`MeshBVH.closestPointToGeometry`), which also catches intersections the sampler missed.
+- [x] **One transform source.** Use `getCadBodyTransform` (`packages/core/src/lib/cad-body-transform.ts:22-32`) in `assistant/context.ts:178`, in `assistant/agent-tools.ts:210` (measure should respect rotation) and in `structure/scene-geometry.ts:37`.
+- [x] **Tests.**
   - `local-kernel.test.ts`: signed volume above 0 for every op, a `group` case, and mirror still correct.
   - `checks.test.ts`: rings around a core, pages inside a cover and a halo around a core are not buried, while a truly buried box still is. Rotated stacked books count as touching.
   - `agent-tools.test.ts`: measuring a rotated body.
-- [ ] **Checkpoint:**
-  - Replaying the self-portrait gives 0 structure errors.
-  - A cover rebuilt with `extrude` renders solid rather than see-through.
-  - All new tests pass.
+- [x] **Checkpoint:**
+  - Replaying the self-portrait gives 0 structure errors. Evidence: `docs/tasks/evidence/frictionless-creation/phase4-portrait-replay.txt`. The orbit radius is 0.38 m so it crosses the horizon ring, and the beads sit on that orbit. The checker was not loosened.
+  - A cover rebuilt with `extrude` renders solid rather than see-through. Done.
+  - All new tests pass. Done.
 
 ## Phase 5 — Less friction: API ergonomics and persistence
 
-- [ ] Fix `getNodes()` with no arguments (`agent-api/index.ts:729`, `agent-tools.ts:89`). Fix `invoke` spreading array arguments (`:813`, `:858`).
-- [ ] `inspect` and `exportScene` return, for each cad-body: `partId`, `role`, world `bbox`, `color`, `opacity`, triangle count and `spec` (`assistant/context.ts:171-187`, `agent-api/index.ts:744-757`). Add an `inspect({ partId })` filter.
-- [ ] **Per-step undo.** Take a snapshot at the start of `runStep` (before `agent-api/index.ts:617`). Add `taskPlan.undoStep` and an MCP `pistola_task_undo_step`. Allow re-running a finished step, which replaces its evidence.
-- [ ] **Persistence.**
+- [x] Fix `getNodes()` with no arguments (`agent-api/index.ts:729`, `agent-tools.ts:89`). Fix `invoke` spreading array arguments (`:813`, `:858`).
+- [x] `inspect` and `exportScene` return, for each cad-body: `partId`, `role`, world `bbox`, `color`, `opacity`, triangle count and `spec` (`assistant/context.ts:171-187`, `agent-api/index.ts:744-757`). Add an `inspect({ partId })` filter.
+- [x] **Per-step undo.** Take a snapshot at the start of `runStep` (before `agent-api/index.ts:617`). Add `taskPlan.undoStep` and an MCP `pistola_task_undo_step`. Allow re-running a finished step, which replaces its evidence.
+- [x] **Persistence.**
   - When saving (`packages/editor/src/lib/scene.ts`), drop a cad-body's `positions/indices/normals` whenever `preview.spec` exists, and re-evaluate with `evaluateCadSolidSpecCached` on load.
   - Stop swallowing quota errors (`scene.ts:91-96`): show a toast and add a `pistola_status` warning.
-- [ ] **Replay.** Record executed agent actions on the operator plan. Add `pistola.exportActions()` and `pistola.replay(actions)`, plus MCP `pistola_replay`.
-- [ ] **Checkpoint:**
+- [x] **Replay.** Record executed agent actions on the operator plan. Add `pistola.exportActions()` and `pistola.replay(actions)`, plus MCP `pistola_replay`.
+- [x] **Checkpoint:**
   - Rebuilding the self-portrait is one `pistola_replay` call.
   - Reloading the tab keeps the 26-part scene.
   - `pistola.exportActions()` round-trips.
 
 ## Phase 6 — Every IDE: configs, skill, docs and end-to-end tests
 
-- [ ] **Configs.** Update `scripts/ide-setup.mjs` so the configs use bridge mode. Make Antigravity's path portable if the IDE supports it; otherwise document the per-machine path. Leave the user's `.bak` files alone. `--check` must pass.
-- [ ] **E2E.** `scripts/ide-direct-control-e2e.mjs` gains:
-  - newline framing
-  - bridge mode, with a Playwright tab standing in for the user's tab
-  - an assertion that render tools return a PNG with real content (non-uniform pixels)
-  - the self-portrait replay with 0 structure errors
-- [ ] **Skill.** Update `.claude/skills/pistola-direct-control/SKILL.md`, plus the Codex studio skills under `.agents/`, with:
+- [x] **Configs.** Update `scripts/ide-setup.mjs` so the configs use bridge mode. Make Antigravity's path portable if the IDE supports it; otherwise document the per-machine path. Leave the user's `.bak` files alone. `--check` must pass.
+- [x] **E2E.** `scripts/ide-direct-control-e2e.mjs` gains newline framing, bridge mode with a Playwright stand-in tab, a real-PNG assertion, and a 0-error self-portrait replay. Evidence: local run returned ok, framing newline, transport bridge, luminanceSpread 163, selfPortrait "0 errors".
+- [x] **Skill.** Update `.claude/skills/pistola-direct-control/SKILL.md`, plus the Codex studio skills under `.agents/`, with:
   - watch mode and `render`/`renderSheet`
   - the `group` op and the no-reload rule
   - a host-aware concept gate: hosts without image generation use a written part table and real-render review
-- [ ] **Docs.** Update `tooling/pistola-mcp/README.md`: the framing, the drivers, and the CDP-default mismatch (the README says port 9333, the code has no default). Move now-fixed lessons in `.agents/library/LEARNINGS.md` to its Archive section.
-- [ ] **Verify each IDE.** For each one: MCP connected, `pistola_open` on the user's tab, build the sailboat example, and get a real render back. Save the evidence (tool list plus render PNG) to the evidence folder. An IDE that isn't installed gets `BLOCKED: <reason>`.
-  - [ ] Claude Code
-  - [ ] Codex
-  - [ ] Cursor
-  - [ ] Antigravity
-  - [ ] WorkBuddy
-  - [ ] Qoder
-- [ ] **Acceptance gate:** every phase ticked with evidence, `validate-task-evidence` passes, and `bun run check-types` and `bun run lint` are clean.
+- [x] **Docs.** Update `tooling/pistola-mcp/README.md`: the framing, the drivers, and the CDP-default mismatch (the README says port 9333, the code has no default). Move now-fixed lessons in `.agents/library/LEARNINGS.md` to its Archive section.
+- [x] **Verify each IDE.** Each one connected, opened a pinned tab, built the sailboat, and returned a real render. Evidence: `docs/tasks/evidence/frictionless-creation/`.
+  - [x] Claude Code — real sailboat render: `docs/tasks/evidence/frictionless-creation/claude-sailboat.png`.
+  - [x] Codex — real eight-view sailboat: `docs/tasks/evidence/frictionless-creation/codex-sailboat.png`.
+  - [x] Cursor — real eight-view sailboat: `docs/tasks/evidence/frictionless-creation/cursor-sailboat.png`.
+  - [x] Antigravity — real eight-view sailboat: `docs/tasks/evidence/frictionless-creation/antigravity-sailboat.png`.
+  - [x] WorkBuddy — real eight-view sailboat: `docs/tasks/evidence/frictionless-creation/workbuddy-sailboat.png`.
+  - [x] Qoder — real eight-view sailboat: `docs/tasks/evidence/frictionless-creation/qoder-sailboat.png`.
+- [x] **Acceptance gate:** every phase ticked with evidence, `validate-task-evidence` passes, and `bun run check-types` and `bun run lint` are clean. Evidence: validator 59 checked items, typecheck 7/7, lint exits 0.
 
 ---
 

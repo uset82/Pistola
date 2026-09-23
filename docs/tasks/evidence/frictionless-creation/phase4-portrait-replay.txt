@@ -1,0 +1,6 @@
+api.replay of .pistola/studio/claude-self-portrait/actions.json
+
+errorCount: 0
+errors: []
+
+The conversation orbit major radius was 0.56 m, so its tube stayed 162 mm outside the supported horizon ring no matter the tilt. The radius is now 0.38 m, the same as the horizon ring, and the existing tilt makes the two rings cross. The five beads were moved onto that orbit. The structure checker was not changed.

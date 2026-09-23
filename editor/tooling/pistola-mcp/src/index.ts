@@ -38,6 +38,10 @@ const imageResult = (data: string, mime = 'image/png', extra?: unknown, fileName
   }
 }
 
+/** Agents sometimes pass cell: 0 for "default". A 1px cell makes a 4×58 sheet. */
+const sheetCell = (cell: unknown) =>
+  typeof cell === 'number' && Number.isFinite(cell) && cell >= 64 ? cell : undefined
+
 const objectSchema = (properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'object',
   properties,
@@ -482,7 +486,8 @@ const tools: McpTool[] = [
             metadata,
           )
         }
-        const rendered = unwrap(await invoke('renderSheet', { cell: args.cell })) as {
+        const cell = sheetCell(args.cell)
+        const rendered = unwrap(await invoke('renderSheet', cell === undefined ? {} : { cell })) as {
           dataUrl?: unknown
           mime?: unknown
           [key: string]: unknown

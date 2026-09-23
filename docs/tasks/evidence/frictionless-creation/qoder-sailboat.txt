@@ -1,0 +1,26 @@
+{
+  "sessionId": "512bf4f4-337a-43ad-910c-09755ad29dd3",
+  "code": 0,
+  "fresh": [
+    {
+      "name": "1790165980761-eight-views.png",
+      "size": 751314
+    },
+    {
+      "name": "1790165973899-step.png",
+      "size": 166827
+    },
+    {
+      "name": "1790165959894-step.png",
+      "size": 144892
+    }
+  ],
+  "copied": "D:\\Proyectos\\pistolacodex\\docs\\tasks\\evidence\\frictionless-creation\\qoder-sailboat.png"
+}
+
+Detected 1 skill name conflict across sources. Run /skills to inspect.
+Done. The sailboat built with 4 parts (Hull, Keel, Mast, Sail — structure check: 0 errors, 2 expected warnings: keel below floor and hull/keel overlap, both intentional).
+
+- Render file: `D:\Proyectos\pistolacodex\.pistola\renders\1790165980761-eight-views.png` (1536×824, 4×2)
+- Part count: 4
+
