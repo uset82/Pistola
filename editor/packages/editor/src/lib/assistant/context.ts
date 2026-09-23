@@ -1,7 +1,14 @@
 'use client'
 
-import type { AnyNode, AnyNodeId } from '@pascal-app/core'
-import { useScene } from '@pascal-app/core'
+import {
+  getCadBodyTransform,
+  meshBounds,
+  transformMesh,
+  useScene,
+  type AnyNode,
+  type AnyNodeId,
+  type CadBodyNode,
+} from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
 import useCad from '../../store/use-cad'
 import useEditor from '../../store/use-editor'
@@ -30,6 +37,62 @@ export type AssistantWorkspaceContext = {
     helperStatus: string
     lastError: string | null
     activeSketchId: string | null
+  }
+}
+
+const walkBoundsThroughParents = (
+  node: AnyNode,
+  bounds: { min: [number, number, number]; max: [number, number, number] },
+) => {
+  let min: [number, number, number] = [...bounds.min]
+  let max: [number, number, number] = [...bounds.max]
+  let parentId = node.parentId
+  const nodes = useScene.getState().nodes
+  while (parentId) {
+    const parent = nodes[parentId as AnyNodeId]
+    if (!parent) break
+    const position = 'position' in parent && Array.isArray(parent.position) ? parent.position : [0, 0, 0]
+    const scale = 'scale' in parent && Array.isArray(parent.scale) ? parent.scale : [1, 1, 1]
+    const [positionX = 0, positionY = 0, positionZ = 0] = position
+    const [scaleX = 1, scaleY = 1, scaleZ = 1] = scale
+    min = [positionX + min[0] * scaleX, positionY + min[1] * scaleY, positionZ + min[2] * scaleZ]
+    max = [positionX + max[0] * scaleX, positionY + max[1] * scaleY, positionZ + max[2] * scaleZ]
+    parentId = parent.parentId
+  }
+  const nextMin: [number, number, number] = [Math.min(min[0], max[0]), Math.min(min[1], max[1]), Math.min(min[2], max[2])]
+  const nextMax: [number, number, number] = [Math.max(min[0], max[0]), Math.max(min[1], max[1]), Math.max(min[2], max[2])]
+  return {
+    min: nextMin,
+    max: nextMax,
+    size: [nextMax[0] - nextMin[0], nextMax[1] - nextMin[1], nextMax[2] - nextMin[2]] as [number, number, number],
+  }
+}
+
+export const describeCadBody = (node: CadBodyNode) => {
+  const preview = node.preview
+  const mesh = preview.primitive === 'mesh' ? preview : null
+  const metadata = (node.metadata ?? {}) as { partId?: unknown; role?: unknown }
+  const spec = mesh && mesh.spec && typeof mesh.spec === 'object' ? mesh.spec : null
+  let bbox: ReturnType<typeof walkBoundsThroughParents> | null = null
+  if (mesh && mesh.positions.length > 0) {
+    const transform = getCadBodyTransform(node)
+    const world = transformMesh(
+      { positions: mesh.positions, indices: mesh.indices },
+      transform.position,
+      transform.scale,
+      transform.rotation,
+    )
+    const measured = meshBounds(world.positions)
+    bbox = walkBoundsThroughParents(node, { min: measured.min, max: measured.max })
+  }
+  return {
+    partId: typeof metadata.partId === 'string' ? metadata.partId : null,
+    role: typeof metadata.role === 'string' ? metadata.role : null,
+    bbox,
+    color: 'color' in preview ? preview.color : null,
+    opacity: typeof node.opacity === 'number' ? node.opacity : mesh && typeof mesh.opacity === 'number' ? mesh.opacity : 1,
+    triangles: mesh ? Math.floor(mesh.indices.length / 3) : 0,
+    spec,
   }
 }
 
@@ -175,7 +238,7 @@ export const summarizeAssistantNode = (node: AnyNode): AssistantNodeSummary => {
         type: node.type,
         name: node.name ?? null,
         parentId: node.parentId,
-        transform: node.transform,
+        transform: getCadBodyTransform(node),
         regenStatus: node.regenStatus,
         sourceSketchIds: node.sourceSketchIds,
         operationKinds: operations.map((operation) => operation.kind),
@@ -184,6 +247,7 @@ export const summarizeAssistantNode = (node: AnyNode): AssistantNodeSummary => {
           kind: operation.kind,
           suppressed: operation.suppressed,
         })),
+        ...describeCadBody(node),
       }
     }
     default:

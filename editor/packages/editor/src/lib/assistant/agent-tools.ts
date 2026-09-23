@@ -6,7 +6,10 @@ import {
   type CadBodyNode,
   type ItemNode,
   type WallNode,
+  getCadBodyTransform,
   getScaledDimensions,
+  meshBounds,
+  transformMesh,
   useScene,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
@@ -23,11 +26,13 @@ import {
   type AssistantPlanValidationResult,
 } from './execute'
 import { listCreationRecipes } from './recipes/creation-recipes'
+import { sceneSaveWarning } from '../scene'
 
 export type InspectSceneParams = {
   levelId?: string
   type?: string
   nameQuery?: string
+  partId?: string
   limit?: number
   offset?: number
 }
@@ -58,6 +63,10 @@ export function inspectScene(params: InspectSceneParams = {}): InspectSceneResul
       const id = node.id.toLowerCase()
       if (!name.includes(q) && !id.includes(q)) return false
     }
+    if (params.partId) {
+      const metadata = 'metadata' in node ? (node.metadata as { partId?: unknown } | undefined) : undefined
+      if (metadata?.partId !== params.partId) return false
+    }
     return true
   })
 
@@ -75,18 +84,19 @@ export function inspectScene(params: InspectSceneParams = {}): InspectSceneResul
 }
 
 export type GetNodesParams = {
-  nodeIds: string[]
+  nodeIds?: string[]
 }
 
 export type GetNodesResult = {
   nodes: Record<string, AssistantNodeSummary | null>
 }
 
-export function getNodes(params: GetNodesParams): GetNodesResult {
+export function getNodes(params: GetNodesParams = {}): GetNodesResult {
   const sceneNodes = useScene.getState().nodes
   const result: Record<string, AssistantNodeSummary | null> = {}
+  const nodeIds = params.nodeIds ?? Object.keys(sceneNodes)
 
-  for (const id of params.nodeIds) {
+  for (const id of nodeIds) {
     const node = sceneNodes[id as AnyNodeId]
     result[id] = node ? summarizeAssistantNode(node) : null
   }
@@ -207,7 +217,28 @@ export function getNodeBounds(node: AnyNode): NodeBounds | null {
 
   if (node.type === 'cad-body') {
     const body = node as CadBodyNode
-    const position = body.position ?? [0, 0, 0]
+    const transform = getCadBodyTransform(body)
+    const preview = body.preview
+    if (preview?.primitive === 'mesh' && preview.positions.length > 0) {
+      const mesh = transformMesh(
+        { positions: preview.positions, indices: preview.indices },
+        transform.position,
+        transform.scale,
+        transform.rotation,
+      )
+      const measured = meshBounds(mesh.positions)
+      return transformBoundsThroughParents(node, {
+        min: measured.min,
+        max: measured.max,
+        size: measured.size,
+        center: [
+          (measured.min[0] + measured.max[0]) / 2,
+          (measured.min[1] + measured.max[1]) / 2,
+          (measured.min[2] + measured.max[2]) / 2,
+        ],
+      })
+    }
+    const position = transform.position
     const metadata = (body.metadata ?? {}) as {
       bbox?:
         | { min?: [number, number, number]; max?: [number, number, number] }
@@ -469,6 +500,7 @@ export function getWorkspaceState() {
       helperStatus: cadState.helperStatus,
       lastError: cadState.lastError,
     },
+    saveWarning: sceneSaveWarning(),
   }
 }
 

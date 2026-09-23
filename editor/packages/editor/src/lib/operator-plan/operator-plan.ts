@@ -35,6 +35,7 @@ export type OperatorPlanEvidence = {
   actionCount?: number
   createdNodeIds?: string[]
   warnings?: string[]
+  actions?: unknown[]
 }
 
 export type OperatorPlanStep = {
@@ -106,6 +107,7 @@ const evidenceSchema = z.object({
   actionCount: z.number().int().nonnegative().optional(),
   createdNodeIds: z.array(z.string().min(1)).optional(),
   warnings: z.array(z.string()).optional(),
+  actions: z.array(z.unknown()).optional(),
 })
 
 const storedPlanSchema: z.ZodType<OperatorPlan> = z.object({

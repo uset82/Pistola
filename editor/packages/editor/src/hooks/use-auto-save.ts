@@ -2,7 +2,7 @@
 
 import { useScene } from '@pascal-app/core'
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react'
-import { type SceneGraph, saveSceneToLocalStorage } from '../lib/scene'
+import { type SceneGraph, saveScene } from '../lib/scene'
 
 const AUTOSAVE_DEBOUNCE_MS = 1000
 
@@ -82,7 +82,7 @@ export function useAutoSave({
         if (onSaveRef.current) {
           await onSaveRef.current(sceneGraph)
         } else {
-          saveSceneToLocalStorage(sceneGraph)
+          await saveScene(sceneGraph)
         }
         hasDirtyChangesRef.current = false
         setSaveStatus('saved')
@@ -144,7 +144,7 @@ export function useAutoSave({
       if (onSaveRef.current) {
         onSaveRef.current(sceneGraph).catch(() => {})
       } else {
-        saveSceneToLocalStorage(sceneGraph)
+        void saveScene(sceneGraph).catch(() => {})
       }
       hasDirtyChangesRef.current = false
     }

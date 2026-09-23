@@ -52,6 +52,35 @@ async function reportResult(
   })
 }
 
+let lastFocusedAt: number | null = null
+
+const readWorkspaceSnapshot = (sessionId: string) => {
+  const { phase, mode } = useEditor.getState()
+  const { selectedIds, levelId } = useViewer.getState().selection
+  const nodeCount = Object.keys(useScene.getState().nodes).length
+  return {
+    sessionId,
+    phase,
+    mode,
+    selectedIds,
+    nodeCount,
+    levelId,
+    siteId: getRootSiteId(),
+    cadHelperStatus: useCad.getState().helperStatus,
+    summary: `phase=${phase}; nodes=${nodeCount}; selected=${selectedIds.length}`,
+    installedModel: null,
+    visible: document.visibilityState === 'visible',
+    focusedAt: lastFocusedAt,
+  }
+}
+
+const patchWorkspaceSnapshot = (sessionId: string) =>
+  pistolaFetch('/api/workspace/session', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(readWorkspaceSnapshot(sessionId)),
+  }).catch(() => undefined)
+
 export function WorkspaceBridge() {
   const sessionIdRef = useRef<string>(getOrCreateSessionId())
   const phase = useEditor((state) => state.phase)
@@ -60,26 +89,19 @@ export function WorkspaceBridge() {
   const nodeCount = useScene((state) => Object.keys(state.nodes).length)
   const helperStatus = useCad((state) => state.helperStatus)
 
+  // Snapshot changes are cheap PATCHes; they must not tear down the command stream mid-build.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the values are change triggers only
+  useEffect(() => {
+    void patchWorkspaceSnapshot(sessionIdRef.current)
+  }, [phase, mode, selectedIds, nodeCount, helperStatus])
+
   useEffect(() => {
     let sessionId = sessionIdRef.current
     let closed = false
     let eventSource: EventSource | null = null
+    if (document.hasFocus()) lastFocusedAt = Date.now()
 
-    const buildSnapshot = () => {
-      const context = getAssistantWorkspaceContext()
-      return {
-        sessionId,
-        phase,
-        mode,
-        selectedIds,
-        nodeCount,
-        levelId: useViewer.getState().selection.levelId,
-        siteId: getRootSiteId(),
-        cadHelperStatus: helperStatus,
-        summary: `phase=${phase}; nodes=${nodeCount}; selected=${selectedIds.length}`,
-        installedModel: null,
-      }
-    }
+    const buildSnapshot = () => readWorkspaceSnapshot(sessionId)
 
     const register = async () => {
       const response = await pistolaFetch('/api/workspace/session', {
@@ -277,20 +299,23 @@ export function WorkspaceBridge() {
         // Static Sites has no local API. The editor still renders.
       })
 
-    const heartbeat = window.setInterval(() => {
-      void pistolaFetch('/api/workspace/session', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildSnapshot()),
-      })
-    }, 10_000)
+    const heartbeat = window.setInterval(() => void patchWorkspaceSnapshot(sessionId), 10_000)
+    const onVisibilityChange = () => void patchWorkspaceSnapshot(sessionId)
+    const onFocus = () => {
+      lastFocusedAt = Date.now()
+      void patchWorkspaceSnapshot(sessionId)
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('focus', onFocus)
 
     return () => {
       closed = true
       window.clearInterval(heartbeat)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('focus', onFocus)
       eventSource?.close()
     }
-  }, [phase, mode, selectedIds, nodeCount, helperStatus])
+  }, [])
 
   return null
 }

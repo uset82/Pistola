@@ -1,0 +1,10 @@
+Phase 5 API, 2026-09-22.
+
+From editor/:
+
+bun test ./packages/editor/src/lib/agent-api/index.test.ts ./packages/editor/src/lib/scene-persistence.test.ts
+→ pass, including "getNodes() lists the scene and invoke keeps an action array whole", "undoStep restores a step and re-running it replaces the part", "exportActions round-trips through replay", "compact drops mesh buffers and rehydrate rebuilds them from the spec", and "a failed local save surfaces a warning instead of disappearing".
+
+node --test tooling/pistola-mcp/src/stdio.test.ts → 3 pass. New tools pistola_task_undo_step and pistola_replay declare array items.
+
+Checkpoint: one `replay` call of `.pistola/studio/claude-self-portrait/actions.json` returned ok with 26 actions and partCount 26. After a reload of the workspace tab, `checkStructure()` still reported partCount 26. `exportActions()` round-trip is covered by the unit test above. Structure errorCount stayed 7 (FLOATING_PART); that is recorded on the phase 4 checkpoint, not this one.

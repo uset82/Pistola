@@ -313,3 +313,95 @@ test('taskPlan requires explicit confirmation before destructive execution', asy
   assert.ok((useScene.getState().nodes as Record<string, unknown>)[targetId])
   assert.equal(outcome.plan.undoAvailable, false)
 })
+
+test('getNodes() lists the scene and invoke keeps an action array whole', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  const listed = await api.getNodes()
+  assert.ok(Object.keys(listed.nodes).length > 0)
+
+  const created = (await api.invoke('run', [
+    {
+      type: 'build_cad_solid',
+      name: 'Invoke box',
+      partId: 'invoke-box',
+      role: 'probe',
+      spec: { op: 'box', size: [0.4, 0.2, 0.3] },
+      color: '#2266aa',
+      opacity: 1,
+    },
+  ])) as { ok: boolean; createdNodeIds: string[] }
+  assert.equal(created.ok, true)
+  const bodyId = created.createdNodeIds[0]
+  assert.ok(bodyId)
+
+  const one = (await api.invoke('getNodes', [bodyId])) as { nodes: Record<string, { partId?: string; spec?: { op?: string } }> }
+  assert.equal(one.nodes[bodyId]?.partId, 'invoke-box')
+  assert.equal(one.nodes[bodyId]?.spec?.op, 'box')
+
+  const inspected = await api.inspect({ partId: 'invoke-box' })
+  assert.equal(inspected.total, 1)
+  const summary = inspected.nodes[0] as {
+    role?: string
+    color?: string
+    opacity?: number
+    triangles?: number
+    bbox?: { size?: number[] }
+  }
+  assert.equal(summary.role, 'probe')
+  assert.equal(summary.color, '#2266aa')
+  assert.equal(summary.opacity, 1)
+  assert.ok((summary.triangles ?? 0) > 0)
+  assert.ok((summary.bbox?.size?.[0] ?? 0) > 0.3)
+
+  const exported = await api.exportScene()
+  const probe = exported.nodes.find((node) => node.id === bodyId) as {
+    partId?: string
+    role?: string
+    spec?: { op?: string }
+    triangles?: number
+  }
+  assert.equal(probe.partId, 'invoke-box')
+  assert.equal(probe.role, 'probe')
+  assert.equal(probe.spec?.op, 'box')
+  assert.ok((probe.triangles ?? 0) > 0)
+})
+
+test('undoStep restores a step and re-running it replaces the part', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  const plan = await api.taskPlan.create({
+    id: 'step-undo',
+    title: 'Step undo',
+    phases: [{ id: 'build', title: 'Build', steps: [{ id: 'box', title: 'Box', kind: 'execution' }] }],
+  })
+  const before = Object.keys(useScene.getState().nodes).length
+  const actions = [{ type: 'build_cad_solid', name: 'Step box', spec: { op: 'box', size: [0.2, 0.2, 0.2] } }]
+  const first = await api.taskPlan.runStep({ planId: plan.id, phaseId: 'build', stepId: 'box', actions })
+  assert.equal(first.ok, true)
+  const after = Object.keys(useScene.getState().nodes).length
+  assert.equal(after, before + 1)
+  const second = await api.taskPlan.runStep({ planId: plan.id, phaseId: 'build', stepId: 'box', actions })
+  assert.equal(second.ok, true)
+  assert.equal(Object.keys(useScene.getState().nodes).length, after)
+  const undone = await api.taskPlan.undoStep({ planId: plan.id, phaseId: 'build', stepId: 'box' })
+  assert.equal(undone.undone, true)
+  assert.equal(Object.keys(useScene.getState().nodes).length, before)
+  const step = undone.plan.phases[0]?.steps[0]
+  assert.equal(step?.status, 'pending')
+})
+
+test('exportActions round-trips through replay', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  await api.replay([
+    { type: 'build_cad_solid', name: 'Replay probe', spec: { op: 'box', size: [0.3, 0.3, 0.3] } },
+  ])
+  const exported = api.exportActions()
+  assert.equal(exported.length, 1)
+  assert.equal((exported[0] as { name?: string } | undefined)?.name, 'Replay probe')
+  await api.replay(exported)
+  const names = Object.values(useScene.getState().nodes).map((node) => node?.name)
+  assert.equal(names.filter((name) => name === 'Replay probe').length, 1)
+  assert.equal(api.exportActions().length, 1)
+})

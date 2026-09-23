@@ -1,0 +1,8 @@
+@pascal-app/nodes check-types, 2026-09-23.
+
+The package script is `tsc --noEmit` and the folder had no tsconfig.json, so the root `bun run check-types` failed there since f9fb976.
+
+Added `editor/packages/nodes/tsconfig.json` extending `@pascal/typescript-config/react-library.json`.
+
+From editor/:
+`bunx tsc --noEmit -p packages/nodes/tsconfig.json` → exit 0.

@@ -14,6 +14,10 @@ const TASKS = [
     file: 'docs/tasks/TASK-reliable-creation.md',
     evidence: 'docs/tasks/evidence/creation-quality/',
   },
+  {
+    file: 'docs/tasks/TASK-frictionless-creation.md',
+    evidence: 'docs/tasks/evidence/frictionless-creation/',
+  },
 ]
 
 const requested = process.argv.slice(2).filter((value) => !value.startsWith('-'))

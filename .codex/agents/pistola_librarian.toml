@@ -21,3 +21,4 @@ Return the list of files you changed and a one-line summary of each lesson added
 
 [[skills.config]]
 name = "pistola-learnings"
+enabled = true

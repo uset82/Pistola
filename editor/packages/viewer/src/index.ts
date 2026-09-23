@@ -16,3 +16,4 @@ export {
 export { default as useViewer } from './store/use-viewer'
 export { InteractiveSystem } from './systems/interactive/interactive-system'
 export { snapLevelsToTruePositions } from './systems/level/level-utils'
+export { isPipelineCaptureActive, requestPipelineCapture, type PipelineCapturePose } from './lib/pipeline-capture'

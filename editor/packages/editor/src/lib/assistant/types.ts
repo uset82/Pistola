@@ -51,6 +51,8 @@ export const assistantActionTypeValues = [
   'set_transform_pivot',
   'camera_top_view',
   'orbit_camera',
+  'set_view',
+  'set_camera',
   'set_fullscreen',
   'undo_history',
   'redo_history',
@@ -150,6 +152,8 @@ export const assistantSafeImmediateActionTypes = [
   'set_transform_pivot',
   'camera_top_view',
   'orbit_camera',
+  'set_view',
+  'set_camera',
   'set_fullscreen',
   'undo_history',
   'redo_history',
@@ -276,6 +280,16 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('orbit_camera'),
     direction: AssistantCameraOrbitDirectionSchema,
+    degrees: z.number().positive().max(360).optional(),
+  }),
+  z.object({
+    type: z.literal('set_view'),
+    view: z.enum(['top', 'bottom', 'front', 'back', 'left', 'right', 'left-45', 'right-45', 'iso']),
+  }),
+  z.object({
+    type: z.literal('set_camera'),
+    position: z.tuple([z.number(), z.number(), z.number()]),
+    target: z.tuple([z.number(), z.number(), z.number()]),
   }),
   z.object({
     type: z.literal('set_fullscreen'),
@@ -745,6 +759,7 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     parentId: z.string().optional(),
     partId: z.string().optional(),
     role: z.string().optional(),
+    nested: z.boolean().optional(),
   }),
   z.object({
     type: z.literal('update_cad_solid'),

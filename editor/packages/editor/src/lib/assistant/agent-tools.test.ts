@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { clearSceneHistory, useScene } from '@pascal-app/core'
 import {
   calculatePolygonArea,
   calculatePolygonPerimeter,
@@ -8,6 +9,7 @@ import {
   measure,
   searchCatalog,
 } from './agent-tools'
+import { createPistolaAgentApi } from '../agent-api'
 
 test('calculatePolygonArea and calculatePolygonPerimeter compute correct geometry', () => {
   // 4m x 4m square
@@ -74,4 +76,29 @@ test('executeAgentTool dispatches known tools correctly', async () => {
   const finishResult = (await executeAgentTool('finish', { reply: 'Build complete.', assumptions: ['Assumed standard height.'] })) as any
   assert.equal(finishResult.status, 'finished')
   assert.equal(finishResult.reply, 'Build complete.')
+})
+
+test('measure bounds follow a rotated cad body', async () => {
+  useScene.getState().clearScene()
+  clearSceneHistory()
+  const api = createPistolaAgentApi()
+  const created = await api.run([
+    {
+      type: 'build_cad_solid',
+      name: 'Turned book',
+      spec: { op: 'box', size: [0.4, 0.1, 0.2] },
+      rotation: [0, Math.PI / 2, 0],
+    },
+  ])
+  const bodyId = created.createdNodeIds[0]
+  assert.ok(bodyId)
+  const result = measure({ mode: 'bounds', nodeIds: [bodyId] })
+  assert.equal(result.mode, 'bounds')
+  if (result.mode !== 'bounds') return
+  const bounds = result.bounds[bodyId]
+  assert.ok(bounds)
+  assert.ok(Math.abs(bounds.size[0] - 0.2) < 0.02)
+  assert.ok(Math.abs(bounds.size[1] - 0.1) < 0.02)
+  assert.ok(Math.abs(bounds.size[2] - 0.4) < 0.02)
+  useScene.getState().clearScene()
 })

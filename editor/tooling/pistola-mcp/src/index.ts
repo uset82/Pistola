@@ -2,22 +2,41 @@
 import { createBridgeDriver } from './drivers/bridge.ts'
 import { createBrowserDriver } from './drivers/browser.ts'
 import type { PageDriver } from './drivers/types.ts'
+import { formatDoctor, runDoctor } from './doctor.ts'
+import { pngPayload, saveRenderPng } from './render-image.ts'
 import { createStdioServer, type McpTool } from './stdio.ts'
+import { resolveTarget } from './targets.ts'
 
 const assistantToolsEnabled = process.env.PISTOLA_MCP_ASSISTANT_TOOLS === '1'
-const transportName = process.env.PISTOLA_TRANSPORT === 'bridge' ? 'bridge' : 'browser'
+// Local work defaults to the user's own open tab; the headless browser is opt-in (CI, e2e, remote targets).
+const transportName = () => {
+  const explicit = process.env.PISTOLA_TRANSPORT
+  if (explicit === 'bridge' || explicit === 'browser') return explicit
+  return resolveTarget().name === 'local' ? 'bridge' : 'browser'
+}
 
 const jsonResult = (data: unknown, isError = false) => ({
   content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
   isError,
 })
 
-const imageResult = (data: string, mime = 'image/png', extra?: unknown) => ({
-  content: [
-    { type: 'image', data, mimeType: mime },
-    ...(extra ? [{ type: 'text', text: JSON.stringify(extra, null, 2) }] : []),
-  ],
-})
+const imageResult = (data: string, mime = 'image/png', extra?: unknown, fileName = 'render') => {
+  let savedPath: string | null = null
+  if (mime === 'image/png') {
+    try {
+      savedPath = saveRenderPng(data, fileName)
+    } catch {
+      savedPath = null
+    }
+  }
+  const metadata = savedPath ? { ...(extra && typeof extra === 'object' ? extra : { extra }), path: savedPath } : extra
+  return {
+    content: [
+      { type: 'image', data, mimeType: mime },
+      ...(metadata ? [{ type: 'text', text: JSON.stringify(metadata, null, 2) }] : []),
+    ],
+  }
+}
 
 const objectSchema = (properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'object',
@@ -29,7 +48,7 @@ const objectSchema = (properties: Record<string, unknown> = {}, required: string
 let driverPromise: Promise<PageDriver> | null = null
 
 const getDriver = () => {
-  driverPromise ??= transportName === 'bridge' ? createBridgeDriver() : createBrowserDriver()
+  driverPromise ??= transportName() === 'bridge' ? createBridgeDriver() : createBrowserDriver()
   return driverPromise
 }
 
@@ -47,17 +66,52 @@ const unwrap = (value: unknown) => {
 const runActions = async (actions: unknown[], confirmDestructive = false) =>
   unwrap(await invoke('run', [actions, { confirmDestructive }]))
 
+const wantPreview = (args: Record<string, unknown>) =>
+  args.preview === true || (args.preview !== false && transportName() === 'bridge')
+
+const withPreview = async (result: unknown, preview: boolean) => {
+  if (!preview) return jsonResult(result)
+  try {
+    const rendered = unwrap(await invoke('render', { view: 'iso', width: 512, height: 512 })) as {
+      dataUrl?: unknown
+      mime?: unknown
+    }
+    const { base64, mime } = pngPayload(rendered)
+    const savedPath = saveRenderPng(base64, 'step')
+    const body = result && typeof result === 'object' ? { ...result, previewPath: savedPath } : { result, previewPath: savedPath }
+    return {
+      content: [
+        { type: 'text', text: JSON.stringify(body, null, 2) },
+        { type: 'image', data: base64, mimeType: mime },
+      ],
+    }
+  } catch (error) {
+    const previewError = error instanceof Error ? error.message : String(error)
+    const body = result && typeof result === 'object' ? { ...result, previewError } : { result, previewError }
+    return jsonResult(body)
+  }
+}
+
 const tools: McpTool[] = [
   {
     name: 'pistola_status',
     description: 'Report the current Pistola target, page API version, transport, and forbidden-request count.',
     inputSchema: objectSchema(),
     handler: async () => {
+      const doctor = await runDoctor()
       try {
         const driver = await getDriver()
         const opened = await driver.open()
+        let saveWarning: string | null = null
+        try {
+          const workspace = unwrap(await invoke('workspace')) as { saveWarning?: string | null }
+          saveWarning = typeof workspace?.saveWarning === 'string' ? workspace.saveWarning : null
+        } catch {
+          saveWarning = null
+        }
         return jsonResult({
           ok: true,
+          doctor,
           target: driver.target,
           transport: driver.kind,
           apiVersion: opened.apiVersion || driver.apiVersion,
@@ -65,9 +119,10 @@ const tools: McpTool[] = [
           forbiddenRequestCount: driver.forbiddenCount(),
           forbiddenHits: driver.forbiddenHits(),
           assistantTools: assistantToolsEnabled,
+          saveWarning,
         })
       } catch (error) {
-        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+        return jsonResult({ error: error instanceof Error ? error.message : String(error), doctor }, true)
       }
     },
   },
@@ -79,7 +134,7 @@ const tools: McpTool[] = [
       try {
         if (typeof args.target === 'string') process.env.PISTOLA_TARGET = args.target
         const driver = await getDriver()
-        const opened = await driver.open()
+        const opened = await driver.open({ launch: true })
         return jsonResult({ ...opened, target: driver.target, transport: driver.kind })
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
@@ -111,6 +166,7 @@ const tools: McpTool[] = [
       levelId: { type: 'string' },
       type: { type: 'string' },
       nameQuery: { type: 'string' },
+      partId: { type: 'string' },
       limit: { type: 'number' },
     }),
     handler: async (args) => {
@@ -135,11 +191,12 @@ const tools: McpTool[] = [
   },
   {
     name: 'pistola_get_nodes',
-    description: 'Read specific scene nodes by id.',
-    inputSchema: objectSchema({ nodeIds: { type: 'array', items: { type: 'string' } } }, ['nodeIds']),
+    description: 'Read scene nodes. Omit nodeIds to return every node.',
+    inputSchema: objectSchema({ nodeIds: { type: 'array', items: { type: 'string' } } }),
     handler: async (args) => {
       try {
-        return jsonResult(unwrap(await invoke('getNodes', [args.nodeIds])))
+        const nodeIds = Array.isArray(args.nodeIds) ? args.nodeIds : undefined
+        return jsonResult(unwrap(await invoke('getNodes', nodeIds)))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -184,10 +241,10 @@ const tools: McpTool[] = [
   {
     name: 'pistola_validate',
     description: 'Validate a typed action batch without mutating the scene.',
-    inputSchema: objectSchema({ actions: { type: 'array' } }, ['actions']),
+    inputSchema: objectSchema({ actions: { type: 'array', items: { type: 'object' } } }, ['actions']),
     handler: async (args) => {
       try {
-        return jsonResult(unwrap(await invoke('validate', [args.actions])))
+        return jsonResult(unwrap(await invoke('validate', args.actions)))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -202,7 +259,7 @@ const tools: McpTool[] = [
       query: { type: 'string' },
       id: { type: 'string' },
       params: { type: 'object' },
-      at: { type: 'array' },
+      at: { type: 'array', items: { type: 'number' } },
       kind: { type: 'string' },
     }),
     handler: async (args) => {
@@ -374,20 +431,29 @@ const tools: McpTool[] = [
   {
     name: 'pistola_render_views',
     description:
-      'CPU-rasterize a deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) plus a fixed critique checklist. No camera motion.',
-    inputSchema: objectSchema({ planned: { type: 'array' } }),
+      'Render real FRONT, SIDE, TOP and ISO views of the live meshes as one PNG. No camera motion. Pass mode "layout" for the old bounding-box diagnostic.',
+    inputSchema: objectSchema({
+      planned: { type: 'array', items: { type: 'number' } },
+      mode: { type: 'string', enum: ['image', 'layout'] },
+    }),
     handler: async (args) => {
       try {
-        const rendered = unwrap(await invoke('renderViews', args.planned ? { planned: args.planned } : undefined)) as {
-          dataUrl?: unknown
-          mime?: unknown
-          [key: string]: unknown
+        if (args.mode === 'layout') {
+          const rendered = unwrap(await invoke('renderViews', args.planned ? { planned: args.planned } : undefined)) as {
+            dataUrl?: unknown
+            mime?: unknown
+            [key: string]: unknown
+          }
+          const { base64, mime } = pngPayload(rendered)
+          const { dataUrl: _ignored, mime: _mime, ...metadata } = rendered
+          return imageResult(base64, mime, metadata, 'views-layout')
         }
-        const dataUrl = typeof rendered.dataUrl === 'string' ? rendered.dataUrl : ''
-        const base64 = dataUrl.includes(',') ? dataUrl.slice(dataUrl.indexOf(',') + 1) : dataUrl
-        if (!base64) throw new Error('The Pistola page did not return a PNG visual review.')
-        const { dataUrl: _ignored, mime, ...metadata } = rendered
-        return imageResult(base64, typeof mime === 'string' ? mime : 'image/png', metadata)
+        const rendered = unwrap(
+          await invoke('renderSheet', { views: ['front', 'right', 'top', 'iso'], cell: 384 }),
+        ) as { dataUrl?: unknown; mime?: unknown; [key: string]: unknown }
+        const { base64, mime } = pngPayload(rendered)
+        const { dataUrl: _ignored, ...metadata } = rendered
+        return imageResult(base64, mime, metadata, 'views')
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -396,24 +462,34 @@ const tools: McpTool[] = [
   {
     name: 'pistola_render_eight_views',
     description:
-      'Render a side-effect-free 4×2 SVG contact sheet of the live scene: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom. Includes the current structural report.',
-    inputSchema: objectSchema(),
-    handler: async () => {
+      'Render a side-effect-free 4×2 PNG of the live meshes: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom. Pass mode "layout" for the bounding-box SVG.',
+    inputSchema: objectSchema({ mode: { type: 'string', enum: ['image', 'layout'] }, cell: { type: 'number' } }),
+    handler: async (args) => {
       try {
-        const rendered = unwrap(await invoke('renderEightViews')) as {
+        if (args.mode === 'layout') {
+          const rendered = unwrap(await invoke('renderEightViews')) as {
+            mime?: unknown
+            svg?: unknown
+            [key: string]: unknown
+          }
+          if (typeof rendered.svg !== 'string') {
+            throw new Error('The Pistola page did not return an eight-view SVG review.')
+          }
+          const { svg, mime, ...metadata } = rendered
+          return imageResult(
+            Buffer.from(svg, 'utf8').toString('base64'),
+            typeof mime === 'string' ? mime : 'image/svg+xml',
+            metadata,
+          )
+        }
+        const rendered = unwrap(await invoke('renderSheet', { cell: args.cell })) as {
+          dataUrl?: unknown
           mime?: unknown
-          svg?: unknown
           [key: string]: unknown
         }
-        if (typeof rendered.svg !== 'string') {
-          throw new Error('The Pistola page did not return an eight-view SVG review.')
-        }
-        const { svg, mime, ...metadata } = rendered
-        return imageResult(
-          Buffer.from(svg, 'utf8').toString('base64'),
-          typeof mime === 'string' ? mime : 'image/svg+xml',
-          metadata,
-        )
+        const { base64, mime } = pngPayload(rendered)
+        const { dataUrl: _ignored, ...metadata } = rendered
+        return imageResult(base64, mime, metadata, 'eight-views')
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -437,12 +513,17 @@ const tools: McpTool[] = [
     description:
       'Execute a typed, validated action batch through window.pistola.invoke. confirmDestructive defaults to false.',
     inputSchema: objectSchema(
-      { actions: { type: 'array' }, confirmDestructive: { type: 'boolean' } },
+      {
+        actions: { type: 'array', items: { type: 'object' } },
+        confirmDestructive: { type: 'boolean' },
+        preview: { type: 'boolean' },
+      },
       ['actions'],
     ),
     handler: async (args) => {
       try {
-        return jsonResult(await runActions(args.actions as unknown[], args.confirmDestructive === true))
+        const result = unwrap(await invoke('run', [args.actions, { confirmDestructive: args.confirmDestructive === true }]))
+        return withPreview(result, wantPreview(args))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -452,7 +533,7 @@ const tools: McpTool[] = [
     name: 'pistola_execute',
     description: 'Deprecated alias of pistola_run. Still enforces confirmDestructive.',
     inputSchema: objectSchema(
-      { actions: { type: 'array' }, confirmDestructive: { type: 'boolean' } },
+      { actions: { type: 'array', items: { type: 'object' } }, confirmDestructive: { type: 'boolean' } },
       ['actions'],
     ),
     handler: async (args) => {
@@ -469,13 +550,16 @@ const tools: McpTool[] = [
   },
   {
     name: 'pistola_screenshot',
-    description: 'Capture the live viewport canvas as a PNG.',
+    description: 'Render the current viewport camera as a PNG without editor helpers or UI clutter.',
     inputSchema: objectSchema(),
     handler: async () => {
       try {
-        const driver = await getDriver()
-        const shot = await driver.screenshot()
-        return imageResult(shot.data, shot.mime, { forbiddenRequestCount: driver.forbiddenCount() })
+        const rendered = unwrap(await invoke('render', { width: 768, height: 768 })) as {
+          dataUrl?: unknown
+          mime?: unknown
+        }
+        const { base64, mime } = pngPayload(rendered)
+        return imageResult(base64, mime, undefined, 'viewport')
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -562,15 +646,17 @@ const tools: McpTool[] = [
         planId: { type: 'string' },
         phaseId: { type: 'string' },
         stepId: { type: 'string' },
-        actions: { type: 'array' },
+        actions: { type: 'array', items: { type: 'object' } },
         confirmDestructive: { type: 'boolean' },
         strict: { type: 'boolean' },
+        preview: { type: 'boolean' },
       },
       ['planId', 'phaseId', 'stepId', 'actions'],
     ),
     handler: async (args) => {
       try {
-        return jsonResult(unwrap(await invoke('taskPlan.runStep', args)))
+        const result = unwrap(await invoke('taskPlan.runStep', args))
+        return withPreview(result, wantPreview(args))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -615,7 +701,7 @@ const tools: McpTool[] = [
     inputSchema: objectSchema({ planId: { type: 'string' }, summary: { type: 'string' } }, ['planId', 'summary']),
     handler: async (args) => {
       try {
-        return jsonResult(unwrap(await invoke('taskPlan.complete', [args.planId, args.summary])))
+        return jsonResult(unwrap(await invoke('taskPlan.complete', { planId: args.planId, summary: args.summary })))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -628,6 +714,45 @@ const tools: McpTool[] = [
     handler: async (args) => {
       try {
         return jsonResult(unwrap(await invoke('taskPlan.undo', args.planId)))
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_task_undo_step',
+    description: 'Restore the scene to the snapshot taken before one plan step, and mark that step pending.',
+    inputSchema: objectSchema(
+      {
+        planId: { type: 'string' },
+        phaseId: { type: 'string' },
+        stepId: { type: 'string' },
+      },
+      ['planId', 'phaseId', 'stepId'],
+    ),
+    handler: async (args) => {
+      try {
+        return jsonResult(
+          unwrap(
+            await invoke('taskPlan.undoStep', {
+              planId: args.planId,
+              phaseId: args.phaseId,
+              stepId: args.stepId,
+            }),
+          ),
+        )
+      } catch (error) {
+        return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
+      }
+    },
+  },
+  {
+    name: 'pistola_replay',
+    description: 'Clear the scene and rebuild it from a recorded action list. exportActions() on the page returns that list.',
+    inputSchema: objectSchema({ actions: { type: 'array', items: { type: 'object' } } }, ['actions']),
+    handler: async (args) => {
+      try {
+        return jsonResult(unwrap(await invoke('replay', args.actions)))
       } catch (error) {
         return jsonResult({ error: error instanceof Error ? error.message : String(error) }, true)
       }
@@ -703,4 +828,10 @@ if (assistantToolsEnabled) {
   )
 }
 
-createStdioServer(tools)
+if (process.argv.includes('--doctor')) {
+  const report = await runDoctor()
+  console.log(formatDoctor(report))
+  process.exit(report.ok ? 0 : 1)
+} else {
+  createStdioServer(tools)
+}

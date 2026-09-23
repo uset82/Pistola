@@ -1,0 +1,13 @@
+IDE connection status, 2026-09-23. Not a completed sailboat verification.
+
+Claude Code: rechecked 2026-09-23. `claude mcp list` still shows `pistola: node editor/tooling/pistola-mcp/src/index.ts` as pending approval. There is no non-interactive approve command.
+
+Codex: `node editor/scripts/codex-sailboat-check.mjs` on 2026-09-23 used `codex.exe` and model `gpt-5.6-sol` (the configured `gpt-6-luna` model is not supported on this ChatGPT account). The run was pinned to stand-in session `415ccba8-4428-48cf-bace-8a9a47df8433`. Codex called `pistola_status`, `pistola_open`, `pistola_task_create`, `pistola_inspect`, `pistola_task_run_step`, and `pistola_render_eight_views`. It reported 4 parts. The eight-view PNG is `docs/tasks/evidence/frictionless-creation/codex-sailboat.png` (brown hull, white sail, labeled views). Session `00e87520` stayed at 54 nodes.
+
+Cursor: rechecked 2026-09-23. `cursor-agent status` in WSL still prints `Not logged in`. `pistola` stays unloaded until that login and an MCP approval. No sailboat render.
+
+Antigravity: `C:\Users\carlos\AppData\Local\Programs\Antigravity\Antigravity.exe` exists. `resources\bin` contains `language_server.exe` and `webm_encoder.exe`, not an agent CLI. Pistola is already in `~/.gemini/config/mcp_config.json`. `gemini` 0.58.0 does not read that file. A headless `gemini --skip-trust -p` exits with `IneligibleTierError` / `UNSUPPORTED_CLIENT` and tells this account to migrate to Antigravity (https://antigravity.google). No sailboat render.
+
+WorkBuddy: `WorkBuddyAI.exe` includes the headless CLI `resources\app.asar.unpacked\cli\bin\codebuddy`. Earlier pinned runs stopped at the turn limit with a blank grid because `DeferExecuteTool` was denied. `.workbuddy/settings.json` now allows `DeferExecuteTool` and `mcp__pistola__*`. The run on stand-in `fc79dba9-2822-4520-b1a6-4db310e934b4` saved `docs/tasks/evidence/frictionless-creation/workbuddy-sailboat.png`, a labeled eight-view sheet with a brown hull and white sail. The transcript also ends with `Max turns (8) exceeded`. Session `00e87520` stayed at 54 nodes. The stand-in ended at 8 nodes.
+
+Qoder: installed at `C:\Program Files\Qoder\Qoder\Qoder.exe` (launcher state.ini, 2026-09-19). There is no `resources\app\bin` CLI and no `qoder` command on PATH. `app.asar` contains the Electron `out/main` bundle and no headless CLI. No sailboat render.

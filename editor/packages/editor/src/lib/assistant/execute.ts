@@ -14,6 +14,8 @@ import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
 import { CadSpecError, evaluateCadSolidSpecCached, type KernelMesh } from '../cad/local-kernel'
 import { CadSolidSpecSchema } from '../cad/solid-spec'
+import { boundsFromBoxes, poseForView, type RenderViewId } from '../render/capture-frame'
+import { collectStructureParts } from '../structure'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
 import { cadHelperUnavailableMessage } from '../../store/use-cad'
 import useCad from '../../store/use-cad'
@@ -420,6 +422,8 @@ const getValidationError = (action: AssistantAction) => {
     case 'set_transform_pivot':
     case 'camera_top_view':
     case 'orbit_camera':
+    case 'set_view':
+    case 'set_camera':
     case 'set_fullscreen':
     case 'undo_history':
     case 'redo_history':
@@ -1019,7 +1023,18 @@ const executeAction = async (
       emitter.emit('camera-controls:top-view')
       return {}
     case 'orbit_camera':
-      emitter.emit(action.direction === 'cw' ? 'camera-controls:orbit-cw' : 'camera-controls:orbit-ccw')
+      emitter.emit(action.direction === 'cw' ? 'camera-controls:orbit-cw' : 'camera-controls:orbit-ccw', {
+        degrees: action.degrees,
+      })
+      return {}
+    case 'set_view': {
+      const bounds = boundsFromBoxes(collectStructureParts())
+      const pose = poseForView(action.view as RenderViewId, bounds)
+      emitter.emit('camera-controls:set-look-at', { position: pose.position, target: pose.target })
+      return {}
+    }
+    case 'set_camera':
+      emitter.emit('camera-controls:set-look-at', { position: action.position, target: action.target })
       return {}
     case 'set_fullscreen':
       if (action.enabled) {
@@ -1274,6 +1289,7 @@ const executeAction = async (
           bbox: { min: mesh.bbox[0], max: mesh.bbox[1] },
           partId: action.partId ?? null,
           role: action.role ?? null,
+          nested: action.nested === true,
         },
       })
       useScene.getState().createNode(body, parentId as AnyNodeId)

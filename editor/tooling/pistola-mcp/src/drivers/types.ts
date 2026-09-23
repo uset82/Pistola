@@ -6,7 +6,9 @@ export type PageDriver = {
   apiVersion: number | null
   forbiddenCount: () => number
   forbiddenHits: () => { method: string; url: string; reason: string }[]
-  open: () => Promise<{ url: string; apiVersion: number; signInRequired: boolean }>
+  open: (options?: { launch?: boolean }) => Promise<
+    { url: string; apiVersion: number; signInRequired: boolean } & Record<string, unknown>
+  >
   invoke: (method: string, args?: InvokeArgs) => Promise<unknown>
   screenshot: () => Promise<{ mime: string; data: string }>
   close?: () => Promise<void>

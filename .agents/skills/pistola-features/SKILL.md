@@ -26,6 +26,7 @@ Check once per session and note the result:
 | `loft` | `build_cad_solid` `{ op: "loft", sections, axis?, heights? }` | Cross-sections along +Y by default; kernel budget 50k triangles | stacked `extrude` or `place_item` |
 | `revolve` | `build_cad_solid` `{ op: "revolve", profile, angle }` | Local kernel, not the hosted FreeCAD mock | Cylinder, cone, or capsule primitives |
 | `torus` / `capsule` / `ellipsoid` | `build_cad_solid` `{ op: "torus"|"capsule"|"ellipsoid" }` | Bottom-center; optional body `roughness` / `metalness` / `opacity` | matching `place_item` primitives |
+| `group` | `build_cad_solid` `{ op: "group", children }` | Merge only, no boolean. Disjoint shells are allowed | `linearArray` / `mirror` |
 | `mac` | `generate_mac_part` | Needs a real MAC runtime (local `PISTOLA_MAC_ROOT`). Hosted throws and asks for `build_cad_solid`. | Decompose into `build_cad_solid` ops |
 
 When you choose a fallback, record it in the plan so the critic judges the result fairly and the librarian can learn from it.

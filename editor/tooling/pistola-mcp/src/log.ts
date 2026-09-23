@@ -8,6 +8,7 @@ export type McpLogEntry = {
   error: string | null
   code: string | number | null
   ms: number
+  client?: string
 }
 
 export const errorCodeFromText = (text: string | undefined, isError: boolean): string | number | null => {

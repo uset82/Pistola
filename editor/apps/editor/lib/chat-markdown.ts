@@ -29,9 +29,8 @@ export function parseInline(text: string): InlineToken[] {
   const inlineRegex =
     /(`([^`]+)`)|(\[([^\]]+)\]\(([^)]+)\))|(\*\*\*([^*]+)\*\*\*|___([^_]+)___)|(\*\*([^*]+)\*\*|__([^_]+)__)|(\*([^*\s][^*]*[^*\s]|[^*\s])\*|_([^_\s][^_]*[^_\s]|[^_\s])_)|(~~([^~]+)~~)/g
 
-  let match: RegExpExecArray | null = null
-
-  while ((match = inlineRegex.exec(text)) !== null) {
+  let match: RegExpExecArray | null = inlineRegex.exec(text)
+  while (match !== null) {
     const matchIndex = match.index
 
     // Add preceding plain text
@@ -57,6 +56,7 @@ export function parseInline(text: string): InlineToken[] {
     }
 
     cursor = matchIndex + match[0].length
+    match = inlineRegex.exec(text)
   }
 
   // Trailing plain text

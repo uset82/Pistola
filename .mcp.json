@@ -6,7 +6,8 @@
         "editor/tooling/pistola-mcp/src/index.ts"
       ],
       "env": {
-        "PISTOLA_TARGET": "local"
+        "PISTOLA_TARGET": "local",
+        "PISTOLA_TRANSPORT": "bridge"
       }
     }
   }

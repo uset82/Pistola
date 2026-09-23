@@ -1,6 +1,6 @@
 'use client'
 
-import { Editor } from '@pascal-app/editor'
+import { Editor, useEditor } from '@pascal-app/editor'
 import type { ReactNode } from 'react'
 
 import { AccountBadge } from './AccountBadge'
@@ -20,6 +20,7 @@ type PistolaWorkspaceShellProps = {
 }
 
 export function PistolaWorkspaceShell({ userEmail, children }: PistolaWorkspaceShellProps = {}) {
+  const isPreviewMode = useEditor((state) => state.isPreviewMode)
   return (
     <BuiltinNodesBootstrap>
       <div className="relative h-screen w-screen overflow-hidden">
@@ -27,11 +28,11 @@ export function PistolaWorkspaceShell({ userEmail, children }: PistolaWorkspaceS
         <WorkspaceBridge />
         <AgentApiBridge />
         <WebMcpSceneTools />
-        <OperatorPlanPanel />
+        {isPreviewMode ? null : <OperatorPlanPanel />}
         <WorkspaceMenuBar />
         <ProjectModals />
-        <AiAssistantPanel />
-        {userEmail ? <AccountBadge email={userEmail} /> : null}
+        {isPreviewMode ? null : <AiAssistantPanel />}
+        {isPreviewMode || !userEmail ? null : <AccountBadge email={userEmail} />}
         {children}
         <Editor />
       </div>

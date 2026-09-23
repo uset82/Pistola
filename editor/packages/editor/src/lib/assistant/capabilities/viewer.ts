@@ -225,6 +225,31 @@ export const focusCameraOnNodesCapability = defineCapability({
   },
 })
 
+export const setViewCapability = defineCapability({
+  type: 'set_view',
+  domain: 'viewer',
+  schema: z.object({
+    type: z.literal('set_view'),
+    view: z.enum(['top', 'bottom', 'front', 'back', 'left', 'right', 'left-45', 'right-45', 'iso']),
+  }),
+  safeImmediate: true,
+  describe: 'Move the live camera to a named view of the current parts',
+  examples: ['front view', 'show the isometric view'],
+})
+
+export const setCameraCapability = defineCapability({
+  type: 'set_camera',
+  domain: 'viewer',
+  schema: z.object({
+    type: z.literal('set_camera'),
+    position: z.tuple([z.number(), z.number(), z.number()]),
+    target: z.tuple([z.number(), z.number(), z.number()]),
+  }),
+  safeImmediate: true,
+  describe: 'Move the live camera to an exact position and target',
+  examples: ['set the camera to this position'],
+})
+
 export const viewerCapabilities = [
   setCameraModeCapability,
   setThemeCapability,
@@ -236,6 +261,8 @@ export const viewerCapabilities = [
   setGridVisibilityCapability,
   cameraTopViewCapability,
   orbitCameraCapability,
+  setViewCapability,
+  setCameraCapability,
   captureCameraSnapshotCapability,
   viewCameraSnapshotCapability,
   clearCameraSnapshotCapability,

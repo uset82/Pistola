@@ -1,0 +1,15 @@
+Phase 3 render evidence, 2026-09-22. Editor at http://127.0.0.1:3002/workspace, window.pistola ready.
+
+Extruded cover probe (#e11d48 difference of two boxes): render({ view: 'iso', width: 320, height: 240 }) returned a PNG data URL, world bounds, and pixels with luminance spread 162 and 6728 red samples. The probe was undone.
+
+renderSheet() of the replayed 26-part self-portrait returned a 4×2 sheet, 640×376, views top, left-45, front, right-45, left, right, back, bottom. File: docs/tasks/evidence/frictionless-creation/phase3-eight-view.png (173724 bytes). Top reads as a flat stack; front reads as the vertical arrangement.
+
+Live camera position delta after that sheet: 0. The assistant toggle was still in the DOM. During capture the orbit controls are disabled so they do not pull the camera back before the frame is presented, then the previous camera is restored.
+
+set_view front moved the camera (about [10.22, 1.57, -5.06] to [1.31, 0.9, 5.83]). orbit_camera left 15 degrees moved it again.
+
+set_preview_mode hid [data-testid=assistant-toggle] and, once a plan existed, [data-testid=operator-plan-toggle]. Both came back when preview mode turned off. The account badge is not mounted when nobody is signed in; PistolaWorkspaceShell also skips it in preview mode.
+
+CAD origin axes are on EDITOR_LAYER in packages/viewer/src/components/renderers/cad-space/cad-space-renderer.tsx.
+
+Self-portrait replay is one pistola replay call (26 actions, including the grouped {order, groups} file). Structure report after the closed-sphere fix: partCount 26, errorCount 7, all FLOATING_PART (conversation orbit, beads 1–5, edge of knowing). Open meshes are gone. The phase 4 checkpoint stays open because those seven errors remain.

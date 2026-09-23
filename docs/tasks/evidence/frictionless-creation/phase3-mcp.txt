@@ -1,0 +1,12 @@
+Phase 3 MCP render evidence, 2026-09-23.
+
+Bridge driver (`PISTOLA_TRANSPORT=bridge`), visible editor tab:
+`node editor/scripts/render-mcp-check.mjs`
+→ pistola_render_views returned a PNG 1536×412, luminance spread 216, long edge 1536 (cap 1568), saved to `.pistola/renders/1790148165689-views.png`.
+→ mode `layout` returned a PNG (345361 bytes).
+→ pistola_run of one box with preview attached a 512×512 PNG, spread 198, and a `previewPath` under `.pistola/renders/`. pistola_undo left the tab at 30 nodes.
+
+Browser driver (`PISTOLA_TRANSPORT=browser`, installed Chrome, headless):
+`PLAYWRIGHT_BROWSERS_PATH=C:\Users\carlos\AppData\Local\ms-playwright node editor/scripts/render-browser-probe.mjs`
+→ created 1 body, pistola_render_views returned a PNG 1536×412, luminance spread 216, saved under `.pistola/renders`. Copy: `docs/tasks/evidence/frictionless-creation/browser-driver-views.png`.
+The bundled headless shell has no GPU frame and returned a blank sheet. The driver now launches the installed Chrome first.

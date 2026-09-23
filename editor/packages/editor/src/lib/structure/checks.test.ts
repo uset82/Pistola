@@ -241,3 +241,111 @@ test('the eight creation recipes validate and sit check-clean after a world-spac
     )
   }
 })
+
+test('containment flags a buried box and leaves rings, pages, and halos clear', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  await api.run([
+    { type: 'build_cad_solid', name: 'shell', spec: { op: 'box', size: [1, 1, 1] }, position: [0, 0, 0] },
+    { type: 'build_cad_solid', name: 'core', spec: { op: 'box', size: [0.3, 0.3, 0.3] }, position: [0, 0, 0] },
+  ])
+  assert.ok(checkStructure().issues.some((issue) => issue.code === 'BURIED_PART'))
+
+  reset()
+  await api.run([
+    { type: 'build_cad_solid', name: 'post', spec: { op: 'cylinder', r: 0.12, h: 0.5 }, position: [0, 0, 0] },
+    { type: 'build_cad_solid', name: 'ring', spec: { op: 'torus', R: 0.42, r: 0.07 }, position: [0, 0.15, 0] },
+  ])
+  assert.equal(checkStructure().issues.filter((issue) => issue.code === 'BURIED_PART').length, 0)
+
+  reset()
+  await api.run([
+    {
+      type: 'build_cad_solid',
+      name: 'cover',
+      spec: {
+        op: 'difference',
+        children: [
+          { op: 'box', size: [0.42, 0.32, 0.28] },
+          { op: 'box', size: [0.36, 0.28, 0.24], translate: [0, 0.02, 0] },
+        ],
+      },
+      position: [0, 0, 0],
+    },
+    {
+      type: 'build_cad_solid',
+      name: 'page',
+      spec: { op: 'box', size: [0.3, 0.22, 0.012] },
+      position: [0, 0.05, 0],
+    },
+  ])
+  assert.equal(checkStructure().issues.filter((issue) => issue.code === 'BURIED_PART').length, 0)
+
+  reset()
+  await api.run([
+    { type: 'build_cad_solid', name: 'core', spec: { op: 'sphere', r: 0.12 }, position: [0, 0, 0] },
+    { type: 'build_cad_solid', name: 'halo', spec: { op: 'torus', R: 0.34, r: 0.04 }, position: [0, 0.12, 0] },
+  ])
+  assert.equal(checkStructure().issues.filter((issue) => issue.code === 'BURIED_PART').length, 0)
+
+  reset()
+  await api.run([
+    { type: 'build_cad_solid', name: 'shell', spec: { op: 'box', size: [1, 1, 1] }, position: [0, 0, 0] },
+    {
+      type: 'build_cad_solid',
+      name: 'core',
+      nested: true,
+      spec: { op: 'box', size: [0.3, 0.3, 0.3] },
+      position: [0, 0, 0],
+    },
+  ])
+  assert.equal(checkStructure().issues.filter((issue) => issue.code === 'BURIED_PART').length, 0)
+})
+
+test('a sphere that intersects a grounded column is supported, and a separated sphere still floats', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  await api.run([
+    { type: 'build_cad_solid', name: 'column', spec: { op: 'box', size: [0.04, 1.2, 0.04] }, position: [0, 0, 0] },
+    { type: 'build_cad_solid', name: 'through', spec: { op: 'sphere', r: 0.3 }, position: [0, 1.05, 0], opacity: 0.07 },
+  ])
+  const through = collectStructureParts().find((part) => part.name === 'through')
+  assert.ok(through)
+  assert.equal(
+    checkStructure().issues.some((issue) => issue.code === 'FLOATING_PART' && issue.partId === through.id),
+    false,
+  )
+
+  reset()
+  await api.run([
+    { type: 'build_cad_solid', name: 'column', spec: { op: 'box', size: [0.04, 1.2, 0.04] }, position: [0, 0, 0] },
+    { type: 'build_cad_solid', name: 'aloft', spec: { op: 'sphere', r: 0.2 }, position: [0, 2.2, 0] },
+  ])
+  const aloft = collectStructureParts().find((part) => part.name === 'aloft')
+  assert.ok(aloft)
+  assert.equal(
+    checkStructure().issues.some((issue) => issue.code === 'FLOATING_PART' && issue.partId === aloft.id),
+    true,
+  )
+})
+
+test('rotated stacked books stay in contact', async () => {
+  reset()
+  const api = createPistolaAgentApi()
+  await api.run([
+    { type: 'build_cad_solid', name: 'lower', spec: { op: 'box', size: [0.22, 0.04, 0.3] }, position: [0, 0, 0] },
+    {
+      type: 'build_cad_solid',
+      name: 'upper',
+      spec: { op: 'box', size: [0.22, 0.04, 0.3] },
+      position: [0, 0.04, 0],
+      rotation: [0, Math.PI / 2, 0],
+    },
+  ])
+  const upper = collectStructureParts().find((part) => part.name === 'upper')
+  assert.ok(upper)
+  assert.ok(upper.box.size[0] > 0.25, 'Y rotation should swap the book footprint')
+  assert.ok(upper.box.size[2] < 0.25)
+  const floating = checkStructure().issues.filter((issue) => issue.code === 'FLOATING_PART' && issue.partId === upper.id)
+  assert.equal(floating.length, 0)
+})

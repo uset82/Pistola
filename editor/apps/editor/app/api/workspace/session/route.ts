@@ -3,6 +3,7 @@ import { requireRouteAuthSession } from '@/lib/auth/route'
 import {
   getActiveWorkspaceSession,
   getWorkspaceSession,
+  listWorkspaceSessions,
   registerWorkspaceSession,
   touchWorkspaceSession,
 } from '@/lib/workspace-bridge'
@@ -36,6 +37,7 @@ export async function GET(request: Request) {
           message:
             'No live editor workspace session. Open the Pistola editor in a browser tab.',
           installedModel: installed,
+          sessions: listWorkspaceSessions(access),
         },
         { headers: { 'Cache-Control': 'no-store' } },
       )
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
         connected: true,
         session: snapshot,
         installedModel: installed,
+        sessions: listWorkspaceSessions(access),
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )
@@ -87,6 +90,8 @@ export async function POST(request: Request) {
           ? (body.installedModel as { provider?: string | null; model?: string | null })
           : getInstalledAiConfigPublicView(readInstalledAiConfig()),
       summary: typeof body.summary === 'string' ? body.summary : null,
+      visible: typeof body.visible === 'boolean' ? body.visible : null,
+      focusedAt: typeof body.focusedAt === 'number' ? body.focusedAt : null,
     })
 
     return NextResponse.json(
@@ -133,6 +138,8 @@ export async function PATCH(request: Request) {
       macHelperStatus:
         typeof body.macHelperStatus === 'string' ? body.macHelperStatus : undefined,
       summary: typeof body.summary === 'string' ? body.summary : undefined,
+      visible: typeof body.visible === 'boolean' ? body.visible : undefined,
+      focusedAt: typeof body.focusedAt === 'number' ? body.focusedAt : undefined,
     })
 
     if (!snapshot) {

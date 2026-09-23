@@ -20,3 +20,4 @@ Return only the JSON described in the skill. Do not touch the browser and do not
 
 [[skills.config]]
 name = "pistola-visual-critique"
+enabled = true

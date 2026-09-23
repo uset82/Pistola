@@ -130,7 +130,9 @@ export async function GET(request: Request) {
       )
     }
 
-    const result = getWorkspaceCommandResult(access, sessionId, commandId)
+    const result = getWorkspaceCommandResult(access, sessionId, commandId, {
+      consume: url.searchParams.get('consume') === '1',
+    })
     if (!result) {
       return NextResponse.json(
         { pending: true },

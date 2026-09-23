@@ -7,6 +7,7 @@
     "build:sites": "bun run --cwd=apps/sites build",
     "smoke:sites": "node ./scripts/sites-static-smoke.mjs",
     "dev": "turbo run dev --env-mode=loose --filter=!@pascal-app/cad-helper",
+    "dev:editor": "node ./scripts/check-port.mjs 3002 && bun run --cwd=apps/editor dev",
     "lint": "biome lint",
     "lint:fix": "biome lint --write",
     "format": "biome format --write",

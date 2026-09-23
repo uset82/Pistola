@@ -7,14 +7,17 @@ plans; Pistola only executes typed actions. It runs on **Node ≥22.18**, not Bu
 
 1. Node 22.18+ on the PATH.
 2. A reachable Pistola page: local editor, Canner, or a Sites export.
-3. Optional: a Chrome instance already listening on `127.0.0.1:9333` so the server can attach.
+3. Optional: set `PISTOLA_BROWSER_CDP_URL` to attach to a Chrome that is already running. There is no default attach URL. A browser the server launches itself listens on `127.0.0.1:9333`.
 
 ## Transports
 
+The server speaks newline-delimited JSON-RPC and still accepts a `Content-Length` request.
+
 | `PISTOLA_TRANSPORT` | Use |
 |---|---|
-| `browser` (default) | Playwright launches or attaches to Chrome and calls `window.pistola.invoke`. Works on local, Canner, and Sites. |
+| unset, local target | Bridge. The user's open editor tab runs the actions. |
 | `bridge` | HTTP `/api/workspace/command` with `{ type: "api", method, args }`. Local editor only. |
+| `browser` | Playwright launches or attaches to Chrome and calls `window.pistola.invoke`. Use this for Canner, Sites, and headless runs. The launch prefers the installed Chrome (`PISTOLA_BROWSER_CHANNEL`, default `chrome`) so the page can present a GPU frame. |
 
 ## Targets
 
@@ -28,7 +31,7 @@ plans; Pistola only executes typed actions. It runs on **Node ≥22.18**, not Bu
 
 Other env vars:
 
-- `PISTOLA_BROWSER_CDP_URL` — attach instead of launch (default `http://127.0.0.1:9333`)
+- `PISTOLA_BROWSER_CDP_URL` — attach instead of launch. Unset means launch a browser; that launch uses port 9333, and nothing attaches to 9333 unless this variable is set.
 - `PISTOLA_BROWSER_PROFILE` — dedicated Chrome profile (default `%LOCALAPPDATA%/pistola/browser-profile`)
 - `PISTOLA_BROWSER_HEADLESS=0` — show the window
 - `PISTOLA_LOCAL_API_TOKEN` — only for `bridge`
@@ -49,7 +52,7 @@ Actions: `pistola_validate`, `pistola_run` (`confirmDestructive` defaults to fal
 
 View / history: `pistola_render_eight_views` (primary 4×2 Top/Left 45°/Front/Right 45°/Left/Right/Back/Bottom SVG review), `pistola_render_views` (2×2 FRONT/SIDE/TOP/ISO PNG critique), `pistola_screenshot` (canvas only), `pistola_undo`, `pistola_redo`, `pistola_wait_idle`, `pistola_camera`
 
-Tasks: `pistola_task_create`, `pistola_task_get`, `pistola_task_run_step`, `pistola_task_update_step`, `pistola_task_restore_best`, `pistola_task_complete`, `pistola_task_undo`, `pistola_task_clear`
+Tasks: `pistola_task_create`, `pistola_task_get`, `pistola_task_run_step`, `pistola_task_update_step`, `pistola_task_restore_best`, `pistola_task_complete`, `pistola_task_undo`, `pistola_task_undo_step`, `pistola_task_clear`, `pistola_replay`
 
 Never use a `pistola_plan*` name. That prefix is reserved for the hidden AI tool.
 

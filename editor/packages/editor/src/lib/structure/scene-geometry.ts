@@ -1,5 +1,6 @@
 import {
   boxMeshFromSize,
+  getCadBodyTransform,
   getScaledDimensions,
   meshBounds,
   primitiveMesh,
@@ -20,6 +21,8 @@ export type StructurePart = {
   box: { min: [number, number, number]; max: [number, number, number]; size: [number, number, number] }
   triangleCount: number
   volumeHint: number
+  opacity?: number
+  nested?: boolean
   specOp?: string
   spec?: Record<string, unknown>
 }
@@ -33,20 +36,31 @@ const nodeVec = (node: AnyNode, key: 'position' | 'scale' | 'rotation', fallback
     : fallback
 }
 
+const placementOf = (node: AnyNode) => {
+  if (node.type === 'cad-body') {
+    const transform = getCadBodyTransform(node as CadBodyNode)
+    return {
+      position: transform.position,
+      rotation: transform.rotation,
+      scale: transform.scale,
+    }
+  }
+  return {
+    position: nodeVec(node, 'position', [0, 0, 0]),
+    rotation: nodeVec(node, 'rotation', [0, 0, 0]),
+    scale: nodeVec(node, 'scale', [1, 1, 1]),
+  }
+}
+
 const worldMesh = (node: AnyNode, local: TriangleMesh): TriangleMesh => {
-  let mesh = transformMesh(local, nodeVec(node, 'position', [0, 0, 0]), nodeVec(node, 'scale', [1, 1, 1]), nodeVec(node, 'rotation', [0, 0, 0]))
-  let parentId = 'parentId' in node ? node.parentId : null
-  const nodes = useScene.getState().nodes
-  while (parentId) {
-    const parent = nodes[parentId as keyof typeof nodes] as AnyNode | undefined
-    if (!parent) break
-    mesh = transformMesh(
-      mesh,
-      nodeVec(parent, 'position', [0, 0, 0]),
-      nodeVec(parent, 'scale', [1, 1, 1]),
-      nodeVec(parent, 'rotation', [0, 0, 0]),
-    )
-    parentId = 'parentId' in parent ? parent.parentId : null
+  let mesh = local
+  let current: AnyNode | undefined = node
+  while (current) {
+    const placement = placementOf(current)
+    mesh = transformMesh(mesh, placement.position, placement.scale, placement.rotation)
+    const parentId: string | null = 'parentId' in current && typeof current.parentId === 'string' ? current.parentId : null
+    const nodes = useScene.getState().nodes
+    current = parentId ? (nodes[parentId as keyof typeof nodes] as AnyNode | undefined) : undefined
   }
   return mesh
 }
@@ -111,6 +125,8 @@ export const collectStructureParts = (): StructurePart[] => {
         },
         triangleCount: mesh.indices.length / 3,
         volumeHint: volume,
+        opacity: typeof body.opacity === 'number' ? body.opacity : undefined,
+        nested: (body.metadata as { nested?: boolean } | undefined)?.nested === true,
         specOp: typeof spec?.op === 'string' ? spec.op : undefined,
         spec,
       })

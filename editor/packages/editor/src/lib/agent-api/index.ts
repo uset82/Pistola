@@ -18,7 +18,7 @@ import {
   validateAssistantPlan,
   type AssistantExecutionResult,
 } from '../assistant/execute'
-import { getAssistantWorkspaceContext } from '../assistant/context'
+import { describeCadBody, getAssistantWorkspaceContext } from '../assistant/context'
 import { CREATION_RECIPES, listCreationRecipes } from '../assistant/recipes/creation-recipes'
 import { MANUAL_OP_EXAMPLES } from '../cad/manual-examples'
 import { ORTHO_VIEWS, PISTOLA_FRAME } from '../cad/views'
@@ -47,8 +47,19 @@ import {
 import { getExample, searchExamples } from '../agent-examples'
 import { renderViews as renderSceneViews } from '../render'
 import {
+  boundsFromBoxes,
+  clampCaptureSize,
+  livePose,
+  poseForView,
+  poseFromCamera,
+  RENDER_VIEW_IDS,
+  type RenderViewId,
+} from '../render/capture-frame'
+import { requestSceneCapture } from '../render/capture-registry'
+import {
   CANONICAL_CONTACT_SHEET_LAYOUT,
   CANONICAL_VIEW_CAMERAS,
+  CANONICAL_VIEW_ORDER,
   PISTOLA_CANONICAL_FRAME,
   renderSceneContactSheet,
 } from '../render-views'
@@ -76,6 +87,7 @@ const AGENT_WORKFLOW = {
 const SOLID_SPEC_GRAMMAR = {
   primitives: ['box', 'cylinder', 'sphere', 'torus', 'capsule', 'ellipsoid', 'extrude', 'revolve', 'loft'],
   booleans: ['union', 'difference', 'intersection'],
+  group: 'op group merges children without a boolean. Disjoint shells are allowed.',
   arrays: ['mirror', 'linearArray', 'polarArray'],
   hull: 'op hull requires profileXY, profileZY, and profileXZ (sideProfile/topProfile stay as aliases)',
   rotation: 'radians, applied X then Y then Z after scale and before translate',
@@ -119,6 +131,8 @@ const INVOKE_ALLOWLIST = new Set([
   'examples.get',
   'renderViews',
   'renderEightViews',
+  'render',
+  'renderSheet',
   'referencePack.validate',
   'referencePack.set',
   'referencePack.get',
@@ -130,6 +144,7 @@ const INVOKE_ALLOWLIST = new Set([
   'reference.hull',
   'reference.guides',
   'waitForIdle',
+  'screenshot',
   'undo',
   'redo',
   'taskPlan.create',
@@ -139,14 +154,82 @@ const INVOKE_ALLOWLIST = new Set([
   'taskPlan.restoreBest',
   'taskPlan.complete',
   'taskPlan.undo',
+  'taskPlan.undoStep',
   'taskPlan.clear',
+  'exportActions',
+  'replay',
 ])
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const operatorPlanSnapshots = new Map<string, SceneGraph>()
+const operatorPlanStepSnapshots = new Map<string, SceneGraph>()
 const operatorPlanBest = new Map<string, { graph: SceneGraph; errorCount: number }>()
 const operatorPlanBlueprints = new Map<string, BlueprintV2>()
+const recordedActions: AssistantAction[] = []
+
+const stepSnapshotKey = (planId: string, phaseId: string, stepId: string) => `${planId}:${phaseId}:${stepId}`
+
+const clearPlanMemory = (planId: string) => {
+  operatorPlanSnapshots.delete(planId)
+  operatorPlanBest.delete(planId)
+  operatorPlanBlueprints.delete(planId)
+  for (const key of [...operatorPlanStepSnapshots.keys()]) {
+    if (key.startsWith(`${planId}:`)) operatorPlanStepSnapshots.delete(key)
+  }
+}
+
+type RunOptions = { confirmDestructive?: boolean; select?: boolean; maxActions?: number }
+
+const unpackRunInput = (input: unknown, options: RunOptions = {}) => {
+  if (
+    Array.isArray(input) &&
+    input.length === 2 &&
+    Array.isArray(input[0]) &&
+    input[1] &&
+    typeof input[1] === 'object' &&
+    !Array.isArray(input[1])
+  ) {
+    return { actions: input[0], options: { ...options, ...(input[1] as RunOptions) } }
+  }
+  if (input && typeof input === 'object' && !Array.isArray(input) && 'actions' in input) {
+    const packed = input as { actions: unknown } & RunOptions
+    return {
+      actions: packed.actions,
+      options: { confirmDestructive: packed.confirmDestructive, select: packed.select },
+    }
+  }
+  return { actions: input, options }
+}
+
+const unwrapActionList = (actions: unknown) =>
+  Array.isArray(actions) && actions.length === 1 && Array.isArray(actions[0]) ? actions[0] : actions
+
+const asActionList = (value: unknown): unknown[] | null => {
+  if (Array.isArray(value)) return value
+  if (!value || typeof value !== 'object') return null
+  const record = value as { actions?: unknown; order?: unknown; groups?: Record<string, unknown> }
+  if (Array.isArray(record.actions)) return record.actions
+  if (Array.isArray(record.order) && record.groups && typeof record.groups === 'object') {
+    return record.order.flatMap((name) => {
+      if (typeof name !== 'string') return []
+      const group = record.groups?.[name]
+      return Array.isArray(group) ? group : []
+    })
+  }
+  return null
+}
+
+const normalizeNodeIds = (ids: unknown): string[] | undefined => {
+  if (ids === undefined) return undefined
+  if (typeof ids === 'string') return [ids]
+  if (ids && typeof ids === 'object' && !Array.isArray(ids) && 'nodeIds' in ids) {
+    return normalizeNodeIds((ids as { nodeIds?: unknown }).nodeIds)
+  }
+  if (!Array.isArray(ids)) return undefined
+  if (ids.length === 1 && Array.isArray(ids[0])) return ids[0].filter((id): id is string => typeof id === 'string')
+  return ids.filter((id): id is string => typeof id === 'string')
+}
 
 type ExecutionResult = AssistantExecutionResult & { structure: StructureReport }
 
@@ -204,13 +287,13 @@ export const createPistolaAgentApi = () => {
       rule: 'examples.search(query) then examples.get({id, params, at}). Returns editable actions with partIds and a blueprint fragment. Placeholders: $ref_* and LEVEL.',
     },
     visualReview: {
-      method: 'renderViews',
-      output: 'A deterministic 2×2 PNG (FRONT, SIDE, TOP, ISO) with a fixed critique checklist. At most 2 rounds; keep the best.',
+      method: 'render',
+      output: 'A PNG of the live meshes. Pass {view} or {camera}. The viewport camera is not moved.',
     },
     eightViewReview: {
-      method: 'renderEightViews',
+      method: 'renderSheet',
       output:
-        'A deterministic 4×2 SVG contact sheet: Top, Left 45°, Front, Right 45°, Left, Right, Back, Bottom.',
+        'A labelled PNG contact sheet of the real meshes. renderEightViews({ mode: "layout" }) still returns the bounding-box SVG.',
       policy:
         'Use after each assembly milestone without moving the active viewport. Address structural errors first, then the largest visible placement or proportion mismatch.',
       layout: CANONICAL_CONTACT_SHEET_LAYOUT,
@@ -258,11 +341,11 @@ export const createPistolaAgentApi = () => {
     return { section, value: full[section as keyof typeof full] }
   }
 
-  const inspect = async (query?: { levelId?: string; type?: string; nameQuery?: string; limit?: number }) =>
+  const inspect = async (query?: { levelId?: string; type?: string; nameQuery?: string; partId?: string; limit?: number }) =>
     inspectScene(query ?? {})
 
   const validate = async (actions: unknown) => {
-    const result = validateAssistantPlan(actions, { maxActions: AGENT_WORKFLOW.maxActionsPerBatch })
+    const result = validateAssistantPlan(unwrapActionList(actions), { maxActions: AGENT_WORKFLOW.maxActionsPerBatch })
     return {
       valid: result.valid,
       requiresReview: result.requiresReview,
@@ -283,10 +366,17 @@ export const createPistolaAgentApi = () => {
     }
   }
 
-  const run = async (actions: unknown, options: { confirmDestructive?: boolean } = {}) => {
-    const parsed = Array.isArray(actions) ? (actions as AssistantAction[]) : []
+  const run = async (actionsOrInput: unknown, options: RunOptions = {}) => {
+    const unpacked = unpackRunInput(actionsOrInput, options)
+    const parsed = Array.isArray(unpacked.actions) ? (unpacked.actions as AssistantAction[]) : []
+    const resolvedOptions = unpacked.options
+    // Builders select what they create; an external agent should not yank the user's selection or panels.
+    const keepSelection =
+      resolvedOptions.select !== true &&
+      !parsed.some((action) => action.type === 'select_nodes' || action.type === 'reset_workspace_selection')
+    const selectionBefore = useViewer.getState().selection
     const hasDestructive = parsed.some((action) => isDestructiveAssistantActionType(action.type))
-    if (hasDestructive && !options.confirmDestructive) {
+    if (hasDestructive && !resolvedOptions.confirmDestructive) {
       return withStructure({
         ok: false,
         completedActionCount: 0,
@@ -304,12 +394,14 @@ export const createPistolaAgentApi = () => {
       })
     }
 
-    return withStructure(
-      await executeAssistantPlan(actions, {
-        reviewConfirmed: true,
-        runtime,
-      }),
-    )
+    const result = await executeAssistantPlan(unpacked.actions, {
+      reviewConfirmed: true,
+      runtime,
+      maxActions: resolvedOptions.maxActions,
+    })
+    if (result.ok) recordedActions.push(...parsed)
+    if (keepSelection) useViewer.getState().setSelection(selectionBefore)
+    return withStructure(result)
   }
 
   const runRecipe = async (name: string, params: Record<string, unknown> = {}) => {
@@ -361,12 +453,86 @@ export const createPistolaAgentApi = () => {
     return { redone: true }
   }
 
-  const screenshot = async () => {
-    const canvas = document.querySelector('canvas')
-    if (!(canvas instanceof HTMLCanvasElement)) {
-      throw new Error('Viewer canvas is not available.')
+  const screenshot = async () => render({})
+
+  const loadImage = (dataUrl: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = () => reject(new Error('Could not compose the render sheet.'))
+      image.src = dataUrl
+    })
+
+  const render = async (input: {
+    view?: RenderViewId
+    camera?: { position: [number, number, number]; target: [number, number, number]; fov?: number; up?: [number, number, number] }
+    nodeIds?: string[]
+    width?: number
+    height?: number
+  } = {}) => {
+    const parts = collectStructureParts()
+    const bounds = boundsFromBoxes(parts, input.nodeIds)
+    const size = clampCaptureSize(input.width ?? 768, input.height ?? 768)
+    const pose = input.camera
+      ? poseFromCamera(input.camera)
+      : input.view
+        ? poseForView(input.view, bounds)
+        : livePose()
+    if (typeof requestAnimationFrame === 'function') {
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+      await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
     }
-    return { mime: 'image/png', dataUrl: canvas.toDataURL('image/png') }
+    const captured = await requestSceneCapture({ ...size, pose }, bounds)
+    return {
+      mime: 'image/png' as const,
+      dataUrl: captured.dataUrl,
+      camera: captured.camera,
+      bounds: captured.bounds,
+      width: size.width,
+      height: size.height,
+    }
+  }
+
+  const renderSheet = async (input: { views?: RenderViewId[]; cell?: number; nodeIds?: string[] } = {}) => {
+    const views = input.views?.length ? input.views : [...CANONICAL_VIEW_ORDER]
+    for (const view of views) {
+      if (!RENDER_VIEW_IDS.includes(view)) throw new Error(`Unknown render view "${view}".`)
+    }
+    const cell = clampCaptureSize(input.cell ?? 384, input.cell ?? 384).width
+    const columns = views.length >= 8 ? 4 : Math.min(4, Math.max(1, views.length))
+    const rows = Math.ceil(views.length / columns)
+    const labelBand = 28
+    const canvas = document.createElement('canvas')
+    canvas.width = columns * cell
+    canvas.height = rows * (cell + labelBand)
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Could not compose the render sheet.')
+    context.fillStyle = '#f4f1ea'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.font = '16px sans-serif'
+    const shots = []
+    for (let index = 0; index < views.length; index += 1) {
+      const view = views[index]!
+      const shot = await render({ view, width: cell, height: cell, nodeIds: input.nodeIds })
+      const image = await loadImage(shot.dataUrl)
+      const column = index % columns
+      const row = Math.floor(index / columns)
+      const x = column * cell
+      const y = row * (cell + labelBand)
+      context.drawImage(image, x, y, cell, cell)
+      context.fillStyle = '#1c1917'
+      context.fillText(view, x + 8, y + cell + 18)
+      shots.push({ id: view, camera: shot.camera })
+    }
+    return {
+      mime: 'image/png' as const,
+      dataUrl: canvas.toDataURL('image/png'),
+      width: canvas.width,
+      height: canvas.height,
+      columns,
+      rows,
+      views: shots,
+    }
   }
 
   const referencePack = {
@@ -518,11 +684,7 @@ export const createPistolaAgentApi = () => {
           'An unfinished operator plan is already active. Pass replace: true to replace it.',
         )
       }
-      if (previous) {
-        operatorPlanSnapshots.delete(previous.id)
-        operatorPlanBest.delete(previous.id)
-        operatorPlanBlueprints.delete(previous.id)
-      }
+      if (previous) clearPlanMemory(previous.id)
       let nextInput: OperatorPlanInput = input
       if (input.blueprint) {
         const checked = checkBlueprint(input.blueprint)
@@ -614,6 +776,14 @@ export const createPistolaAgentApi = () => {
         useOperatorPlanStore.getState().setUndoAvailable(input.planId, true)
       }
 
+      const stepKey = stepSnapshotKey(input.planId, input.phaseId, input.stepId)
+      if (!operatorPlanStepSnapshots.has(stepKey)) {
+        operatorPlanStepSnapshots.set(stepKey, cloneCurrentSceneGraph())
+      } else if (step.status === 'done' || step.status === 'error') {
+        const baseline = operatorPlanStepSnapshots.get(stepKey)
+        if (baseline) applySceneGraphToEditor(baseline)
+      }
+
       let result: ExecutionResult | null = null
       try {
         result = await run(input.actions, { confirmDestructive: input.confirmDestructive })
@@ -676,6 +846,7 @@ export const createPistolaAgentApi = () => {
           ...result.warnings,
           ...structure.issues.filter((issue) => issue.severity === 'warning').map((issue) => issue.code),
         ],
+        actions: Array.isArray(input.actions) ? input.actions : [],
       }
       const plan = useOperatorPlanStore.getState().updateStep({
         planId: input.planId,
@@ -694,9 +865,33 @@ export const createPistolaAgentApi = () => {
       applySceneGraphToEditor(best.graph)
       return { restored: true as const, errorCount: best.errorCount, structure: checkStructure() }
     },
-    complete: async (planId: string, summary: string) => {
-      if (!summary.trim()) throw new Error('A completed operator plan requires a summary.')
-      return useOperatorPlanStore.getState().setSummary(planId, summary)
+    complete: async (planIdOrInput: string | { planId: string; summary: string } | [string, string], summary?: string) => {
+      const planId = Array.isArray(planIdOrInput)
+        ? planIdOrInput[0]
+        : typeof planIdOrInput === 'object'
+          ? planIdOrInput.planId
+          : planIdOrInput
+      const text = Array.isArray(planIdOrInput)
+        ? planIdOrInput[1]
+        : typeof planIdOrInput === 'object'
+          ? planIdOrInput.summary
+          : summary
+      if (!text?.trim()) throw new Error('A completed operator plan requires a summary.')
+      return useOperatorPlanStore.getState().setSummary(planId, text)
+    },
+    undoStep: async (input: { planId: string; phaseId: string; stepId: string }) => {
+      const current = useOperatorPlanStore.getState().plan
+      if (!current || current.id !== input.planId) throw new Error(`Operator plan "${input.planId}" is not active.`)
+      const snapshot = operatorPlanStepSnapshots.get(stepSnapshotKey(input.planId, input.phaseId, input.stepId))
+      if (!snapshot) return { undone: false as const, reason: 'That step has no snapshot.' }
+      applySceneGraphToEditor(snapshot)
+      const plan = useOperatorPlanStore.getState().updateStep({
+        planId: input.planId,
+        phaseId: input.phaseId,
+        stepId: input.stepId,
+        status: 'pending',
+      })
+      return { undone: true as const, plan, structure: checkStructure() }
     },
     undo: async (planId: string) => {
       const current = useOperatorPlanStore.getState().plan
@@ -704,19 +899,13 @@ export const createPistolaAgentApi = () => {
       const snapshot = operatorPlanSnapshots.get(planId)
       if (!snapshot) return { undone: false as const, reason: 'The pre-plan snapshot is no longer available.' }
       applySceneGraphToEditor(snapshot)
-      operatorPlanSnapshots.delete(planId)
-      operatorPlanBest.delete(planId)
-      operatorPlanBlueprints.delete(planId)
+      clearPlanMemory(planId)
       useOperatorPlanStore.getState().clear(planId)
       return { undone: true as const }
     },
     clear: async (planId?: string) => {
       const current = useOperatorPlanStore.getState().plan
-      if (current && (!planId || current.id === planId)) {
-        operatorPlanSnapshots.delete(current.id)
-        operatorPlanBest.delete(current.id)
-        operatorPlanBlueprints.delete(current.id)
-      }
+      if (current && (!planId || current.id === planId)) clearPlanMemory(current.id)
       useOperatorPlanStore.getState().clear(planId)
       return { cleared: true as const }
     },
@@ -726,7 +915,10 @@ export const createPistolaAgentApi = () => {
     apiVersion: PISTOLA_API_VERSION,
     manual,
     inspect,
-    getNodes: async (ids: string[]) => getNodes({ nodeIds: ids }),
+    getNodes: async (ids?: unknown) => {
+      const nodeIds = normalizeNodeIds(ids)
+      return getNodes({ nodeIds: nodeIds ?? Object.keys(useScene.getState().nodes) })
+    },
     exportScene: async () => {
       const scene = useScene.getState()
       const nodes = Object.values(scene.nodes).filter((node): node is NonNullable<typeof node> => Boolean(node))
@@ -743,6 +935,7 @@ export const createPistolaAgentApi = () => {
         count: nodes.length,
         nodes: nodes.map((node) => {
           const item = node.type === 'item' ? node : null
+          const cad = node.type === 'cad-body' ? describeCadBody(node) : null
           return {
             id: node.id,
             type: node.type,
@@ -752,7 +945,12 @@ export const createPistolaAgentApi = () => {
             rotation: 'rotation' in node ? (node.rotation ?? null) : null,
             scale: 'scale' in node ? (node.scale ?? null) : null,
             assetId: item?.asset?.id ?? null,
-            color: item?.asset?.color ?? ('color' in node ? (node.color ?? null) : null),
+            partId: cad?.partId ?? null,
+            role: cad?.role ?? null,
+            color: cad?.color ?? item?.asset?.color ?? ('color' in node ? (node.color ?? null) : null),
+            opacity: cad?.opacity ?? null,
+            triangles: cad?.triangles ?? null,
+            spec: cad?.spec ?? null,
             bounds: getNodeBounds(node),
           }
         }),
@@ -769,6 +967,8 @@ export const createPistolaAgentApi = () => {
     checkStructure: async () => checkStructure(),
     renderViews: async (input?: { planned?: [number, number, number] }) => renderSceneViews(input),
     renderEightViews,
+    render,
+    renderSheet,
     referencePack,
     reference,
     examples: {
@@ -806,56 +1006,44 @@ export const createPistolaAgentApi = () => {
     selection: () => useViewer.getState().selection,
     executeTool: executeAgentTool,
     taskPlan,
+    exportActions: () => recordedActions.map((action) => structuredClone(action)),
+    replay: async (actions: unknown) => {
+      useScene.getState().clearScene()
+      recordedActions.length = 0
+      const list = asActionList(actions) ?? unwrapActionList(actions)
+      const maxActions = Array.isArray(list) ? Math.max(25, list.length) : 25
+      return run(list, { maxActions })
+    },
     invoke: async (method: string, args?: unknown) => {
       if (!INVOKE_ALLOWLIST.has(method)) {
         throw new Error(`Unknown pistola method "${method}".`)
       }
-      const payload = args === undefined ? [] : Array.isArray(args) ? args : [args]
+      const call = (fn: unknown) => {
+        if (typeof fn !== 'function') throw new Error(`Unknown pistola method "${method}".`)
+        const target = fn as (value?: unknown) => unknown
+        return args === undefined ? target() : target(args)
+      }
       if (method.startsWith('taskPlan.')) {
         const name = method.slice('taskPlan.'.length) as keyof typeof taskPlan
-        const fn = taskPlan[name]
-        if (typeof fn !== 'function') {
-          throw new Error(`Unknown pistola method "${method}".`)
-        }
-        return (fn as (...values: unknown[]) => unknown)(...payload)
+        return call(taskPlan[name])
       }
       if (method.startsWith('examples.')) {
         const name = method.slice('examples.'.length) as keyof typeof api.examples
-        const fn = api.examples[name]
-        if (typeof fn !== 'function') {
-          throw new Error(`Unknown pistola method "${method}".`)
-        }
-        return (fn as (...values: unknown[]) => unknown)(...payload)
+        return call(api.examples[name])
       }
       if (method.startsWith('referencePack.')) {
         const name = method.slice('referencePack.'.length) as keyof typeof referencePack
-        const fn = referencePack[name]
-        if (typeof fn !== 'function') {
-          throw new Error(`Unknown pistola method "${method}".`)
-        }
-        return (fn as (...values: unknown[]) => unknown)(...payload)
+        return call(referencePack[name])
       }
       if (method.startsWith('reference.')) {
         const name = method.slice('reference.'.length) as keyof typeof reference
-        const fn = reference[name]
-        if (typeof fn !== 'function') {
-          throw new Error(`Unknown pistola method "${method}".`)
-        }
-        return (fn as (...values: unknown[]) => unknown)(...payload)
+        return call(reference[name])
       }
       if (method.startsWith('plan.')) {
         const name = method.slice('plan.'.length) as keyof typeof api.plan
-        const fn = api.plan[name]
-        if (typeof fn !== 'function') {
-          throw new Error(`Unknown pistola method "${method}".`)
-        }
-        return (fn as (...values: unknown[]) => unknown)(...payload)
+        return call(api.plan[name])
       }
-      const fn = (api as Record<string, unknown>)[method]
-      if (typeof fn !== 'function') {
-        throw new Error(`Unknown pistola method "${method}".`)
-      }
-      return (fn as (...values: unknown[]) => unknown)(...payload)
+      return call((api as Record<string, unknown>)[method])
     },
   }
 

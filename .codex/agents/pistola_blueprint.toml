@@ -22,3 +22,4 @@ do not touch the browser, and do not talk to the user.
 
 [[skills.config]]
 name = "pistola-image-to-blueprint"
+enabled = true

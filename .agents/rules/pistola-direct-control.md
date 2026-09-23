@@ -49,3 +49,19 @@ Prefer world-space parts. Nested `parentId` children inherit parent scale; compe
 `parentId` child positions are local to the parent, not world coordinates. Primitive ids are `primitive-box`, `primitive-sphere`, `primitive-cylinder`, `primitive-cone`, `primitive-torus`, `primitive-capsule`, `primitive-wedge`. Optional `color` is a hex string on `place_item` and `update_item_properties`.
 
 Local `build_cad_solid` ops include `loft`, `hull` (three profiles), `torus`, `capsule`, and `ellipsoid`. Optional `roughness` / `metalness` / `opacity` are per body. The kernel rejects meshes over 50k triangles. `place_cad_body_in_architecture` instances draw the source mesh, not a box. Items parented to a `cad-body` or `cad-instance` keep their local position (no slab lift).
+
+`group` merges child solids without a boolean. Disjoint shells are allowed. Use it when parts only need to sit together. `nested: true` on `build_cad_solid` opts a part out of the buried-part check.
+
+## Watch mode
+
+Local MCP uses the bridge driver (`PISTOLA_TRANSPORT=bridge`). The build appears in the user's already open tab. Do not reload that tab: a reload drops queued bridge commands. The scene itself is stored in IndexedDB and reloads from there.
+
+WorkBuddy's `codebuddy` CLI calls Pistola tools through `DeferExecuteTool`. That call is denied in non-interactive mode unless `.workbuddy/settings.json` allows `DeferExecuteTool` and `mcp__pistola__*`. `scripts/ide-setup.mjs` writes that allow list. The MCP config also needs `honoured: true`.
+
+## Render
+
+`pistola_render`, `pistola_render_sheet`, `pistola_render_eight_views`, and `pistola_screenshot` return real PNG pixels. `mode: 'layout'` keeps the old bounding-box sheet. Review the labeled eight-view sheet after each assembly milestone. `pistola_task_undo_step` restores one step; `pistola_replay` rebuilds from `exportActions()`.
+
+## Concept gate
+
+Hosts that can generate images still make 2–3 concepts and wait. Hosts without image generation write a measured part table (name, size in meters, color, relation) and review it with `pistola_render_eight_views`. Do not skip the gate, and do not reload the tab to recover a dropped command.

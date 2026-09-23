@@ -1,15 +1,71 @@
 import { countOpenEdges, evaluateCadSolidSpecCached } from '../cad/local-kernel'
 import { buildContactGraph, supportedFromFloor } from './contact-graph'
+import { MeshBVH } from 'three-mesh-bvh'
+import * as THREE from 'three'
 import { finalizeReport, type StructureIssue } from './report'
 import { assemblyTolerance, collectStructureParts, type StructurePart } from './scene-geometry'
 
-const ARRAY_OPS = new Set(['linearArray', 'polarArray', 'mirror'])
+const ARRAY_OPS = new Set(['linearArray', 'polarArray', 'mirror', 'group'])
 
 const overlapVolume = (a: StructurePart['box'], b: StructurePart['box']) => {
   const x = Math.max(0, Math.min(a.max[0], b.max[0]) - Math.max(a.min[0], b.min[0]))
   const y = Math.max(0, Math.min(a.max[1], b.max[1]) - Math.max(a.min[1], b.min[1]))
   const z = Math.max(0, Math.min(a.max[2], b.max[2]) - Math.max(a.min[2], b.min[2]))
   return x * y * z
+}
+
+const partSamples = (part: StructurePart) => {
+  const { positions, indices } = part.mesh
+  const points: THREE.Vector3[] = []
+  const vertexCount = Math.floor(positions.length / 3)
+  const vertexStep = Math.max(1, Math.floor(vertexCount / 24))
+  for (let index = 0; index < vertexCount; index += vertexStep) {
+    points.push(new THREE.Vector3(positions[index * 3] ?? 0, positions[index * 3 + 1] ?? 0, positions[index * 3 + 2] ?? 0))
+  }
+  const triangleCount = Math.floor(indices.length / 3)
+  const triangleStep = Math.max(1, Math.floor(triangleCount / 24))
+  for (let triangle = 0; triangle < triangleCount; triangle += triangleStep) {
+    const i0 = indices[triangle * 3] ?? 0
+    const i1 = indices[triangle * 3 + 1] ?? 0
+    const i2 = indices[triangle * 3 + 2] ?? 0
+    const ax = positions[i0 * 3] ?? 0
+    const ay = positions[i0 * 3 + 1] ?? 0
+    const az = positions[i0 * 3 + 2] ?? 0
+    const bx = positions[i1 * 3] ?? 0
+    const by = positions[i1 * 3 + 1] ?? 0
+    const bz = positions[i1 * 3 + 2] ?? 0
+    const cx = positions[i2 * 3] ?? 0
+    const cy = positions[i2 * 3 + 1] ?? 0
+    const cz = positions[i2 * 3 + 2] ?? 0
+    points.push(new THREE.Vector3((ax + bx + cx) / 3, (ay + by + cy) / 3, (az + bz + cz) / 3))
+  }
+  return points
+}
+
+const insideFraction = (inner: StructurePart, outer: StructurePart) => {
+  const samples = partSamples(inner)
+  if (samples.length === 0 || outer.mesh.positions.length === 0) return 0
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(outer.mesh.positions, 3))
+  if (outer.mesh.indices.length > 0) geometry.setIndex(outer.mesh.indices)
+  try {
+    const tree = new MeshBVH(geometry)
+    const direction = new THREE.Vector3(1, 0.013, 0.017).normalize()
+    let inside = 0
+    let counted = 0
+    for (const point of samples) {
+      const hits = tree.raycast(new THREE.Ray(point, direction), THREE.DoubleSide)
+      const nearest = hits.reduce((min, hit) => Math.min(min, hit.distance), Infinity)
+      if (nearest <= 1e-4) continue
+      counted += 1
+      if (hits.length % 2 === 1) inside += 1
+    }
+    return counted === 0 ? 0 : inside / counted
+  } catch {
+    return 0
+  } finally {
+    geometry.dispose()
+  }
 }
 
 const almostEqualBox = (a: StructurePart['box'], b: StructurePart['box'], tol: number) =>
@@ -86,7 +142,9 @@ const visitDifference = (spec: unknown, path: string, partId: string, issues: St
       })
     }
   }
-  node.children?.forEach((child, index) => visitDifference(child, `${path}.children[${index}]`, partId, issues))
+  node.children?.forEach((child, index) => {
+    visitDifference(child, `${path}.children[${index}]`, partId, issues)
+  })
   if ('child' in node) visitDifference((node as { child?: unknown }).child, `${path}.child`, partId, issues)
 }
 
@@ -224,17 +282,20 @@ export const checkStructure = () => {
         })
       }
       const overlap = overlapVolume(a.box, b.box)
-      const smaller = Math.min(a.volumeHint, b.volumeHint)
-      if (smaller > 0 && overlap > 0.85 * smaller) {
+      const smaller = a.volumeHint <= b.volumeHint ? a : b
+      const larger = smaller === a ? b : a
+      const translucent = (a.opacity ?? 1) < 1 || (b.opacity ?? 1) < 1
+      const optedOut = a.nested === true || b.nested === true
+      if (!translucent && !optedOut && insideFraction(smaller, larger) >= 0.85) {
         issues.push({
           code: 'BURIED_PART',
           severity: 'error',
-          partId: a.volumeHint <= b.volumeHint ? a.id : b.id,
-          otherPartId: a.volumeHint <= b.volumeHint ? b.id : a.id,
+          partId: smaller.id,
+          otherPartId: larger.id,
           measured: { overlap },
           fix: { hint: 'Move the buried part so it is only touching, not inside, the other part.' },
         })
-      } else if (smaller > 0 && overlap > 0.35 * smaller) {
+      } else if (smaller.volumeHint > 0 && overlap > 0.35 * smaller.volumeHint) {
         issues.push({
           code: 'EXCESSIVE_OVERLAP',
           severity: 'warning',

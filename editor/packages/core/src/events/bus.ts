@@ -100,8 +100,12 @@ type CameraControlEvents = {
   'camera-controls:capture': CameraControlEvent
   'camera-controls:top-view': undefined
   'camera-controls:front-view': undefined
-  'camera-controls:orbit-cw': undefined
-  'camera-controls:orbit-ccw': undefined
+  'camera-controls:orbit-cw': { degrees?: number }
+  'camera-controls:orbit-ccw': { degrees?: number }
+  'camera-controls:set-look-at': {
+    position: readonly [number, number, number]
+    target: readonly [number, number, number]
+  }
   'camera-controls:dolly': CameraDollyEvent
   'camera-controls:truck': CameraTruckEvent
   'camera-controls:fit': undefined

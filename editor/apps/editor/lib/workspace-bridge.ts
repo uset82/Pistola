@@ -105,6 +105,8 @@ export type WorkspaceSnapshot = {
     model?: string | null
   } | null
   summary?: string | null
+  visible?: boolean | null
+  focusedAt?: number | null
 }
 
 export type WorkspaceSessionAccess = {
@@ -183,6 +185,8 @@ export const registerWorkspaceSession = (
     macHelperStatus: input.macHelperStatus ?? existing?.snapshot.macHelperStatus ?? null,
     installedModel: input.installedModel ?? existing?.snapshot.installedModel ?? null,
     summary: input.summary ?? existing?.snapshot.summary ?? null,
+    visible: input.visible ?? existing?.snapshot.visible ?? null,
+    focusedAt: input.focusedAt ?? existing?.snapshot.focusedAt ?? null,
   }
 
   if (existing) {
@@ -220,19 +224,41 @@ export const touchWorkspaceSession = (
   return session.snapshot
 }
 
+// A tab with a live event stream beats a stale one; then a visible tab; then the most recently focused.
+const sessionRank = (session: WorkspaceSession) => [
+  session.listeners.size > 0 ? 1 : 0,
+  session.snapshot.visible === false ? 0 : 1,
+  session.snapshot.focusedAt ?? 0,
+  session.snapshot.lastSeenAt,
+]
+
+const outranks = (left: WorkspaceSession, right: WorkspaceSession) => {
+  const a = sessionRank(left)
+  const b = sessionRank(right)
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return (a[index] ?? 0) > (b[index] ?? 0)
+  }
+  return false
+}
+
 export const getActiveWorkspaceSession = (
   access: WorkspaceSessionAccess,
 ): WorkspaceSnapshot | null => {
   pruneExpired()
   const store = getStore()
-  let latest: WorkspaceSession | null = null
+  let best: WorkspaceSession | null = null
   for (const session of store.values()) {
     if (!canAccessWorkspaceSession(session, access)) continue
-    if (!latest || session.snapshot.lastSeenAt > latest.snapshot.lastSeenAt) {
-      latest = session
-    }
+    if (!best || outranks(session, best)) best = session
   }
-  return latest?.snapshot ?? null
+  return best?.snapshot ?? null
+}
+
+export const listWorkspaceSessions = (access: WorkspaceSessionAccess) => {
+  pruneExpired()
+  return [...getStore().values()]
+    .filter((session) => canAccessWorkspaceSession(session, access))
+    .map((session) => ({ ...session.snapshot, streamConnected: session.listeners.size > 0 }))
 }
 
 export const getWorkspaceSession = (access: WorkspaceSessionAccess, sessionId: string) => {
@@ -318,7 +344,9 @@ export const reportWorkspaceCommandResult = (
   }
   session.results = [...session.results.slice(-40), fullResult]
   session.snapshot.lastSeenAt = Date.now()
-  emit(session, { type: 'result', result: fullResult })
+  // Results can carry large payloads such as rendered images; the stream only needs the outcome.
+  const { output: _output, turn: _turn, timeline: _timeline, ...summary } = fullResult
+  emit(session, { type: 'result', result: summary })
   return fullResult
 }
 
@@ -326,10 +354,15 @@ export const getWorkspaceCommandResult = (
   access: WorkspaceSessionAccess,
   sessionId: string,
   commandId: string,
+  options: { consume?: boolean } = {},
 ) => {
   const session = getStore().get(sessionId)
   if (!session || !canAccessWorkspaceSession(session, access)) return null
-  return session.results.find((item) => item.commandId === commandId) || null
+  const result = session.results.find((item) => item.commandId === commandId) || null
+  if (result && options.consume) {
+    session.results = session.results.filter((item) => item.commandId !== commandId)
+  }
+  return result
 }
 
 export const subscribeWorkspaceSession = (

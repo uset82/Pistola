@@ -77,7 +77,7 @@ const CadBodyExtrudedProfileMesh = ({
     if (!firstPoint) return null
     const shape = new Shape()
     shape.moveTo(firstPoint[0], firstPoint[1])
-    remainingPoints.forEach(([x, y]) => shape.lineTo(x, y))
+    for (const [x, y] of remainingPoints) shape.lineTo(x, y)
     shape.closePath()
     const nextGeometry = new ExtrudeGeometry(shape, {
       depth: node.preview.height,

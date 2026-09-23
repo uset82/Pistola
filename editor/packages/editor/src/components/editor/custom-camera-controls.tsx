@@ -1,9 +1,9 @@
 'use client'
 
 import { type CameraControlEvent, emitter, sceneRegistry, useScene } from '@pascal-app/core'
-import { useViewer } from '@pascal-app/viewer'
+import { isPipelineCaptureActive, useViewer } from '@pascal-app/viewer'
 import { CameraControls, CameraControlsImpl } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Box3, Vector3 } from 'three'
 import { EDITOR_LAYER } from '../../lib/constants'
@@ -38,6 +38,11 @@ const isTypingTarget = (target: EventTarget | null) => {
 
 export const CustomCameraControls = () => {
   const controls = useRef<CameraControlsImpl>(null!)
+  useFrame(() => {
+    const controlsImpl = controls.current as (CameraControlsImpl & { enabled?: boolean }) | null
+    if (!controlsImpl) return
+    controlsImpl.enabled = !isPipelineCaptureActive()
+  }, -1)
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
   const selection = useViewer((s) => s.selection)
   const currentLevelId = selection.levelId
@@ -333,28 +338,49 @@ export const CustomCameraControls = () => {
       controls.current.rotatePolarTo(targetAngle, true)
     }
 
-    const handleOrbitCW = () => {
+    const handleOrbitCW = (event?: { degrees?: number }) => {
       if (!controls.current) return
 
       const currentAzimuth = controls.current.azimuthAngle
       const currentPolar = controls.current.polarAngle
-      // Round to nearest 90° increment, then rotate 90° clockwise
+      if (typeof event?.degrees === 'number') {
+        controls.current.rotateTo(currentAzimuth - (event.degrees * Math.PI) / 180, currentPolar, true)
+        return
+      }
       const rounded = Math.round(currentAzimuth / (Math.PI / 2)) * (Math.PI / 2)
       const target = rounded - Math.PI / 2
 
       controls.current.rotateTo(target, currentPolar, true)
     }
 
-    const handleOrbitCCW = () => {
+    const handleOrbitCCW = (event?: { degrees?: number }) => {
       if (!controls.current) return
 
       const currentAzimuth = controls.current.azimuthAngle
       const currentPolar = controls.current.polarAngle
-      // Round to nearest 90° increment, then rotate 90° counter-clockwise
+      if (typeof event?.degrees === 'number') {
+        controls.current.rotateTo(currentAzimuth + (event.degrees * Math.PI) / 180, currentPolar, true)
+        return
+      }
       const rounded = Math.round(currentAzimuth / (Math.PI / 2)) * (Math.PI / 2)
       const target = rounded + Math.PI / 2
 
       controls.current.rotateTo(target, currentPolar, true)
+    }
+
+    const handleSetLookAt = (event: {
+      position: readonly [number, number, number]
+      target: readonly [number, number, number]
+    }) => {
+      controls.current?.setLookAt(
+        event.position[0],
+        event.position[1],
+        event.position[2],
+        event.target[0],
+        event.target[1],
+        event.target[2],
+        true,
+      )
     }
 
     const handleFrontView = () => {
@@ -465,6 +491,7 @@ export const CustomCameraControls = () => {
     emitter.on('camera-controls:front-view', handleFrontView)
     emitter.on('camera-controls:orbit-cw', handleOrbitCW)
     emitter.on('camera-controls:orbit-ccw', handleOrbitCCW)
+    emitter.on('camera-controls:set-look-at', handleSetLookAt)
     emitter.on('camera-controls:dolly', handleDolly)
     emitter.on('camera-controls:truck', handleTruck)
     emitter.on('camera-controls:fit', handleFit)
@@ -477,6 +504,7 @@ export const CustomCameraControls = () => {
       emitter.off('camera-controls:front-view', handleFrontView)
       emitter.off('camera-controls:orbit-cw', handleOrbitCW)
       emitter.off('camera-controls:orbit-ccw', handleOrbitCCW)
+      emitter.off('camera-controls:set-look-at', handleSetLookAt)
       emitter.off('camera-controls:dolly', handleDolly)
       emitter.off('camera-controls:truck', handleTruck)
       emitter.off('camera-controls:fit', handleFit)

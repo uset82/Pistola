@@ -4,6 +4,7 @@ import {
   countOpenEdges,
   evaluateCadSolidSpec,
   KERNEL_TRIANGLE_BUDGET,
+  rawSignedVolume,
   triangleCount,
   validateCadSolidSpec,
 } from './local-kernel'
@@ -338,4 +339,64 @@ test('complexity budget rejects oversized meshes and kernel jobs evaluate on a w
   const mesh = await runKernelJob({ kind: 'evaluate', spec: { op: 'box', size: [1, 1, 1] } })
   assert.ok(triangleCount(mesh) > 1)
   assert.ok((mesh.normals?.length ?? 0) === mesh.positions.length)
+})
+
+test('every solid op has outward winding and group merges without a boolean', () => {
+  const specs = [
+    { op: 'box', size: [1, 1, 1] },
+    { op: 'cylinder', r: 0.4, h: 1 },
+    { op: 'sphere', r: 0.5 },
+    { op: 'extrude', polygon: [[-0.5, -0.4], [0.5, -0.4], [0.5, 0.4], [-0.5, 0.4]], height: 0.2 },
+    { op: 'revolve', profile: [[0.2, 0], [0.4, 0], [0.4, 0.6], [0.2, 0.6]] },
+    { op: 'torus', R: 0.4, r: 0.1 },
+    { op: 'capsule', r: 0.2, h: 0.6 },
+    { op: 'ellipsoid', radii: [0.4, 0.3, 0.2] },
+    { op: 'loft', sections: [[[-0.4, -0.3], [0.4, -0.3], [0.4, 0.3], [-0.4, 0.3]], [[-0.2, -0.15], [0.2, -0.15], [0.2, 0.15], [-0.2, 0.15]]], heights: [0, 0.5] },
+    {
+      op: 'hull',
+      profileXY: [[0, 0], [1, 0], [1, 1], [0, 1]],
+      profileZY: [[0, 0], [1, 0], [1, 1], [0, 1]],
+      profileXZ: [[0, 0], [1, 0], [1, 1], [0, 1]],
+    },
+  ] as const
+  for (const spec of specs) {
+    const mesh = evaluateCadSolidSpec(spec)
+    const signed = rawSignedVolume(mesh.positions, mesh.indices)
+    assert.ok(signed > 0, `${spec.op} signed volume ${signed}`)
+  }
+  const grouped = evaluateCadSolidSpec({
+    op: 'group',
+    children: [
+      { op: 'box', size: [0.4, 0.4, 0.4] },
+      { op: 'box', size: [0.4, 0.4, 0.4], translate: [1, 0, 0] },
+    ],
+  })
+  assert.ok(rawSignedVolume(grouped.positions, grouped.indices) > 0)
+  assert.ok(grouped.volume > 0.1)
+})
+
+test('touching unions weld down to a closed solid', () => {
+  const boxes = evaluateCadSolidSpec({
+    op: 'union',
+    children: [
+      { op: 'box', size: [1, 1, 1] },
+      { op: 'box', size: [1, 1, 1], translate: [1, 0, 0] },
+    ],
+  })
+  assert.equal(countOpenEdges(boxes), 0)
+  assert.ok(rawSignedVolume(boxes.positions, boxes.indices) > 0)
+
+  const stacked = evaluateCadSolidSpec({
+    op: 'union',
+    children: [
+      { op: 'cylinder', r: 0.25, h: 0.5 },
+      { op: 'cylinder', r: 0.25, h: 0.5, translate: [0, 0.5, 0] },
+    ],
+  })
+  const open = countOpenEdges(stacked)
+  assert.ok(open <= 8, `coaxial cylinder union open edges ${open}`)
+  assert.ok(rawSignedVolume(stacked.positions, stacked.indices) > 0)
+  const sphere = evaluateCadSolidSpec({ op: 'sphere', r: 0.3 })
+  assert.equal(countOpenEdges(sphere), 0)
+  assert.ok(rawSignedVolume(sphere.positions, sphere.indices) > 0)
 })

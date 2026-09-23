@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   createNewProject,
   useProjectStore,
@@ -14,6 +14,11 @@ export function ProjectModals() {
 
   const [copied, setCopied] = useState(false)
   const [newProjectInput, setNewProjectInput] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (activeModal === 'new-project') nameInputRef.current?.focus()
+  }, [activeModal])
 
   if (!activeModal) return null
 
@@ -48,7 +53,7 @@ export function ProjectModals() {
                 Project Name
               </label>
               <input
-                autoFocus
+                ref={nameInputRef}
                 className="mt-1.5 w-full rounded-xl border border-white/10 bg-black/30 px-3.5 py-2 text-[13px] text-white placeholder:text-white/30 focus:border-cyan-300 focus:outline-none"
                 defaultValue={newProjectInput || 'Untitled Project'}
                 onChange={(e) => setNewProjectInput(e.target.value)}

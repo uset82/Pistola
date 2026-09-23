@@ -17,34 +17,35 @@ export const boxDistance = (a: StructurePart['box'], b: StructurePart['box']) =>
   return Math.hypot(dx, dy, dz)
 }
 
+const identity = new THREE.Matrix4()
+
 const toGeometry = (part: StructurePart) => {
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(part.mesh.positions, 3))
   if (part.mesh.indices.length > 0) geometry.setIndex(part.mesh.indices)
+  geometry.computeBoundingBox()
   return geometry
 }
 
-const meshDistance = (a: StructurePart, b: StructurePart) => {
+const meshDistance = (a: StructurePart, b: StructurePart, tol: number) => {
   const fallback = boxDistance(a.box, b.box)
   try {
     const ga = toGeometry(a)
     const gb = toGeometry(b)
     const tree = new MeshBVH(ga)
-    const target = { point: new THREE.Vector3(), distance: 0, faceIndex: 0 }
-    const query = new THREE.Vector3()
-    let min = Infinity
-    const pos = gb.getAttribute('position')
-    if (!pos) return fallback
-    const step = Math.max(1, Math.floor(pos.count / 64))
-    for (let i = 0; i < pos.count; i += step) {
-      query.set(pos.getX(i), pos.getY(i), pos.getZ(i))
-      const hit = tree.closestPointToPoint(query, target)
-      if (hit) min = Math.min(min, hit.distance)
-      if (min <= 1e-4) break
-    }
+    gb.boundsTree = new MeshBVH(gb)
+    const hit = tree.closestPointToGeometry(
+      gb,
+      identity,
+      { point: new THREE.Vector3(), distance: Infinity, faceIndex: 0 },
+      { point: new THREE.Vector3(), distance: Infinity, faceIndex: 0 },
+      1e-4,
+      tol + 1e-4,
+    )
     ga.dispose()
     gb.dispose()
-    return Number.isFinite(min) ? min : fallback
+    if (!hit || !Number.isFinite(hit.distance)) return tol + 1
+    return hit.distance
   } catch {
     return fallback
   }
@@ -58,7 +59,7 @@ export const buildContactGraph = (parts: StructurePart[], tol: number) => {
       const right = parts[j]
       if (!left || !right) continue
       if (!boxesOverlap(left.box, right.box, tol)) continue
-      const distance = meshDistance(left, right)
+      const distance = meshDistance(left, right, tol)
       if (distance <= tol) edges.push([left.id, right.id, distance])
     }
   }

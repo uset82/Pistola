@@ -191,7 +191,7 @@ const finishMesh = (positions: number[], indices: number[]): KernelMesh => {
   }
 }
 
-const signedVolume = (positions: number[], indices: number[]) => {
+export const rawSignedVolume = (positions: number[], indices: number[]) => {
   let volume = 0
   for (let i = 0; i < indices.length; i += 3) {
     const a = vertexAt(positions, indices[i])
@@ -199,8 +199,10 @@ const signedVolume = (positions: number[], indices: number[]) => {
     const c = vertexAt(positions, indices[i + 2])
     volume += dot(a, cross(b, c)) / 6
   }
-  return Math.abs(volume)
+  return volume
 }
+
+const signedVolume = (positions: number[], indices: number[]) => Math.abs(rawSignedVolume(positions, indices))
 
 const pushTriangle = (positions: number[], indices: number[], a: Vec3, b: Vec3, c: Vec3) => {
   const start = positions.length / 3
@@ -249,10 +251,10 @@ const cylinderMesh = (r: number, h: number, r2 = r, segments = 32): KernelMesh =
     const b1: Vec3 = [Math.cos(a1) * r, 0, Math.sin(a1) * r]
     const t0: Vec3 = [Math.cos(a0) * r2, h, Math.sin(a0) * r2]
     const t1: Vec3 = [Math.cos(a1) * r2, h, Math.sin(a1) * r2]
-    pushTriangle(positions, indices, b0, b1, t1)
-    pushTriangle(positions, indices, b0, t1, t0)
-    pushTriangle(positions, indices, bottom, b1, b0)
-    pushTriangle(positions, indices, top, t0, t1)
+    pushTriangle(positions, indices, b0, t1, b1)
+    pushTriangle(positions, indices, b0, t0, t1)
+    pushTriangle(positions, indices, bottom, b0, b1)
+    pushTriangle(positions, indices, top, t1, t0)
   }
   return finishMesh(positions, indices)
 }
@@ -260,22 +262,48 @@ const cylinderMesh = (r: number, h: number, r2 = r, segments = 32): KernelMesh =
 const sphereMesh = (r: number, segments = 24): KernelMesh => {
   const positions: number[] = []
   const indices: number[] = []
-  for (let y = 0; y < segments; y += 1) {
-    const v0 = y / segments
-    const v1 = (y + 1) / segments
-    const y0 = Math.cos(v0 * Math.PI) * r + r
-    const y1 = Math.cos(v1 * Math.PI) * r + r
-    const r0 = Math.sin(v0 * Math.PI) * r
-    const r1 = Math.sin(v1 * Math.PI) * r
+  const pole = (y: number) => {
+    const index = positions.length / 3
+    positions.push(0, y, 0)
+    return index
+  }
+  const north = pole(r + r)
+  const rings: number[][] = []
+  for (let y = 1; y < segments; y += 1) {
+    const v = y / segments
+    const ringY = Math.cos(v * Math.PI) * r + r
+    const ringR = Math.sin(v * Math.PI) * r
+    const ring: number[] = []
     for (let x = 0; x < segments; x += 1) {
-      const a0 = (x / segments) * Math.PI * 2
-      const a1 = ((x + 1) / segments) * Math.PI * 2
-      const p00: Vec3 = [Math.cos(a0) * r0, y0, Math.sin(a0) * r0]
-      const p10: Vec3 = [Math.cos(a1) * r0, y0, Math.sin(a1) * r0]
-      const p01: Vec3 = [Math.cos(a0) * r1, y1, Math.sin(a0) * r1]
-      const p11: Vec3 = [Math.cos(a1) * r1, y1, Math.sin(a1) * r1]
-      if (r0 > 1e-8) pushTriangle(positions, indices, p00, p10, p11)
-      if (r1 > 1e-8) pushTriangle(positions, indices, p00, p11, p01)
+      const angle = (x / segments) * Math.PI * 2
+      ring.push(positions.length / 3)
+      positions.push(Math.cos(angle) * ringR, ringY, Math.sin(angle) * ringR)
+    }
+    rings.push(ring)
+  }
+  const south = pole(0)
+  const link = (a: number, b: number, c: number) => {
+    indices.push(a, b, c)
+  }
+  const first = rings[0]
+  const last = rings[rings.length - 1]
+  if (first) {
+    for (let x = 0; x < segments; x += 1) {
+      link(north, first[x] ?? 0, first[(x + 1) % segments] ?? 0)
+    }
+  }
+  for (let y = 0; y < rings.length - 1; y += 1) {
+    const lower = rings[y] ?? []
+    const upper = rings[y + 1] ?? []
+    for (let x = 0; x < segments; x += 1) {
+      const next = (x + 1) % segments
+      link(lower[x] ?? 0, lower[next] ?? 0, upper[next] ?? 0)
+      link(lower[x] ?? 0, upper[next] ?? 0, upper[x] ?? 0)
+    }
+  }
+  if (last) {
+    for (let x = 0; x < segments; x += 1) {
+      link(last[x] ?? 0, south, last[(x + 1) % segments] ?? 0)
     }
   }
   return finishMesh(positions, indices)
@@ -381,14 +409,14 @@ const extrudeSolid = (polygon: Vec2[], height: number, path = 'spec.polygon'): K
     const a = vec2(verts[num(i0)])
     const b = vec2(verts[num(i1)])
     const c = vec2(verts[num(i2)])
-    pushTriangle(positions, indices, [a[0], 0, a[1]], [c[0], 0, c[1]], [b[0], 0, b[1]])
-    pushTriangle(positions, indices, [a[0], height, a[1]], [b[0], height, b[1]], [c[0], height, c[1]])
+    pushTriangle(positions, indices, [a[0], 0, a[1]], [b[0], 0, b[1]], [c[0], 0, c[1]])
+    pushTriangle(positions, indices, [a[0], height, a[1]], [c[0], height, c[1]], [b[0], height, b[1]])
   }
   for (let i = 0; i < outer.length; i += 1) {
     const a = vec2(outer[i])
     const b = vec2(outer[(i + 1) % outer.length])
-    pushTriangle(positions, indices, [a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], height, b[1]])
-    pushTriangle(positions, indices, [a[0], 0, a[1]], [b[0], height, b[1]], [a[0], height, a[1]])
+    pushTriangle(positions, indices, [a[0], 0, a[1]], [b[0], height, b[1]], [b[0], 0, b[1]])
+    pushTriangle(positions, indices, [a[0], 0, a[1]], [a[0], height, a[1]], [b[0], height, b[1]])
   }
   return finishMesh(positions, indices)
 }
@@ -402,14 +430,14 @@ const extrudeProfileXy = (polygon: Vec2[], zMin: number, zMax: number, path = 's
     const a = vec2(verts[num(i0)])
     const b = vec2(verts[num(i1)])
     const c = vec2(verts[num(i2)])
-    pushTriangle(positions, indices, [a[0], a[1], zMin], [c[0], c[1], zMin], [b[0], b[1], zMin])
-    pushTriangle(positions, indices, [a[0], a[1], zMax], [b[0], b[1], zMax], [c[0], c[1], zMax])
+    pushTriangle(positions, indices, [a[0], a[1], zMin], [b[0], b[1], zMin], [c[0], c[1], zMin])
+    pushTriangle(positions, indices, [a[0], a[1], zMax], [c[0], c[1], zMax], [b[0], b[1], zMax])
   }
   for (let i = 0; i < outer.length; i += 1) {
     const a = vec2(outer[i])
     const b = vec2(outer[(i + 1) % outer.length])
-    pushTriangle(positions, indices, [a[0], a[1], zMin], [b[0], b[1], zMin], [b[0], b[1], zMax])
-    pushTriangle(positions, indices, [a[0], a[1], zMin], [b[0], b[1], zMax], [a[0], a[1], zMax])
+    pushTriangle(positions, indices, [a[0], a[1], zMin], [b[0], b[1], zMax], [b[0], b[1], zMin])
+    pushTriangle(positions, indices, [a[0], a[1], zMin], [a[0], a[1], zMax], [b[0], b[1], zMax])
   }
   return finishMesh(positions, indices)
 }
@@ -433,14 +461,14 @@ const extrudeProfileZy = (polygon: Vec2[], xMin: number, xMax: number, path = 's
     const a = vec2(verts[num(i0)])
     const b = vec2(verts[num(i1)])
     const c = vec2(verts[num(i2)])
-    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMin, c[1], c[0]], [xMin, b[1], b[0]])
-    pushTriangle(positions, indices, [xMax, a[1], a[0]], [xMax, b[1], b[0]], [xMax, c[1], c[0]])
+    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMin, b[1], b[0]], [xMin, c[1], c[0]])
+    pushTriangle(positions, indices, [xMax, a[1], a[0]], [xMax, c[1], c[0]], [xMax, b[1], b[0]])
   }
   for (let i = 0; i < outer.length; i += 1) {
     const a = vec2(outer[i])
     const b = vec2(outer[(i + 1) % outer.length])
-    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMin, b[1], b[0]], [xMax, b[1], b[0]])
-    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMax, b[1], b[0]], [xMax, a[1], a[0]])
+    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMax, b[1], b[0]], [xMin, b[1], b[0]])
+    pushTriangle(positions, indices, [xMin, a[1], a[0]], [xMax, a[1], a[0]], [xMax, b[1], b[0]])
   }
   return finishMesh(positions, indices)
 }
@@ -540,8 +568,8 @@ const revolveMesh = (profile: Vec2[], angleDeg = 360, segments = 32, path = 'spe
       const p10 = revolvePoint(x0, y0, a1)
       const p01 = revolvePoint(x1, y1, a0)
       const p11 = revolvePoint(x1, y1, a1)
-      pushTriangle(positions, indices, p00, p10, p11)
-      pushTriangle(positions, indices, p00, p11, p01)
+      pushTriangle(positions, indices, p00, p11, p10)
+      pushTriangle(positions, indices, p00, p01, p11)
     }
   }
   if (!closed) {
@@ -550,8 +578,8 @@ const revolveMesh = (profile: Vec2[], angleDeg = 360, segments = 32, path = 'spe
       const a = vec2(verts[num(i0)])
       const b = vec2(verts[num(i1)])
       const c = vec2(verts[num(i2)])
-      pushTriangle(positions, indices, revolvePoint(a[0], a[1], 0), revolvePoint(c[0], c[1], 0), revolvePoint(b[0], b[1], 0))
-      pushTriangle(positions, indices, revolvePoint(a[0], a[1], angle), revolvePoint(b[0], b[1], angle), revolvePoint(c[0], c[1], angle))
+      pushTriangle(positions, indices, revolvePoint(a[0], a[1], 0), revolvePoint(b[0], b[1], 0), revolvePoint(c[0], c[1], 0))
+      pushTriangle(positions, indices, revolvePoint(a[0], a[1], angle), revolvePoint(c[0], c[1], angle), revolvePoint(b[0], b[1], angle))
     }
   }
   return finishMesh(positions, indices)
@@ -605,6 +633,40 @@ const brushToMesh = (brush: Brush): KernelMesh => {
   return finishMesh(positions, indices)
 }
 
+const weldByPosition = (mesh: KernelMesh): KernelMesh => {
+  const map = new Map<string, number>()
+  const positions: number[] = []
+  const remap = new Map<number, number>()
+  const count = mesh.positions.length / 3
+  for (let index = 0; index < count; index += 1) {
+    const x = mesh.positions[index * 3] ?? 0
+    const y = mesh.positions[index * 3 + 1] ?? 0
+    const z = mesh.positions[index * 3 + 2] ?? 0
+    const key = `${x.toFixed(4)},${y.toFixed(4)},${z.toFixed(4)}`
+    let id = map.get(key)
+    if (id === undefined) {
+      id = positions.length / 3
+      map.set(key, id)
+      positions.push(x, y, z)
+    }
+    remap.set(index, id)
+  }
+  return finishMesh(
+    positions,
+    mesh.indices.map((index) => remap.get(index) ?? index),
+  )
+}
+
+const reverseWinding = (mesh: KernelMesh): KernelMesh => {
+  const indices = [...mesh.indices]
+  for (let index = 0; index < indices.length; index += 3) {
+    const swap = indices[index + 1]
+    indices[index + 1] = indices[index + 2] ?? 0
+    indices[index + 2] = swap ?? 0
+  }
+  return finishMesh(mesh.positions, indices)
+}
+
 const evaluateBoolean = (left: KernelMesh, right: KernelMesh, op: 'union' | 'difference' | 'intersection') => {
   const operation = op === 'union' ? ADDITION : op === 'difference' ? SUBTRACTION : INTERSECTION
   const a = meshToBrush(left)
@@ -617,7 +679,10 @@ const evaluateBoolean = (left: KernelMesh, right: KernelMesh, op: 'union' | 'dif
     if (mesh.positions.length === 0) {
       throw new Error(`CAD ${op} produced an empty solid.`)
     }
-    return mesh
+    const oriented = rawSignedVolume(mesh.positions, mesh.indices) < 0 ? reverseWinding(mesh) : mesh
+    if (countOpenEdges(oriented) === 0) return oriented
+    const welded = weldByPosition(oriented)
+    return countOpenEdges(welded) < countOpenEdges(oriented) ? welded : oriented
   } catch (error) {
     a.geometry.dispose()
     b.geometry.dispose()
@@ -745,8 +810,8 @@ const loftMesh = (
       const p1 = sectionToWorld(vec2(lower[(p + 1) % sampleCount]), along0, axis)
       const p2 = sectionToWorld(vec2(upper[(p + 1) % sampleCount]), along1, axis)
       const p3 = sectionToWorld(vec2(upper[p]), along1, axis)
-      pushTriangle(positions, indices, p0, p1, p2)
-      pushTriangle(positions, indices, p0, p2, p3)
+      pushTriangle(positions, indices, p0, p2, p1)
+      pushTriangle(positions, indices, p0, p3, p2)
     }
   }
   const capRing = (ring: Vec2[], along: number, flip: boolean) => {
@@ -761,8 +826,8 @@ const loftMesh = (
   }
   const start = rings[0]
   const end = rings[rings.length - 1]
-  if (start) capRing(start, heights[0] ?? 0, true)
-  if (end) capRing(end, heights[heights.length - 1] ?? span, false)
+  if (start) capRing(start, heights[0] ?? 0, false)
+  if (end) capRing(end, heights[heights.length - 1] ?? span, true)
   return finishMesh(positions, indices)
 }
 
@@ -788,7 +853,7 @@ const torusMesh = (major: number, minor: number, radial = 32, tubular = 24): Ker
       const b = i1 * tubular + j
       const c = i1 * tubular + j1
       const d = i * tubular + j1
-      indices.push(a, b, c, a, c, d)
+      indices.push(a, c, b, a, d, c)
     }
   }
   return finishMesh(positions, indices)
@@ -849,6 +914,11 @@ const evaluateNode = (spec: CadSolidSpec, path = 'spec'): KernelMesh => {
           evaluateBoolean(current, evaluateNode(child, `${path}.children[${index + 1}]`), 'union'),
         evaluateNode(first, `${path}.children[0]`),
       )
+      break
+    }
+    case 'group': {
+      if (spec.children.length === 0) throw new CadSpecError(`${path}.children`, 'group needs at least one solid.')
+      mesh = mergeMeshes(spec.children.map((child, index) => evaluateNode(child, `${path}.children[${index}]`)))
       break
     }
     case 'difference': {

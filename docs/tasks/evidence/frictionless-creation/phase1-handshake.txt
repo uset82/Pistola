@@ -1,0 +1,33 @@
+2026-09-22 Phase 1 evidence
+
+$ printf initialize+ping (newline) | node editor/tooling/pistola-mcp/src/index.ts
+{"jsonrpc":"2.0","id":2,"result":{}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"pistola","version":"0.2.0"}}}
+exit=0
+
+$ node --test tooling/pistola-mcp/src/stdio.test.ts src/log.test.ts
+ok 1 - appendMcpLog writes tool, ok, error codes and ms
+ok 2 - errorCodeFromText prefers JSON code then error text
+ok 3 - answers newline-delimited initialize, tools/list and ping
+ok 4 - still answers a legacy Content-Length request in the same framing
+ok 5 - exits cleanly when stdin closes
+# tests 5
+# pass 5
+# fail 0
+
+$ node editor/tooling/pistola-mcp/src/index.ts --doctor
+ok   node    v22.22.0 (the server runs .ts directly and needs Node 22.18 or newer)
+ok   editor  http://127.0.0.1:3002 responded 200
+ok   auth    local operator accepted
+ok   tab     a live workspace tab is registered
+pistola doctor: all checks passed
+
+$ node sdk-client-check.mjs  (official @modelcontextprotocol/sdk Client + StdioClientTransport)
+{
+  "connectedMs": 2964,
+  "server": {
+    "name": "pistola",
+    "version": "0.2.0"
+  },
+  "toolCount": 39,
+  "statusText": "{\n  \"ok\": true,\n  \"doctor\": {\n    \"ok\": true,\n    \"checks\": [\n      {\n        \"name\": \"node\",\n        \"ok\": true,\n        \"detail\": \"v22.22.0 (the server runs .ts directly and needs Node 22.18 or newer)\"\n      },\n      {\n        \"name\": \"editor\",\n        \"ok\": true,\n        \"detail\": \"http://127.0.0.1:3002 responded 200\"\n      },\n      {\n        \"name\": \"auth\",\n        \"ok\": true,\n        \"detail\": \"local operator accepted\"\n      },\n      {\n        \"name\": \"tab\",\n        \"ok\": true,\n        \"detail\": \"a live workspace tab is registered\"\n      }\n    ]\n  },\n  \"target\": {\n    \"name\": \"local\",\n   "

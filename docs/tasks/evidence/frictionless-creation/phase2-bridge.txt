@@ -1,0 +1,53 @@
+2026-09-22 Phase 2 evidence
+
+$ node bridge-check.mjs  (official MCP SDK client -> pistola MCP, PISTOLA_TRANSPORT unset, target local)
+{
+  "open": {
+    "ms": 391,
+    "isError": false,
+    "head": "{\n  \"url\": \"http://127.0.0.1:3002/workspace\",\n  \"apiVersion\": 1,\n  \"signInRequired\": false,\n  \"tab\": {\n    \"sessionId\": \"524934fa-f4e4-478a-91c6-7b51ca615ed0\",\n    \"connectedAt\": 1790102172213,\n    \"lastSeenAt\": 1790102822287,\n    \"phase\": \"cad\",\n    \"mode\": \""
+  },
+  "run": {
+    "ms": 596,
+    "isError": false,
+    "ok": true,
+    "completed": 1,
+    "bodyIds": [
+      "cbody_x0xlccazb0s6oirc"
+    ]
+  },
+  "screenshot": {
+    "ms": 350,
+    "types": [
+      "image",
+      "text"
+    ],
+    "bytes": 2096,
+    "err": null
+  },
+  "undo": {
+    "ms": 317,
+    "isError": false
+  },
+  "status": {
+    "transport": "bridge",
+    "tabs": "a live workspace tab is registered"
+  }
+}
+
+$ node --test tooling/pistola-mcp/src/drivers/bridge.test.ts
+ok 1 - open fails with instructions when no tab is registered
+ok 2 - screenshot returns the image the tab reported under output
+ok 3 - a failed page command surfaces its error
+ok 4 - a command fails fast when the tab loses its stream
+ok 5 - an unreachable editor points at dev:editor
+# pass 5
+# fail 0
+
+$ bun test ./apps/editor/lib/workspace-bridge.test.ts ./packages/editor/src/lib/agent-api/index.test.ts
+ 12 pass
+ 0 fail
+Ran 12 tests across 2 files. [1288.00ms]
+
+In-page selection probe (window.pistola.run build_cad_solid, then undo):
+{ ok: true, sameSelection: true, panelOpen: false }

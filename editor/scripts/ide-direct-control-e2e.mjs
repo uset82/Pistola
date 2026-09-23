@@ -1,10 +1,12 @@
 import { spawn } from 'node:child_process'
 import { createReadStream } from 'node:fs'
-import { mkdir, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { inflateSync } from 'node:zlib'
 import { createMcpClient, parseToolJson } from './mcp-stdio-client.mjs'
+import { loadChromium } from './load-chromium.mjs'
 
 const scriptsRoot = path.dirname(fileURLToPath(import.meta.url))
 const editorRoot = path.resolve(scriptsRoot, '..')
@@ -64,6 +66,96 @@ const serveExport = async (port) => {
   })
   await new Promise((resolve) => server.listen(port, '127.0.0.1', resolve))
   return server
+}
+
+const paeth = (left, up, upLeft) => {
+  const estimate = left + up - upLeft
+  const leftDistance = Math.abs(estimate - left)
+  const upDistance = Math.abs(estimate - up)
+  const diagonal = Math.abs(estimate - upLeft)
+  if (leftDistance <= upDistance && leftDistance <= diagonal) return left
+  if (upDistance <= diagonal) return up
+  return upLeft
+}
+
+const pngLuminanceSpread = (buffer) => {
+  if (buffer.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('Render is not a PNG.')
+  let offset = 8
+  let width = 0
+  let height = 0
+  let colorType = 2
+  const chunks = []
+  while (offset + 8 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset)
+    const type = buffer.subarray(offset + 4, offset + 8).toString('ascii')
+    const data = buffer.subarray(offset + 8, offset + 8 + length)
+    if (type === 'IHDR') {
+      width = data.readUInt32BE(0)
+      height = data.readUInt32BE(4)
+      colorType = data[9]
+    } else if (type === 'IDAT') chunks.push(data)
+    else if (type === 'IEND') break
+    offset += 12 + length
+  }
+  const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[colorType]
+  if (!channels || width < 1 || height < 1) throw new Error(`Unsupported PNG color type ${colorType}.`)
+  const raw = inflateSync(Buffer.concat(chunks))
+  const stride = width * channels
+  let previous = Buffer.alloc(stride)
+  let min = 255
+  let max = 0
+  for (let y = 0; y < height; y += 1) {
+    const filter = raw[y * (stride + 1)] ?? 0
+    const row = Buffer.alloc(stride)
+    const start = y * (stride + 1) + 1
+    for (let index = 0; index < stride; index += 1) {
+      const value = raw[start + index] ?? 0
+      const left = index >= channels ? row[index - channels] : 0
+      const up = previous[index]
+      const upLeft = index >= channels ? previous[index - channels] : 0
+      if (filter === 1) row[index] = (value + left) & 255
+      else if (filter === 2) row[index] = (value + up) & 255
+      else if (filter === 3) row[index] = (value + Math.floor((left + up) / 2)) & 255
+      else if (filter === 4) row[index] = (value + paeth(left, up, upLeft)) & 255
+      else row[index] = value
+    }
+    for (let index = 0; index < stride; index += channels * 8) {
+      const luminance = channels === 1
+        ? row[index]
+        : Math.round(0.2126 * row[index] + 0.7152 * row[index + 1] + 0.0722 * row[index + 2])
+      min = Math.min(min, luminance)
+      max = Math.max(max, luminance)
+    }
+    previous = row
+  }
+  return { width, height, spread: max - min }
+}
+
+const waitForBridgeTab = async () => {
+  const chromium = await loadChromium()
+  const browser = await chromium.launch({
+    headless: true,
+    channel: 'chrome',
+    args: ['--enable-unsafe-webgpu', '--use-angle=d3d11'],
+  })
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+  await page.goto('http://127.0.0.1:3002/workspace', { waitUntil: 'domcontentloaded', timeout: 60_000 })
+  await page.waitForFunction(() => document.documentElement.dataset.pistolaAgent === 'ready', undefined, { timeout: 60_000 })
+  const sessionId = await page.evaluate(() => sessionStorage.getItem('pistola-workspace-session-id'))
+  if (!sessionId) {
+    await browser.close()
+    throw new Error('The stand-in tab did not create a workspace session.')
+  }
+  const deadline = Date.now() + 20_000
+  while (Date.now() < deadline) {
+    const response = await fetch('http://127.0.0.1:3002/api/workspace/session')
+    const body = await response.json().catch(() => ({}))
+    const mine = (body.sessions ?? []).find((session) => session.sessionId === sessionId)
+    if (mine?.streamConnected) return { browser, sessionId }
+    await new Promise((resolve) => setTimeout(resolve, 300))
+  }
+  await browser.close()
+  throw new Error('The stand-in tab did not register a bridge stream.')
 }
 
 const localAlive = async (url) => {
@@ -144,11 +236,19 @@ const main = async () => {
     }
   }
 
+  let standIn = null
+  let transport = 'browser'
+  if (targetFlag === 'local' && pageUrl.startsWith('http://127.0.0.1:3002')) {
+    standIn = await waitForBridgeTab()
+    transport = 'bridge'
+  }
+
   const child = spawn('node', [path.join(editorRoot, 'tooling/pistola-mcp/src/index.ts')], {
     env: {
       ...process.env,
-      PISTOLA_TRANSPORT: 'browser',
-      PISTOLA_TARGET: pageUrl,
+      PISTOLA_TRANSPORT: transport,
+      PISTOLA_TARGET: transport === 'bridge' ? 'local' : pageUrl,
+      ...(standIn?.sessionId ? { PISTOLA_SESSION_ID: standIn.sessionId } : {}),
       PISTOLA_BROWSER_HEADLESS: process.env.PISTOLA_BROWSER_HEADLESS ?? '1',
       PISTOLA_BROWSER_PROFILE: path.join(evidenceDir, `.browser-profile-${targetFlag}`),
       ...(assistantTools ? { PISTOLA_MCP_ASSISTANT_TOOLS: '1' } : { PISTOLA_MCP_ASSISTANT_TOOLS: '' }),
@@ -258,8 +358,37 @@ const main = async () => {
     if (!image?.data) {
       throw new Error(`Screenshot tool did not return image content: ${JSON.stringify(shot).slice(0, 800)}`)
     }
+    const png = Buffer.from(image.data, 'base64')
+    const spread = pngLuminanceSpread(png)
+    if (spread.spread < 12) {
+      throw new Error(`Render is flat (luminance spread ${spread.spread}).`)
+    }
     const screenshotPath = path.join(evidenceDir, `sailboat-${targetFlag}.png`)
-    await writeFile(screenshotPath, Buffer.from(image.data, 'base64'))
+    await writeFile(screenshotPath, png)
+
+    const portraitPath = path.join(repoRoot, '.pistola/studio/claude-self-portrait/actions.json')
+    let selfPortrait = 'missing'
+    try {
+      const portraitActions = JSON.parse(await readFile(portraitPath, 'utf8'))
+      const replayActions = Array.isArray(portraitActions)
+        ? portraitActions
+        : Array.isArray(portraitActions.order) && portraitActions.groups
+          ? portraitActions.order.flatMap((name) => portraitActions.groups[name] ?? [])
+          : portraitActions.actions
+      const replayed = parseToolJson(await client.callTool('pistola_replay', { actions: replayActions }))
+      if (replayed.ok === false || replayed.error) throw new Error(JSON.stringify(replayed).slice(0, 500))
+      const structure = parseToolJson(await client.callTool('pistola_check'))
+      if ((structure.errorCount ?? 1) !== 0) {
+        throw new Error(`Self-portrait structure errors: ${structure.errorCount}`)
+      }
+      selfPortrait = '0 errors'
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+        selfPortrait = 'missing'
+      } else {
+        throw error
+      }
+    }
 
     const status = parseToolJson(await client.callTool('pistola_status'))
     if ((status.forbiddenRequestCount ?? 0) > 0) {
@@ -280,6 +409,10 @@ const main = async () => {
           pageUrl,
           apiVersion: opened.apiVersion,
           forbiddenRequestCount: status.forbiddenRequestCount ?? 0,
+          framing: 'newline',
+          transport,
+          luminanceSpread: spread.spread,
+          selfPortrait,
           screenshot: screenshotPath,
         },
         null,
@@ -288,6 +421,7 @@ const main = async () => {
     )
   } finally {
     child.kill()
+    await standIn?.browser.close()
     server?.close()
     setTimeout(() => process.exit(0), 50)
   }

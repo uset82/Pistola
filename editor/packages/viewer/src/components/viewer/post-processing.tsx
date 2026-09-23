@@ -23,8 +23,9 @@ import {
   vec4,
   velocity,
 } from 'three/tsl'
-import { RenderPipeline, type WebGPURenderer } from 'three/webgpu'
+import { RenderPipeline, type WebGPURenderer, PerspectiveCamera } from 'three/webgpu'
 import { SCENE_LAYER, ZONE_LAYER } from '../../lib/layers'
+import { holdPipelineCapture, releasePipelineCapture, takePipelineCapture } from '../../lib/pipeline-capture'
 import useViewer from '../../store/use-viewer'
 
 // SSGI Parameters — laptop-budget values from pascalorg/editor main lighting pass
@@ -305,6 +306,73 @@ const PostProcessingPasses = () => {
     }
 
     try {
+      const perspective = camera as PerspectiveCamera
+      const capture = takePipelineCapture()
+      if (capture && perspective.isPerspectiveCamera) {
+        const saved = {
+          position: perspective.position.clone(),
+          quaternion: perspective.quaternion.clone(),
+          fov: perspective.fov,
+          near: perspective.near,
+          far: perspective.far,
+          zoom: perspective.zoom,
+          mask: perspective.layers.mask,
+        }
+        perspective.position.set(capture.pose.position[0], capture.pose.position[1], capture.pose.position[2])
+        perspective.quaternion.set(
+          capture.pose.quaternion[0],
+          capture.pose.quaternion[1],
+          capture.pose.quaternion[2],
+          capture.pose.quaternion[3],
+        )
+        perspective.fov = capture.pose.fov
+        perspective.near = capture.pose.near
+        perspective.far = capture.pose.far
+        perspective.zoom = 1
+        perspective.layers.mask = (1 << SCENE_LAYER) | (1 << ZONE_LAYER)
+        perspective.updateProjectionMatrix()
+        perspective.updateMatrixWorld()
+        holdPipelineCapture()
+        const dom = renderer.domElement
+        // WebGPU only exposes the presented frame. Wait one beat, then read the canvas.
+        window.setTimeout(() => {
+          try {
+            const width = dom.width
+            const height = dom.height
+            const snapshot = document.createElement('canvas')
+            snapshot.width = width
+            snapshot.height = height
+            const snapshotContext = snapshot.getContext('2d', { willReadFrequently: true })
+            if (!snapshotContext) throw new Error('Could not copy the capture frame.')
+            const url = dom.toDataURL('image/png')
+            const image = new Image()
+            image.onload = () => {
+              snapshotContext.drawImage(image, 0, 0, width, height)
+              capture.resolve({
+                width,
+                height,
+                pixels: snapshotContext.getImageData(0, 0, width, height).data,
+              })
+            }
+            image.onerror = () => capture.reject(new Error('Could not read the capture frame.'))
+            image.src = url
+          } catch (error) {
+            capture.reject(error instanceof Error ? error : new Error(String(error)))
+          } finally {
+            perspective.position.copy(saved.position)
+            perspective.quaternion.copy(saved.quaternion)
+            perspective.fov = saved.fov
+            perspective.near = saved.near
+            perspective.far = saved.far
+            perspective.zoom = saved.zoom
+            perspective.layers.mask = saved.mask
+            perspective.updateProjectionMatrix()
+            perspective.updateMatrixWorld()
+            releasePipelineCapture()
+          }
+        }, 120)
+      }
+
       // Clear alpha=0 so background pixels in the output MRT attachment (index 0) get a=0,
       // making scenePassColor.a a reliable geometry mask (geometry pixels write a=1 via output node).
       ;(renderer as any).setClearAlpha(0)

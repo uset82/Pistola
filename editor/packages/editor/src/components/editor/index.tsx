@@ -10,7 +10,7 @@ import { type SaveStatus, useAutoSave } from '../../hooks/use-auto-save'
 import { useKeyboard } from '../../hooks/use-keyboard'
 import {
   applySceneGraphToEditor,
-  loadSceneFromLocalStorage,
+  loadPersistedScene,
   syncEditorSelectionFromCurrentScene,
   type SceneGraph,
 } from '../../lib/scene'
@@ -37,6 +37,7 @@ import { FloatingActionMenu } from './floating-action-menu'
 import { Grid } from './grid'
 import { PresetThumbnailGenerator } from './preset-thumbnail-generator'
 import { SelectionManager } from './selection-manager'
+import { SceneCapture } from './scene-capture'
 import { SiteEdgeLabels } from './site-edge-labels'
 import { ThumbnailGenerator } from './thumbnail-generator'
 import { TransformOverlay } from './transform-overlay'
@@ -153,7 +154,7 @@ export default function Editor({
       setIsSceneLoading(true)
 
       try {
-        const sceneGraph = onLoad ? await onLoad() : loadSceneFromLocalStorage()
+        const sceneGraph = onLoad ? await onLoad() : await loadPersistedScene()
         if (!cancelled) {
           applySceneGraphToEditor(sceneGraph)
         }
@@ -238,6 +239,7 @@ export default function Editor({
             {!isPreviewMode && <ToolManager />}
             <CustomCameraControls />
             <ThumbnailGenerator onThumbnailCapture={onThumbnailCapture} />
+            <SceneCapture />
             <PresetThumbnailGenerator />
             {!isPreviewMode && workspace === 'architecture' && <SiteEdgeLabels />}
             {isPreviewMode && <InteractiveSystem />}

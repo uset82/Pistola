@@ -9,20 +9,21 @@ const skillPath = path.join(repoRoot, '.agents/skills/pistola-direct-control/SKI
 const checkOnly = process.argv.includes('--check')
 const installUser = process.argv.includes('--install-user')
 
+const localEnv = {
+  PISTOLA_TARGET: 'local',
+  PISTOLA_TRANSPORT: 'bridge',
+}
+
 const mcpEntry = {
   command: 'node',
   args: [path.join(repoRoot, 'editor/tooling/pistola-mcp/src/index.ts')],
-  env: {
-    PISTOLA_TARGET: 'local',
-  },
+  env: localEnv,
 }
 
 const relativeMcpEntry = {
   command: 'node',
   args: ['${workspaceFolder}/editor/tooling/pistola-mcp/src/index.ts'],
-  env: {
-    PISTOLA_TARGET: 'local',
-  },
+  env: localEnv,
 }
 
 const requiredSnippets = [
@@ -62,7 +63,7 @@ const mergeJson = async (filePath, updater) => {
     return
   }
   await mkdir(path.dirname(filePath), { recursive: true })
-  if (await readOptional(filePath)) {
+  if (await readOptional(filePath) && !(await readOptional(`${filePath}.bak`))) {
     await copyFile(filePath, `${filePath}.bak`)
   }
   await writeFile(filePath, rendered)
@@ -100,7 +101,7 @@ await mergeJson(path.join(repoRoot, '.mcp.json'), (current) => ({
     pistola: {
       command: 'node',
       args: ['editor/tooling/pistola-mcp/src/index.ts'],
-      env: { PISTOLA_TARGET: 'local' },
+      env: localEnv,
     },
   },
 }))
@@ -125,7 +126,7 @@ await mergeJson(path.join(repoRoot, '.agents/mcp_config.json'), (current) => ({
     pistola: {
       command: 'node',
       args: [path.join(repoRoot, 'editor/tooling/pistola-mcp/src/index.ts').replaceAll('\\', '/')],
-      env: { PISTOLA_TARGET: 'local' },
+      env: localEnv,
     },
   },
 }))
@@ -138,8 +139,16 @@ await mergeJson(path.join(repoRoot, '.workbuddy/mcp.json'), (current) => ({
     pistola: {
       command: 'node',
       args: ['editor/tooling/pistola-mcp/src/index.ts'],
-      env: { PISTOLA_TARGET: 'local' },
+      env: localEnv,
     },
+  },
+}))
+
+await mergeJson(path.join(repoRoot, '.workbuddy/settings.json'), (current) => ({
+  ...current,
+  permissions: {
+    ...(current.permissions ?? {}),
+    allow: Array.from(new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*', 'DeferExecuteTool'])),
   },
 }))
 
@@ -150,7 +159,7 @@ await mergeJson(path.join(repoRoot, '.qoder/settings.json'), (current) => ({
     pistola: {
       command: 'node',
       args: ['editor/tooling/pistola-mcp/src/index.ts'],
-      env: { PISTOLA_TARGET: 'local' },
+      env: localEnv,
     },
   },
   mcp: {
@@ -190,6 +199,8 @@ for (const name of ruleNames) {
 }
 
 if (installUser && !checkOnly) {
+  // Antigravity stores MCP config in the user profile (~/.gemini/config/mcp_config.json).
+  // It has no portable project path, so this block runs only for --install-user.
   await mergeJson(path.join(os.homedir(), '.gemini/config/mcp_config.json'), (current) => ({
     ...current,
     mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry },

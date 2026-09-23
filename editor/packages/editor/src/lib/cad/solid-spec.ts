@@ -65,6 +65,13 @@ export type CadSolidSpec =
       scale?: [number, number, number]
     }
   | {
+      op: 'group'
+      children: CadSolidSpec[]
+      translate?: [number, number, number]
+      rotate?: [number, number, number]
+      scale?: [number, number, number]
+    }
+  | {
       op: 'intersection'
       children: CadSolidSpec[]
       translate?: [number, number, number]
@@ -180,6 +187,7 @@ export const CadSolidSpecSchema: z.ZodType<CadSolidSpec> = z.lazy(() =>
       ...transforms,
     }),
     z.object({ op: z.literal('union'), children: z.array(CadSolidSpecSchema).min(1), ...transforms }),
+    z.object({ op: z.literal('group'), children: z.array(CadSolidSpecSchema).min(1), ...transforms }),
     z.object({ op: z.literal('difference'), children: z.array(CadSolidSpecSchema).min(2), ...transforms }),
     z.object({ op: z.literal('intersection'), children: z.array(CadSolidSpecSchema).min(2), ...transforms }),
     z

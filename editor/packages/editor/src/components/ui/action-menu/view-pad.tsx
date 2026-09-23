@@ -261,7 +261,7 @@ export function ViewPad() {
         <button
           aria-label="Orbit left"
           className={buttonClass}
-          onClick={() => emitter.emit('camera-controls:orbit-ccw')}
+          onClick={() => emitter.emit('camera-controls:orbit-ccw', {})}
           type="button"
         >
           Orbit L
@@ -269,7 +269,7 @@ export function ViewPad() {
         <button
           aria-label="Orbit right"
           className={buttonClass}
-          onClick={() => emitter.emit('camera-controls:orbit-cw')}
+          onClick={() => emitter.emit('camera-controls:orbit-cw', {})}
           type="button"
         >
           Orbit R

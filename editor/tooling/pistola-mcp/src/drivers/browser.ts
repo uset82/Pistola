@@ -64,18 +64,29 @@ export const createBrowserDriver = async (): Promise<PageDriver> => {
     browser = await chromium.connectOverCDP(cdpUrl)
   } catch {
     launched = true
-    const context = await chromium.launchPersistentContext(profileDir(), {
+    const debugPort = process.env.PISTOLA_BROWSER_DEBUG_PORT ?? '9333'
+    const launchOptions = {
       headless: process.env.PISTOLA_BROWSER_HEADLESS !== '0',
       viewport: { width: 1440, height: 1000 },
       timeout: 60_000,
       args: [
-        '--remote-debugging-port=9333',
+        `--remote-debugging-port=${debugPort}`,
         '--remote-debugging-address=127.0.0.1',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
         '--disable-renderer-backgrounding',
+        '--enable-unsafe-webgpu',
+        '--enable-features=Vulkan',
+        '--use-angle=d3d11',
       ],
-    })
+    }
+    const channel = process.env.PISTOLA_BROWSER_CHANNEL ?? 'chrome'
+    let context
+    try {
+      context = await chromium.launchPersistentContext(profileDir(), { ...launchOptions, channel })
+    } catch {
+      context = await chromium.launchPersistentContext(profileDir(), launchOptions)
+    }
     context.setDefaultTimeout?.(60_000)
     browser = {
       contexts: () => [context],
@@ -166,15 +177,15 @@ export const createBrowserDriver = async (): Promise<PageDriver> => {
     open,
     invoke,
     screenshot: async () => {
-      const next = await ensurePage()
-      await next.bringToFront()
-      await next.waitForFunction(
-        () => Boolean(document.querySelector('canvas')),
-        { timeout: 20_000 },
-      )
-      const canvas = next.locator('canvas').first()
-      const data = await canvas.screenshot({ type: 'png', timeout: 20_000 })
-      return { mime: 'image/png', data: data.toString('base64') }
+      const result = (await invoke('render', { width: 768, height: 768 })) as {
+        output?: { mime?: string; dataUrl?: string }
+        dataUrl?: string
+        mime?: string
+      }
+      const dataUrl = result.output?.dataUrl ?? result.dataUrl ?? ''
+      const comma = dataUrl.indexOf(',')
+      if (comma < 0) throw new Error('The Pistola page did not return a PNG.')
+      return { mime: result.output?.mime ?? result.mime ?? 'image/png', data: dataUrl.slice(comma + 1) }
     },
     close: async () => {
       if (launched) await browser.close()

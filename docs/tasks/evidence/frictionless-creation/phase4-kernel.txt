@@ -1,0 +1,10 @@
+Phase 4 kernel and checker, 2026-09-22.
+
+From editor/:
+
+bun test ./packages/editor/src/lib/cad/local-kernel.test.ts ./packages/editor/src/lib/structure/checks.test.ts ./packages/editor/src/lib/assistant/agent-tools.test.ts
+→ 13 kernel pass after adding "touching unions weld down to a closed solid" (touching boxes: 0 open edges; coaxial cylinders: 8 residual CSG edges after weld, not a duplicate-vertex gap). Structure pass including containment and rotated books. "measure bounds follow a rotated cad body" passes.
+
+bunx tsc --noEmit -p packages/editor/tsconfig.json → exit 0.
+
+Checkpoint still open: replay builds 26 parts. Open meshes are gone. After switching contact to exact mesh distance (`MeshBVH.closestPointToGeometry`), errorCount is 6, all FLOATING_PART: conversation orbit and beads 1–5. "edge of knowing" (opacity 0.07) intersects the axis (0 mm) and is supported. The orbit cluster touches itself and stays 67–208 mm from the nearest supported part, so those six are real gaps. `bun test ./packages/editor/src/lib/structure/checks.test.ts` → 11 pass, including an intersecting sphere that is supported and a separated sphere that still floats.

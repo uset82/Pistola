@@ -27,3 +27,4 @@ Return JSON: { "surface": "...", "batches": [[...]], "fallbacks": [{ "part", "wa
 
 [[skills.config]]
 name = "pistola-features"
+enabled = true
