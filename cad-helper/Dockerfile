@@ -20,6 +20,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     SOLIDCRAFT_CLI_PATH=/usr/local/bin/solidcraft-cli
 
+# This image installs SolidCraft and no FreeCAD, so it must not fall back to
+# the FreeCAD default that applies everywhere else.
+ENV PISTOLA_CAD_ENGINE=solidcraft
+
+# The image exists to be reached over a network, so the passthrough job types
+# start closed here even though they default open locally. Platform variables
+# still override both of these.
+ENV PISTOLA_CAD_ALLOW_PASSTHROUGH=0
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
