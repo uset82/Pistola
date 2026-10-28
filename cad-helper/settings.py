@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from typing import Mapping
 
+TOKEN_ENV = "PISTOLA_CAD_HELPER_TOKEN"
 MAX_CONCURRENCY_ENV = "PISTOLA_CAD_MAX_CONCURRENCY"
 
 #: SolidCraft is CPU-bound and each job can hold a whole core for minutes.
@@ -33,6 +34,16 @@ def _positive_int(env: Mapping[str, str] | None, name: str, default: int) -> int
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def helper_token(env: Mapping[str, str] | None = None) -> str | None:
+    """The shared bearer token, or ``None`` when authentication is off.
+
+    Unset keeps the helper open, which is the local-development behaviour. A
+    public deployment must set it; ``routers/jobs.py`` then rejects every
+    ``/v1/cad/*`` request that does not carry it.
+    """
+    return _text(env, TOKEN_ENV) or None
 
 
 def max_concurrency(env: Mapping[str, str] | None = None) -> int:

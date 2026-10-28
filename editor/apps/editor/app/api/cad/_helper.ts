@@ -129,6 +129,16 @@ const isCadHelperHealthy = async (helperUrl: string) => {
   }
 }
 
+// Only the helper's /v1/cad/* routes are token-protected; /health stays open
+// so the reachability probe above keeps working without it.
+const applyCadHelperAuth = (headers: Headers) => {
+  const token = process.env.PISTOLA_CAD_HELPER_TOKEN?.trim()
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  return headers
+}
+
 const waitForCadHelper = async (helperUrl: string) => {
   const deadline = Date.now() + CAD_HELPER_START_TIMEOUT_MS
   let lastError: string | null = null
@@ -469,7 +479,7 @@ export async function fetchCadHelper(pathname: string, init?: RequestInit): Prom
   }
 
   if (await isCadHelperHealthy(helperUrl)) {
-    const headers = new Headers(init?.headers)
+    const headers = applyCadHelperAuth(new Headers(init?.headers))
     if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json')
     }
@@ -489,7 +499,7 @@ export async function fetchCadHelper(pathname: string, init?: RequestInit): Prom
     throw error
   }
 
-  const headers = new Headers(init?.headers)
+  const headers = applyCadHelperAuth(new Headers(init?.headers))
   if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }

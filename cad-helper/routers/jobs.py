@@ -6,12 +6,13 @@ from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
+from auth import require_helper_token
 from engine import CadEngine, get_cad_engine, is_solidcraft_only
 from operations.boolean import run_boolean_operation
 from operations.extrude import run_extrude
@@ -24,7 +25,7 @@ from schemas import JobRequest, JobResult, JobStatus
 from settings import max_concurrency
 
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_helper_token)])
 
 ARTIFACT_DIR = Path(__file__).resolve().parents[1] / ".artifacts"
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
