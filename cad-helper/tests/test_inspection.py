@@ -216,7 +216,7 @@ def test_body_without_operation_history_is_refused():
 
 
 def test_missing_closure_body_is_refused():
-    with pytest.raises(SolidCraftMappingError, match="missing from the inspection closure"):
+    with pytest.raises(SolidCraftMappingError, match="missing from the job's body closure"):
         inspection_commands(
             job_type="inspect_interference",
             body_ids=["body-z"],

@@ -35,6 +35,7 @@ HANDLER_PAYLOADS = {
     "run_list_commands": schemas.ListCommandsPayload,
     "run_describe_command": schemas.DescribeCommandPayload,
     "run_inspection": schemas.InspectionPayload,
+    "run_assign_cad_material": schemas.AssignCadMaterialPayload,
 }
 
 BOOLEAN_PAYLOADS = (

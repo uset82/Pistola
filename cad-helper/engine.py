@@ -32,10 +32,19 @@ SOLIDCRAFT_INSPECTION_JOB_TYPES = frozenset(
     {"inspect_interference", "inspect_clearance", "inspect_center_of_mass"}
 )
 
+#: Named material jobs. Same rule: the job type selects the commands, so a
+#: caller cannot reach an arbitrary catalog command through it.
+SOLIDCRAFT_MATERIAL_JOB_TYPES = frozenset({"assign_cad_material"})
+
+#: Every named (non-passthrough) SolidCraft job type.
+SOLIDCRAFT_NAMED_JOB_TYPES = (
+    SOLIDCRAFT_INSPECTION_JOB_TYPES | SOLIDCRAFT_MATERIAL_JOB_TYPES
+)
+
 #: Job types only SolidCraft can serve. FreeCAD has no addressable command
 #: catalog, so these are refused rather than silently answered with nothing.
 SOLIDCRAFT_ONLY_JOB_TYPES = (
-    SOLIDCRAFT_PASSTHROUGH_JOB_TYPES | SOLIDCRAFT_INSPECTION_JOB_TYPES
+    SOLIDCRAFT_PASSTHROUGH_JOB_TYPES | SOLIDCRAFT_NAMED_JOB_TYPES
 )
 
 
@@ -58,4 +67,10 @@ def is_passthrough_job_type(job_type: str) -> bool:
 def is_inspection_job_type(job_type: str) -> bool:
     """Whether the job type is one of the named inspection jobs."""
     return job_type in SOLIDCRAFT_INSPECTION_JOB_TYPES
+
+
+def is_material_job_type(job_type: str) -> bool:
+    """Whether the job type is one of the named material jobs."""
+    return job_type in SOLIDCRAFT_MATERIAL_JOB_TYPES
+
 

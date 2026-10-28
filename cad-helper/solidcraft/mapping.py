@@ -324,40 +324,36 @@ def _placement_warnings(name: str, body: dict[str, Any]) -> list[str]:
     return warnings
 
 
-def inspection_commands(
+def rebuild_body_commands(
     *,
-    job_type: str,
     body_ids: Sequence[str],
     bodies: dict[str, dict[str, Any]],
     sketches: dict[str, dict[str, Any]],
-    against_body_ids: Sequence[str] = (),
-    minimum_clearance_mm: float | None = None,
-    min_volume_mm3: float | None = None,
-    nearest: int | None = None,
-    budget_seconds: float | None = None,
-) -> tuple[list[dict[str, Any]], list[str], list[str]]:
-    """Rebuild the named Pistola bodies and append one inspection command.
+    extra_body_ids: Sequence[str] = (),
+) -> tuple[list[dict[str, Any]], dict[str, str], list[str]]:
+    """Replay bodies into one SolidCraft document under stable names.
 
-    Each body is replayed from its operation timeline under a deterministic
-    name (`PistolaBody1`, `PistolaBody2`, ...), translated into its scene
-    placement, and then measured. Replaying rather than reading a STEP artifact
-    keeps inspection valid after a restart, when artifacts are gone.
+    Each body is replayed from its operation timeline as `PistolaBody1`,
+    `PistolaBody2`, ..., translated into its scene placement. Replaying rather
+    than reading a STEP artifact keeps a named job valid after a restart, when
+    artifacts are gone.
 
-    Returns the command script, the names of the inspected bodies, and any
-    placement warnings.
+    `body_ids` are the bodies the caller acts on; `extra_body_ids` are rebuilt
+    too (a clearance baseline) but are not returned as targets. Returns the
+    command script, the name chosen for each rebuilt body, and placement
+    warnings.
     """
-    if job_type not in INSPECTION_COMMANDS:
-        raise SolidCraftMappingError(f"{job_type!r} is not a named inspection job.")
-
     roots = [str(body_id) for body_id in body_ids]
     if not roots:
-        raise SolidCraftMappingError("An inspection job needs at least one body id.")
+        raise SolidCraftMappingError("A named job needs at least one body id.")
 
-    build_order = list(dict.fromkeys([*roots, *(str(body_id) for body_id in against_body_ids)]))
+    build_order = list(
+        dict.fromkeys([*roots, *(str(body_id) for body_id in extra_body_ids)])
+    )
     for body_id in build_order:
         if body_id not in bodies:
             raise SolidCraftMappingError(
-                f"Body {body_id!r} is missing from the inspection closure."
+                f"Body {body_id!r} is missing from the job's body closure."
             )
 
     commands: list[dict[str, Any]] = []
@@ -370,7 +366,7 @@ def inspection_commands(
         operations = body.get("operations") or body.get("operationHistory") or []
         if not operations:
             raise SolidCraftMappingError(
-                f"Body {body_id!r} has no operation history. Inspection rebuilds "
+                f"Body {body_id!r} has no operation history. This job rebuilds "
                 "a parametric timeline; imported STEP bodies are not supported yet."
             )
         names[body_id] = name
@@ -392,6 +388,33 @@ def inspection_commands(
             )
         warnings.extend(_placement_warnings(name, body))
 
+    return commands, names, warnings
+
+
+def inspection_commands(
+    *,
+    job_type: str,
+    body_ids: Sequence[str],
+    bodies: dict[str, dict[str, Any]],
+    sketches: dict[str, dict[str, Any]],
+    against_body_ids: Sequence[str] = (),
+    minimum_clearance_mm: float | None = None,
+    min_volume_mm3: float | None = None,
+    nearest: int | None = None,
+    budget_seconds: float | None = None,
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Rebuild the named Pistola bodies and append one inspection command."""
+    if job_type not in INSPECTION_COMMANDS:
+        raise SolidCraftMappingError(f"{job_type!r} is not a named inspection job.")
+
+    commands, names, warnings = rebuild_body_commands(
+        body_ids=body_ids,
+        bodies=bodies,
+        sketches=sketches,
+        extra_body_ids=against_body_ids,
+    )
+    roots = [str(body_id) for body_id in body_ids]
+
     params: dict[str, Any] = {"bodies": [names[body_id] for body_id in roots]}
     if job_type == "inspect_clearance":
         if against_body_ids:
@@ -407,6 +430,56 @@ def inspection_commands(
 
     commands.append({"command": INSPECTION_COMMANDS[job_type], "params": params})
     return commands, [names[body_id] for body_id in roots], warnings
+
+
+#: The two material commands Pistola names. Nothing else is reachable here.
+MATERIAL_ASSIGN_COMMAND = "material.assign"
+MATERIAL_DIRECTIONAL_COMMAND = "material.properties.directional"
+DEFAULT_MATERIAL_DIRECTION = [1.0, 0.0, 0.0]
+
+
+def material_commands(
+    material: dict[str, Any] | None,
+    body_name: str,
+) -> list[dict[str, Any]]:
+    """The material.assign command for one rebuilt body.
+
+    A material is a property of the body, not a timeline step, so this is
+    appended after the geometry commands on every regenerate. With no material
+    set, nothing is appended and the result is unchanged.
+    """
+    if not material:
+        return []
+    name = str(material.get("name") or "").strip()
+    if not name:
+        return []
+    return [
+        {
+            "command": MATERIAL_ASSIGN_COMMAND,
+            "params": {"bodies": [body_name], "material": name},
+        }
+    ]
+
+
+def directional_material_command(
+    card: dict[str, Any],
+    direction: Sequence[float] | None = None,
+) -> dict[str, Any]:
+    """The read-only Young's-modulus query for an engineering card.
+
+    SolidCraft validates the card and normalises the direction; an invalid card
+    or a zero vector fails the job rather than inventing data.
+    """
+    values = [float(value) for value in (direction or DEFAULT_MATERIAL_DIRECTION)[:3]]
+    if len(values) != 3 or all(abs(value) < 1e-12 for value in values):
+        raise SolidCraftMappingError(
+            "material.properties.directional needs a non-zero three-component direction."
+        )
+    return {
+        "command": MATERIAL_DIRECTIONAL_COMMAND,
+        "params": {"card": card, "direction": values},
+    }
+
 
 
 def operations_to_commands(

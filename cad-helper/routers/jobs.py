@@ -17,6 +17,7 @@ from engine import (
     CadEngine,
     get_cad_engine,
     is_inspection_job_type,
+    is_material_job_type,
     is_passthrough_job_type,
     is_solidcraft_only,
 )
@@ -176,6 +177,12 @@ def _run_job(request: JobRequest, job_id: str) -> JobResult:
         return backend.run_inspection(
             job_id=job_id,
             job_type=request.type,
+            payload=request.payload,
+            artifact_dir=ARTIFACT_DIR,
+        )
+    if is_material_job_type(request.type):
+        return backend.run_assign_cad_material(
+            job_id=job_id,
             payload=request.payload,
             artifact_dir=ARTIFACT_DIR,
         )

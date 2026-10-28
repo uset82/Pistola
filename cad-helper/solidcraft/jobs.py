@@ -7,6 +7,7 @@ from typing import Any, Callable, Iterable
 
 from operations.common import artifact_ref, artifact_url, body_operations
 from schemas import (
+    AssignCadMaterialPayload,
     BatchPayload,
     BooleanCutPayload,
     BooleanIntersectPayload,
@@ -29,10 +30,14 @@ from schemas import (
 from solidcraft.client import SolidCraftClientTypes, SolidCraftError, get_client
 from solidcraft.mapping import (
     INSPECTION_COMMANDS,
+    MATERIAL_ASSIGN_COMMAND,
     SolidCraftMappingError,
+    directional_material_command,
     inspection_commands,
+    material_commands,
     operations_to_commands,
     preview_from_measurement,
+    rebuild_body_commands,
     resolve_edge_refs,
     to_solidcraft_length,
 )
@@ -520,11 +525,18 @@ def run_regenerate(*, job_id: str, payload: RegeneratePayload, artifact_dir: Pat
             sketches=sketches,
             bodies=bodies,
         )
+        # Material is body state, not a timeline step, so the replay above
+        # rebuilds the geometry without it. Re-apply it here or a regenerate
+        # would silently drop it.
+        commands = [
+            *built.commands,
+            *material_commands(body.get("material"), BODY_NAME),
+        ]
         result = _run_commands_to_step(
             client,
             job_id=job_id,
             job_type=job_type,
-            commands=built.commands,
+            commands=commands,
             artifact_dir=artifact_dir,
             operations=operations,
             warnings=built.warnings,
@@ -729,6 +741,69 @@ def run_inspection(*, job_id: str, job_type: str, payload: InspectionPayload, ar
                 "bodies": names,
                 "result": results[-1] if results else None,
             },
+            warnings=warnings,
+        )
+    except (SolidCraftError, SolidCraftMappingError) as error:
+        return _failed(job_id, job_type, error)
+
+
+def run_assign_cad_material(
+    *,
+    job_id: str,
+    payload: AssignCadMaterialPayload,
+    artifact_dir: Path,
+) -> JobResult:
+    """Validate a material assignment and, optionally, query the card.
+
+    The job rebuilds the target body so `material.assign` has something to act
+    on, assigns the name, and — when a schema-1 card is supplied — asks
+    SolidCraft for the Young's modulus along the material-local direction. The
+    card is validated by SolidCraft rather than duplicated here, and the
+    editor persists it only when this job succeeds.
+    """
+    job_type = "assign_cad_material"
+    try:
+        client = get_client()
+        commands, names, warnings = rebuild_body_commands(
+            body_ids=payload.bodyIds,
+            bodies={
+                body_id: body.model_dump() for body_id, body in payload.bodies.items()
+            },
+            sketches=payload.sketches,
+        )
+        target = names[str(payload.bodyIds[0])]
+
+        assign_index = len(commands)
+        commands.extend(material_commands({"name": payload.material.name}, target))
+
+        directional_index: int | None = None
+        if payload.material.card is not None:
+            directional_index = len(commands)
+            commands.append(
+                directional_material_command(
+                    payload.material.card,
+                    payload.material.direction,
+                )
+            )
+
+        results = client.run_script(commands)
+        data: dict[str, Any] = {
+            "command": MATERIAL_ASSIGN_COMMAND,
+            "bodies": [target],
+            "material": payload.material.name,
+            "assignment": results[assign_index] if assign_index < len(results) else None,
+        }
+        if directional_index is not None:
+            data["directional"] = (
+                results[directional_index] if directional_index < len(results) else None
+            )
+
+        return _result(
+            job_id=job_id,
+            job_type=job_type,
+            artifact_dir=artifact_dir,
+            step_path=None,
+            data=data,
             warnings=warnings,
         )
     except (SolidCraftError, SolidCraftMappingError) as error:
