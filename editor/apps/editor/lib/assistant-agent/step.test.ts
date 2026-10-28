@@ -19,6 +19,68 @@ test('AgentStepRequestSchema parses minimal valid step request', () => {
   assert.equal(req.budgets.maxRounds, 12)
 })
 
+test('AgentStepRequestSchema accepts an explicit null image', () => {
+  // Regression: `image: null` is what the panel sends when no image is attached.
+  // JSON.stringify keeps null (it only drops undefined), so the route boundary
+  // used to reject the request with a 400 before it ever reached the model.
+  const req = AgentStepRequestSchema.parse({
+    prompt: 'clean the area',
+    chatMode: 'create',
+    round: 1,
+    image: null,
+  })
+
+  assert.equal(req.prompt, 'clean the area')
+  assert.equal(req.image, null)
+})
+
+test('AgentStepRequestSchema accepts an omitted image', () => {
+  const req = AgentStepRequestSchema.parse({
+    prompt: 'clean the area',
+    chatMode: 'create',
+    round: 1,
+  })
+
+  assert.equal(req.image, undefined)
+})
+
+test('AgentStepRequestSchema accepts a valid image attachment', () => {
+  const req = AgentStepRequestSchema.parse({
+    prompt: 'clean this area',
+    chatMode: 'create',
+    round: 1,
+    image: {
+      dataUrl: 'data:image/png;base64,workspace',
+      kind: 'workspace',
+      source: 'upload',
+      analysis: { hasRedMarkup: true },
+    },
+  })
+
+  assert.equal(req.image?.kind, 'workspace')
+  assert.equal(req.image?.analysis?.hasRedMarkup, true)
+})
+
+test('AgentStepRequestSchema still rejects a malformed image', () => {
+  assert.throws(() =>
+    AgentStepRequestSchema.parse({
+      prompt: 'clean the area',
+      chatMode: 'create',
+      round: 1,
+      image: { kind: 'workspace', source: 'upload' },
+    }),
+  )
+
+  assert.throws(() =>
+    AgentStepRequestSchema.parse({
+      prompt: 'clean the area',
+      chatMode: 'create',
+      round: 1,
+      image: { dataUrl: 'data:image/png;base64,workspace', source: 'not-a-source' },
+    }),
+  )
+})
+
 test('AgentStepResponseSchema parses tool_calls response', () => {
   const toolCall = AgentToolCallSchema.parse({
     id: 'call_1',
