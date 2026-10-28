@@ -1,8 +1,9 @@
 """Runtime knobs that exist because the helper can now be reached over a network.
 
 Every variable here is optional. With all of them unset the helper behaves the
-way it always has on localhost. The defaults below are the values a hosted
-container wants, and none of them changes what a single local user sees.
+way it always has on localhost: no token, no passthrough restriction, and the
+same job results. The defaults below are the values a hosted container wants,
+and none of them changes what a single local user sees.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ import os
 from typing import Mapping
 
 TOKEN_ENV = "PISTOLA_CAD_HELPER_TOKEN"
+ALLOW_PASSTHROUGH_ENV = "PISTOLA_CAD_ALLOW_PASSTHROUGH"
 MAX_CONCURRENCY_ENV = "PISTOLA_CAD_MAX_CONCURRENCY"
 JOB_RETENTION_ENV = "PISTOLA_CAD_JOB_RETENTION"
 JOB_TTL_ENV = "PISTOLA_CAD_JOB_TTL_SECONDS"
@@ -19,6 +21,8 @@ JOB_TTL_ENV = "PISTOLA_CAD_JOB_TTL_SECONDS"
 DEFAULT_MAX_CONCURRENCY = 2
 DEFAULT_JOB_RETENTION = 200
 DEFAULT_JOB_TTL_SECONDS = 3600
+
+_FALSE_VALUES = frozenset({"0", "false", "no", "off", "disabled"})
 
 
 def _source(env: Mapping[str, str] | None) -> Mapping[str, str]:
@@ -53,6 +57,18 @@ def helper_token(env: Mapping[str, str] | None = None) -> str | None:
 def max_concurrency(env: Mapping[str, str] | None = None) -> int:
     """How many CAD jobs may run at once before new ones get a 429."""
     return _positive_int(env, MAX_CONCURRENCY_ENV, DEFAULT_MAX_CONCURRENCY)
+
+
+def allow_passthrough(env: Mapping[str, str] | None = None) -> bool:
+    """Whether the SolidCraft passthrough job types are served.
+
+    Defaults to on so nothing changes locally. The hosted helper turns it off
+    because its public entry point has no account wall.
+    """
+    raw = _text(env, ALLOW_PASSTHROUGH_ENV).lower()
+    if not raw:
+        return True
+    return raw not in _FALSE_VALUES
 
 
 def job_retention(env: Mapping[str, str] | None = None) -> int:

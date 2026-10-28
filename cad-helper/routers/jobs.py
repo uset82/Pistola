@@ -23,7 +23,7 @@ from operations.import_step import run_import_step
 from operations.revolve import run_revolve
 from operations.sketch_to_solid import run_regenerate, run_sketch_to_solid
 from schemas import JobRequest, JobResult, JobStatus
-from settings import job_retention, job_ttl_seconds, max_concurrency
+from settings import allow_passthrough, job_retention, job_ttl_seconds, max_concurrency
 
 
 router = APIRouter(dependencies=[Depends(require_helper_token)])
@@ -198,6 +198,16 @@ async def create_job(request: Request) -> JobStatus:
         raise HTTPException(status_code=422, detail=error.errors()) from error
 
     job_id = _job_id()
+
+    if is_solidcraft_only(parsed_request.type) and not allow_passthrough():
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                f"CAD job type {parsed_request.type!r} is disabled on this helper. "
+                "Set PISTOLA_CAD_ALLOW_PASSTHROUGH=1 to serve the SolidCraft "
+                "passthrough job types."
+            ),
+        )
 
     gate = concurrency_gate()
     if not gate.acquire(blocking=False):
