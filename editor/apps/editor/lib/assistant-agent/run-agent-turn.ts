@@ -8,6 +8,7 @@ import type {
   AssistantTurnResult,
 } from '../../../../packages/editor/src/lib/assistant/types'
 import { pistolaFetch } from '../pistola-fetch'
+import type { AssistantImageAttachment } from '../assistant-image-contract'
 import type {
   AgentMessage,
   AgentStepBudget,
@@ -29,7 +30,7 @@ export type AgentStepTimelineEvent = {
 export type RunAgentTurnOptions = {
   prompt: string
   chatMode?: string
-  image?: any
+  image?: AssistantImageAttachment | null
   workspaceContext?: Record<string, unknown>
   budgets?: Partial<AgentStepBudget>
   signal?: AbortSignal
@@ -103,7 +104,7 @@ export async function runAgentTurn(options: RunAgentTurnOptions): Promise<RunAge
       messages,
       toolResults,
       workspaceContext: options.workspaceContext,
-      image: options.image,
+      ...(options.image ? { image: options.image } : {}),
       round,
       budgets,
     }
