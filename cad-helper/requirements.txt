@@ -1,4 +1,5 @@
-freecad==1.0.*
+# FreeCAD is not a pip package: it is the FreeCADCmd binary from the freecad/
+# submodule, located via FREECAD_PATH. The helper only needs its own runtime.
 fastapi>=0.115,<1
 uvicorn>=0.34,<1
 pydantic>=2.11,<3
