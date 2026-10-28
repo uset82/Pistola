@@ -1,16 +1,29 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth import log_auth_configuration
 from engine import get_cad_engine
 from freecad_runtime import FreeCADRuntimeError, build_helper_health_payload
-from routers.jobs import router as jobs_router
+from job_store import sweep_artifacts
+from routers.jobs import ARTIFACT_DIR, router as jobs_router
+from settings import job_ttl_seconds
 
 
-app = FastAPI(title="Pistola CAD Helper", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    log_auth_configuration()
+    # Job entries do not survive a restart, so anything past the retention
+    # window is already unreachable and only consuming disk.
+    sweep_artifacts(ARTIFACT_DIR, job_ttl_seconds())
+    yield
+
+
+app = FastAPI(title="Pistola CAD Helper", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

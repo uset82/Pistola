@@ -14,6 +14,7 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from auth import require_helper_token
 from engine import CadEngine, get_cad_engine, is_solidcraft_only
+from job_store import JobStore
 from operations.boolean import run_boolean_operation
 from operations.extrude import run_extrude
 from operations.export_step import run_export_step
@@ -22,7 +23,7 @@ from operations.import_step import run_import_step
 from operations.revolve import run_revolve
 from operations.sketch_to_solid import run_regenerate, run_sketch_to_solid
 from schemas import JobRequest, JobResult, JobStatus
-from settings import max_concurrency
+from settings import job_retention, job_ttl_seconds, max_concurrency
 
 
 router = APIRouter(dependencies=[Depends(require_helper_token)])
@@ -32,12 +33,14 @@ ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR = ARTIFACT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-JOBS: dict[str, JobResult] = {}
 JOB_REQUEST_ADAPTER = TypeAdapter(JobRequest)
 
 _GATE_LOCK = threading.Lock()
 _GATE: threading.BoundedSemaphore | None = None
 _GATE_SIZE: int | None = None
+
+_JOB_STORE_LOCK = threading.Lock()
+_JOB_STORE: JobStore | None = None
 
 
 def concurrency_gate() -> threading.BoundedSemaphore:
@@ -59,6 +62,28 @@ def reset_concurrency_gate() -> None:
     with _GATE_LOCK:
         _GATE = None
         _GATE_SIZE = None
+
+
+def get_job_store() -> JobStore:
+    """The process-wide job store, configured on first use."""
+    global _JOB_STORE
+
+    with _JOB_STORE_LOCK:
+        if _JOB_STORE is None:
+            _JOB_STORE = JobStore(
+                max_jobs=job_retention(),
+                ttl_seconds=job_ttl_seconds(),
+                artifact_dir=ARTIFACT_DIR,
+            )
+        return _JOB_STORE
+
+
+def reset_job_store() -> None:
+    """Drop the store so the next request re-reads the environment."""
+    global _JOB_STORE
+
+    with _JOB_STORE_LOCK:
+        _JOB_STORE = None
 
 
 def _job_id() -> str:
@@ -193,13 +218,13 @@ async def create_job(request: Request) -> JobStatus:
     finally:
         gate.release()
 
-    JOBS[job_id] = result
+    get_job_store().put(job_id, result)
     return JobStatus(jobId=job_id, status="pending")
 
 
 @router.get("/jobs/{job_id}", response_model=JobResult)
 def get_job(job_id: str) -> JobResult:
-    job = JOBS.get(job_id)
+    job = get_job_store().get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="CAD helper job not found.")
     return job

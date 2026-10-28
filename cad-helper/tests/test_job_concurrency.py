@@ -13,6 +13,7 @@ import time
 
 import httpx
 
+from job_store import JobStore
 from main import app
 from routers import jobs
 from schemas import JobResult
@@ -36,14 +37,19 @@ def _client() -> httpx.AsyncClient:
     )
 
 
-def _isolate(monkeypatch, concurrency: int) -> None:
+def _isolate(monkeypatch, tmp_path, concurrency: int) -> None:
     monkeypatch.setenv("PISTOLA_CAD_MAX_CONCURRENCY", str(concurrency))
     monkeypatch.setattr(jobs, "_GATE", None)
     monkeypatch.setattr(jobs, "_GATE_SIZE", None)
-    monkeypatch.setattr(jobs, "JOBS", {})
+    monkeypatch.setattr(
+        jobs,
+        "_JOB_STORE",
+        JobStore(max_jobs=10, ttl_seconds=60, artifact_dir=tmp_path),
+    )
+    monkeypatch.delenv("PISTOLA_CAD_HELPER_TOKEN", raising=False)
 
 
-def test_health_answers_while_two_jobs_are_running(monkeypatch):
+def test_health_answers_while_two_jobs_are_running(monkeypatch, tmp_path):
     release = threading.Event()
     safety = threading.Timer(3.0, release.set)
     safety.daemon = True
@@ -59,7 +65,7 @@ def test_health_answers_while_two_jobs_are_running(monkeypatch):
         return _succeeded(job_id=job_id, job_type=request.type)
 
     monkeypatch.setattr(jobs, "_run_job", slow_run_job)
-    _isolate(monkeypatch, concurrency=2)
+    _isolate(monkeypatch, tmp_path, concurrency=2)
 
     async def scenario() -> None:
         async with _client() as client:
@@ -88,7 +94,7 @@ def test_health_answers_while_two_jobs_are_running(monkeypatch):
         safety.cancel()
 
 
-def test_jobs_over_the_concurrency_limit_get_429(monkeypatch):
+def test_jobs_over_the_concurrency_limit_get_429(monkeypatch, tmp_path):
     release = threading.Event()
     started = threading.Event()
 
@@ -98,7 +104,7 @@ def test_jobs_over_the_concurrency_limit_get_429(monkeypatch):
         return _succeeded(job_id=job_id, job_type=request.type)
 
     monkeypatch.setattr(jobs, "_run_job", slow_run_job)
-    _isolate(monkeypatch, concurrency=1)
+    _isolate(monkeypatch, tmp_path, concurrency=1)
 
     async def scenario() -> None:
         async with _client() as client:

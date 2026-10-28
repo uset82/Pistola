@@ -12,9 +12,13 @@ from typing import Mapping
 
 TOKEN_ENV = "PISTOLA_CAD_HELPER_TOKEN"
 MAX_CONCURRENCY_ENV = "PISTOLA_CAD_MAX_CONCURRENCY"
+JOB_RETENTION_ENV = "PISTOLA_CAD_JOB_RETENTION"
+JOB_TTL_ENV = "PISTOLA_CAD_JOB_TTL_SECONDS"
 
 #: SolidCraft is CPU-bound and each job can hold a whole core for minutes.
 DEFAULT_MAX_CONCURRENCY = 2
+DEFAULT_JOB_RETENTION = 200
+DEFAULT_JOB_TTL_SECONDS = 3600
 
 
 def _source(env: Mapping[str, str] | None) -> Mapping[str, str]:
@@ -49,3 +53,14 @@ def helper_token(env: Mapping[str, str] | None = None) -> str | None:
 def max_concurrency(env: Mapping[str, str] | None = None) -> int:
     """How many CAD jobs may run at once before new ones get a 429."""
     return _positive_int(env, MAX_CONCURRENCY_ENV, DEFAULT_MAX_CONCURRENCY)
+
+
+def job_retention(env: Mapping[str, str] | None = None) -> int:
+    """Maximum number of job results kept in memory."""
+    return _positive_int(env, JOB_RETENTION_ENV, DEFAULT_JOB_RETENTION)
+
+
+def job_ttl_seconds(env: Mapping[str, str] | None = None) -> int:
+    """How long a job result stays addressable, and how old an orphaned file
+    must be before the startup sweep removes it."""
+    return _positive_int(env, JOB_TTL_ENV, DEFAULT_JOB_TTL_SECONDS)
