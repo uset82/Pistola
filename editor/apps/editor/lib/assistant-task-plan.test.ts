@@ -23,6 +23,7 @@ const buildExecutionResult = (ok = true): AssistantExecutionResult => ({
   bodyIds: [],
   sketchIds: [],
   warnings: [],
+  data: [],
 })
 
 test('parseTaskPlanFromTurn converts a task-plan turn into a local task plan', () => {

@@ -9,6 +9,12 @@
         "PISTOLA_TARGET": "local",
         "PISTOLA_TRANSPORT": "bridge"
       }
+    },
+    "solidcraft": {
+      "command": "node",
+      "args": [
+        "scripts/solidcraft-mcp.mjs"
+      ]
     }
   }
 }

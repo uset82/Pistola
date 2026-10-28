@@ -383,6 +383,7 @@ export const createPistolaAgentApi = () => {
         createdNodeIds: [],
         bodyIds: [],
         sketchIds: [],
+        data: [],
         warnings: [],
         errors: ['Destructive actions require confirmDestructive: true.'],
         snapshotRestored: false,

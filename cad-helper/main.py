@@ -5,7 +5,8 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from freecad_runtime import build_helper_health_payload
+from engine import get_cad_engine
+from freecad_runtime import FreeCADRuntimeError, build_helper_health_payload
 from routers.jobs import router as jobs_router
 
 
@@ -26,10 +27,61 @@ app.include_router(jobs_router, prefix="/v1/cad")
 
 DEFAULT_HOST = os.getenv("PISTOLA_CAD_HELPER_HOST", "127.0.0.1")
 DEFAULT_PORT = os.getenv("PISTOLA_CAD_HELPER_PORT", "7878")
-HEALTH_PAYLOAD = build_helper_health_payload(DEFAULT_HOST, DEFAULT_PORT)
+HELPER_URL = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}"
+
+_HEALTH_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _error_payload(engine: str, error: Exception) -> dict[str, str]:
+    """A health payload for an engine that could not be reached.
+
+    The payload is a formal interface, so an unavailable engine reports
+    ``status: "error"`` rather than "ready". The editor renders that state
+    instead of falling back to placeholder geometry.
+    """
+    return {
+        "status": "error",
+        "runtime": "python",
+        "engine": engine,
+        "version": "unknown",
+        "helperUrl": HELPER_URL,
+        "error": str(error),
+    }
+
+
+def _freecad_health() -> dict[str, str]:
+    # Probed on first request rather than at import. Probing at import meant a
+    # machine without FREECAD_PATH could not start the helper at all, which
+    # also blocked the SolidCraft engine from running on its own.
+    if "freecad" not in _HEALTH_CACHE:
+        try:
+            _HEALTH_CACHE["freecad"] = build_helper_health_payload(DEFAULT_HOST, DEFAULT_PORT)
+        except (FreeCADRuntimeError, OSError) as error:
+            return _error_payload("freecad", error)
+    return _HEALTH_CACHE["freecad"]
+
+
+def _solidcraft_health() -> dict[str, str]:
+    from solidcraft.client import SolidCraftError, get_client
+
+    if "solidcraft" not in _HEALTH_CACHE:
+        try:
+            version = get_client().version()
+        except (SolidCraftError, OSError) as error:
+            return _error_payload("solidcraft", error)
+        _HEALTH_CACHE["solidcraft"] = {
+            "status": "ready",
+            "runtime": "python",
+            "engine": "solidcraft",
+            "version": version,
+            "helperUrl": HELPER_URL,
+        }
+    return _HEALTH_CACHE["solidcraft"]
 
 
 @app.get("/health")
 @app.get("/v1/health")
 def health() -> dict[str, str]:
-    return HEALTH_PAYLOAD
+    if get_cad_engine() == "solidcraft":
+        return _solidcraft_health()
+    return _freecad_health()

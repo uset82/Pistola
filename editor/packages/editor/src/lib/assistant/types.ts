@@ -132,6 +132,11 @@ export const assistantActionTypeValues = [
   // A structured CAD brief only adds editable sketch/body nodes. It is
   // rollback-safe and does not replace or delete existing scene content.
   'execute_cad_brief',
+  // SolidCraft passthrough. Only usable while the helper runs the SolidCraft
+  // engine; discovery first, then run a command the catalog actually has.
+  'list_solidcraft_commands',
+  'describe_solidcraft_command',
+  'run_solidcraft_command',
 ] as const
 export const assistantSafeImmediateActionTypes = [
   'reset_workspace_selection',
@@ -170,6 +175,8 @@ export const assistantSafeImmediateActionTypes = [
   'focus_camera_on_nodes',
   'set_cad_sketch_plane',
   'set_node_metadata',
+  'list_solidcraft_commands',
+  'describe_solidcraft_command',
 ] as const
 
 export const assistantDestructiveActionTypes = [
@@ -868,6 +875,22 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     type: z.literal('set_cad_sketch_plane'),
     sketchId: z.string().optional(),
     plane: AssistantCadWorkplaneSchema,
+  }),
+  z.object({
+    type: z.literal('list_solidcraft_commands'),
+    filter: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('describe_solidcraft_command'),
+    command: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal('run_solidcraft_command'),
+    /** A command id from the SolidCraft catalog, e.g. `solid.shell`. */
+    command: z.string().min(1),
+    params: z.record(z.string(), z.unknown()).default({}),
+    /** Body the command is recorded against. Defaults to the selection. */
+    bodyId: z.string().optional(),
   }),
   z.object({
     type: z.literal('reparent_node'),

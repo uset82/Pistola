@@ -23,6 +23,10 @@ class JobResultPayload(BaseModel):
     operations: list[dict[str, Any]] = Field(default_factory=list)
     artifacts: ArtifactRefs = Field(default_factory=ArtifactRefs)
     exportFile: dict[str, str] | None = None
+    #: Free-form engine output for the SolidCraft passthrough job types, which
+    #: return a command catalog or raw command results rather than a body.
+    #: Empty for every geometry job, so FreeCAD results are unchanged.
+    data: dict[str, Any] = Field(default_factory=dict)
 
 
 class JobResult(BaseModel):
@@ -58,6 +62,11 @@ class RegeneratePayload(BaseModel):
     body: dict[str, Any] = Field(default_factory=dict)
     sketch: dict[str, Any] | None = None
     overrides: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class BooleanUnionPayload(BaseModel):
@@ -65,6 +74,11 @@ class BooleanUnionPayload(BaseModel):
     bodyIdB: str
     targetBody: dict[str, Any] = Field(default_factory=dict)
     toolBody: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class BooleanCutPayload(BaseModel):
@@ -72,6 +86,11 @@ class BooleanCutPayload(BaseModel):
     bodyIdB: str
     targetBody: dict[str, Any] = Field(default_factory=dict)
     toolBody: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class BooleanIntersectPayload(BaseModel):
@@ -79,6 +98,11 @@ class BooleanIntersectPayload(BaseModel):
     bodyIdB: str
     targetBody: dict[str, Any] = Field(default_factory=dict)
     toolBody: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class FilletPayload(BaseModel):
@@ -105,6 +129,12 @@ class ExportStepPayload(BaseModel):
     bodyName: str | None = None
     body: dict[str, Any] = Field(default_factory=dict)
     targetPath: str | None = None
+    sketch: dict[str, Any] | None = None
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class SketchToSolidRequest(BaseModel):
@@ -162,6 +192,49 @@ class ExportStepRequest(BaseModel):
     payload: ExportStepPayload
 
 
+class CommandPayload(BaseModel):
+    command: str
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class BatchStep(BaseModel):
+    command: str
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class BatchPayload(BaseModel):
+    commands: list[BatchStep] = Field(default_factory=list)
+    rollback: bool = True
+
+
+class ListCommandsPayload(BaseModel):
+    filter: str | None = None
+
+
+class DescribeCommandPayload(BaseModel):
+    command: str
+
+
+class CommandRequest(BaseModel):
+    type: Literal["command"]
+    payload: CommandPayload
+
+
+class BatchRequest(BaseModel):
+    type: Literal["batch"]
+    payload: BatchPayload
+
+
+class ListCommandsRequest(BaseModel):
+    type: Literal["list_commands"]
+    payload: ListCommandsPayload = Field(default_factory=ListCommandsPayload)
+
+
+class DescribeCommandRequest(BaseModel):
+    type: Literal["describe_command"]
+    payload: DescribeCommandPayload
+
+
 JobRequest = Annotated[
     Union[
         SketchToSolidRequest,
@@ -175,6 +248,12 @@ JobRequest = Annotated[
         ChamferRequest,
         ImportStepRequest,
         ExportStepRequest,
+        # SolidCraft only. These are rejected with a 400 while the FreeCAD
+        # engine is active, because FreeCAD has no command catalog to address.
+        CommandRequest,
+        BatchRequest,
+        ListCommandsRequest,
+        DescribeCommandRequest,
     ],
     Field(discriminator="type"),
 ]

@@ -7,6 +7,7 @@ import {
   type CadBrief,
   CadBodyNodeSchema,
   generateId,
+  type CadBodyOperation,
   useScene,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
@@ -14,6 +15,7 @@ import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
 import { CadSpecError, evaluateCadSolidSpecCached, type KernelMesh } from '../cad/local-kernel'
 import { CadSolidSpecSchema } from '../cad/solid-spec'
+import { runSolidcraftJob, solidcraftJobData } from '../cad/solidcraft-command'
 import { boundsFromBoxes, poseForView, type RenderViewId } from '../render/capture-frame'
 import { collectStructureParts } from '../structure'
 import { applySceneGraphToEditor, type SceneGraph } from '../scene'
@@ -84,6 +86,7 @@ import {
   isDestructiveAssistantActionType,
   isSafeImmediateAssistantActionType,
 } from './types'
+import { bodyOperationsPatch, readBodyOperations } from '../cad/body-operations'
 import { prepareAssistantActionForExecution } from './execution-preparation'
 import {
   type AssistantActionSequenceIssue,
@@ -195,6 +198,8 @@ export type AssistantExecutionResult = {
   createdNodeIds: string[]
   bodyIds: string[]
   sketchIds: string[]
+  /** One entry per action that returned data, in execution order. */
+  data: Record<string, unknown>[]
 }
 
 type AssistantExecutedActionResult = {
@@ -202,6 +207,11 @@ type AssistantExecutedActionResult = {
   bodyIds?: string[]
   sketchIds?: string[]
   deletedNodeIds?: string[]
+  /**
+   * Free-form output from a read-only action, such as a SolidCraft command
+   * catalog. Scene-mutating actions leave this unset.
+   */
+  data?: Record<string, unknown>
 }
 
 const cadToolSet = new Set(assistantToolValues.filter((tool) => tool.startsWith('cad-')))
@@ -274,7 +284,7 @@ const getSelectedCadBodies = () =>
 const getCadBodyOperations = (bodyId: string | undefined) => {
   const body = getCadBodyById(bodyId)
   if (!body) return null
-  return body.operationHistory.length > 0 ? body.operationHistory : body.operations
+  return readBodyOperations(body)
 }
 
 const cadSolidPreview = (
@@ -323,8 +333,7 @@ const createAttachmentBodies = (
         dimensions: spec.dimensions,
         color: spec.color,
       },
-      operations: [],
-      operationHistory: [],
+      ...bodyOperationsPatch([]),
       artifacts: {},
       warnings: [warning],
     })
@@ -724,6 +733,15 @@ const getValidationError = (action: AssistantAction) => {
         : getCurrentSelectionNode()
       return node?.type === 'cad-body' ? null : 'Select a CAD body before running this action.'
     }
+    case 'run_solidcraft_command': {
+      if (isForwardRef(action.bodyId)) return null
+      const node = action.bodyId
+        ? useScene.getState().nodes[action.bodyId as AnyNodeId]
+        : getCurrentSelectionNode()
+      return node?.type === 'cad-body'
+        ? null
+        : 'Select a CAD body before running a SolidCraft command.'
+    }
     case 'retry_cad_body': {
       if (isForwardRef(action.bodyId)) return null
       const node = action.bodyId
@@ -951,6 +969,7 @@ const buildExecutionResult = (
   createdNodeIds: [],
   bodyIds: [],
   sketchIds: [],
+  data: [],
   ...overrides,
 })
 
@@ -1278,8 +1297,7 @@ const executeAction = async (
         metalness: action.metalness,
         opacity: action.opacity,
         preview: cadSolidPreview(action.spec, mesh, action),
-        operations: [],
-        operationHistory: [],
+        ...bodyOperationsPatch([]),
         sourceSketchIds: [],
         artifacts: {},
         warnings: [],
@@ -1489,6 +1507,45 @@ const executeAction = async (
       }
       return { bodyIds: [body.id], nodeId: body.id }
     }
+    case 'list_solidcraft_commands': {
+      const job = await runSolidcraftJob('list_commands', {
+        ...(action.filter ? { filter: action.filter } : {}),
+      })
+      return { data: solidcraftJobData(job) }
+    }
+    case 'describe_solidcraft_command': {
+      const job = await runSolidcraftJob('describe_command', { command: action.command })
+      return { data: solidcraftJobData(job) }
+    }
+    case 'run_solidcraft_command': {
+      const body = resolveCadBody(action.bodyId)
+      // Record the command on the body timeline rather than firing it once.
+      // The runtime system then replays the whole timeline through the helper,
+      // so the command survives a later regenerate like any other operation.
+      const operation: CadBodyOperation = {
+        id: generateId('cadop'),
+        type: 'solidcraft_command',
+        kind: 'solidcraft_command',
+        suppressed: false,
+        params: {
+          command: action.command,
+          commandParams: action.params ?? {},
+        },
+        command: action.command,
+        commandParams: action.params ?? {},
+      }
+      // The runtime system reads `operationHistory` first when it has entries,
+      // so both lists must move together. Updating only `operations` meant the
+      // regenerate was sent the old timeline and echoed it straight back over
+      // the new command.
+      const nextOperations = [...readBodyOperations(body), operation]
+      useScene.getState().updateNode(body.id, {
+        ...bodyOperationsPatch(nextOperations),
+        regenStatus: 'pending',
+      })
+      useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })
+      return { bodyIds: [body.id], nodeId: body.id }
+    }
     case 'create_site': {
       const siteId = createSite(action)
       return { nodeId: siteId }
@@ -1545,6 +1602,7 @@ export const executeAssistantPlan = async (
   const createdNodeIds: string[] = []
   const bodyIds: string[] = []
   const sketchIds: string[] = []
+  const data: Record<string, unknown>[] = []
   const warnings: string[] = []
   const deletedNodeIds = new Set<string>()
   let completedActionCount = 0
@@ -1650,6 +1708,7 @@ export const executeAssistantPlan = async (
         }
 
         if (result.nodeId) createdNodeIds.push(result.nodeId)
+        if (result.data) data.push(result.data)
         if (result.bodyIds) bodyIds.push(...result.bodyIds)
         if (result.sketchIds) sketchIds.push(...result.sketchIds)
         if (result.deletedNodeIds) {
@@ -1712,6 +1771,7 @@ export const executeAssistantPlan = async (
       createdNodeIds,
       bodyIds,
       sketchIds,
+      data,
     }
   } catch (error) {
     if (snapshot) {

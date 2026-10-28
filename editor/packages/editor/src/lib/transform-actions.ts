@@ -9,6 +9,7 @@ import {
   useScene,
   WindowNode,
 } from '@pascal-app/core'
+import { bodyOperationsPatch, readBodyOperations } from './cad/body-operations'
 import { useViewer } from '@pascal-app/viewer'
 import type { TransformMode, TransformTarget, TransformTargetNode } from './transform-target'
 import { getTransformCapabilities, getTransformTargetNode } from './transform-target'
@@ -115,8 +116,7 @@ const duplicateCadBodyNode = (node: TransformTargetNode) => {
     sourceSketchIds: node.sourceSketchIds,
     regenStatus: node.regenStatus,
     regenError: node.regenError,
-    operations: node.operations,
-    operationHistory: node.operationHistory,
+    ...bodyOperationsPatch(readBodyOperations(node)),
     preview: node.preview,
     artifacts: node.artifacts,
     previewArtifactRef: node.previewArtifactRef,

@@ -18,6 +18,12 @@ export const cadJobTypes = [
   'chamfer',
   'import_step',
   'export_step',
+  // SolidCraft only. The helper rejects these with a 400 while the FreeCAD
+  // engine is active, because FreeCAD has no addressable command catalog.
+  'command',
+  'batch',
+  'list_commands',
+  'describe_command',
 ] as const
 
 export type CadJobType = (typeof cadJobTypes)[number]
@@ -62,6 +68,12 @@ export type CadHelperJobResult = {
       filename: string
       content: string
     }
+    /**
+     * Free-form engine output for the passthrough job types, which return a
+     * command catalog or raw command results rather than a body. Empty for
+     * every geometry job.
+     */
+    data?: Record<string, unknown>
   }
 }
 
@@ -196,6 +208,7 @@ export const normalizeCadJobResult = (payload: unknown): CadHelperJobResult => {
                   },
                 }
               : {}),
+            ...(isRecord(resultRecord.data) ? { data: resultRecord.data } : {}),
           },
         }
       : {}),
