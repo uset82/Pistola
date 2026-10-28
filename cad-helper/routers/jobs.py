@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -8,6 +9,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import TypeAdapter, ValidationError
+from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from engine import CadEngine, get_cad_engine, is_solidcraft_only
@@ -19,6 +21,7 @@ from operations.import_step import run_import_step
 from operations.revolve import run_revolve
 from operations.sketch_to_solid import run_regenerate, run_sketch_to_solid
 from schemas import JobRequest, JobResult, JobStatus
+from settings import max_concurrency
 
 
 router = APIRouter()
@@ -30,6 +33,31 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 JOBS: dict[str, JobResult] = {}
 JOB_REQUEST_ADAPTER = TypeAdapter(JobRequest)
+
+_GATE_LOCK = threading.Lock()
+_GATE: threading.BoundedSemaphore | None = None
+_GATE_SIZE: int | None = None
+
+
+def concurrency_gate() -> threading.BoundedSemaphore:
+    """The process-wide cap on concurrently running CAD jobs."""
+    global _GATE, _GATE_SIZE
+
+    size = max_concurrency()
+    with _GATE_LOCK:
+        if _GATE is None or _GATE_SIZE != size:
+            _GATE = threading.BoundedSemaphore(size)
+            _GATE_SIZE = size
+        return _GATE
+
+
+def reset_concurrency_gate() -> None:
+    """Drop the gate so the next request re-reads the environment."""
+    global _GATE, _GATE_SIZE
+
+    with _GATE_LOCK:
+        _GATE = None
+        _GATE_SIZE = None
 
 
 def _job_id() -> str:
@@ -144,7 +172,27 @@ async def create_job(request: Request) -> JobStatus:
         raise HTTPException(status_code=422, detail=error.errors()) from error
 
     job_id = _job_id()
-    JOBS[job_id] = _run_job(request=parsed_request, job_id=job_id)
+
+    gate = concurrency_gate()
+    if not gate.acquire(blocking=False):
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "CAD helper is at capacity: PISTOLA_CAD_MAX_CONCURRENCY jobs are "
+                "already running. Retry shortly."
+            ),
+            headers={"Retry-After": "1"},
+        )
+
+    try:
+        # The engine call shells out with a timeout of up to 300s. Running it
+        # inline would freeze the event loop, so every other request —
+        # /health included — would wait for it.
+        result = await run_in_threadpool(_run_job, request=parsed_request, job_id=job_id)
+    finally:
+        gate.release()
+
+    JOBS[job_id] = result
     return JobStatus(jobId=job_id, status="pending")
 
 
