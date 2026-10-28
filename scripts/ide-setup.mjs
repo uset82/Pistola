@@ -87,7 +87,7 @@ const mergeJson = async (filePath, updater) => {
   await writeFile(filePath, rendered)
 }
 
-const skill = await readFile(skillPath, 'utf8')
+const skill = (await readFile(skillPath, 'utf8')).replace(/\r\n/g, '\n')
 
 await ensureFile(path.join(repoRoot, '.claude/skills/pistola-direct-control/SKILL.md'), skill)
 await ensureFile(
