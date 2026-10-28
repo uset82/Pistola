@@ -215,6 +215,44 @@ class DescribeCommandPayload(BaseModel):
     command: str
 
 
+class InspectionBody(BaseModel):
+    """One Pistola body, rebuilt by the helper for a named inspection job.
+
+    ``position`` is the scene placement in Pistola metres (Y-up). Translation
+    is applied before inspection; ``rotation`` and ``scale`` are reported as
+    warnings because SolidCraft's inspection commands take a single axis/angle
+    and cannot represent an arbitrary Euler rotation yet.
+    """
+
+    id: str = ""
+    name: str | None = None
+    operations: list[dict[str, Any]] = Field(default_factory=list)
+    position: list[float] = Field(default_factory=lambda: [0.0, 0.0, 0.0])
+    rotation: list[float] = Field(default_factory=lambda: [0.0, 0.0, 0.0])
+    scale: list[float] = Field(default_factory=lambda: [1.0, 1.0, 1.0])
+
+
+class InspectionPayload(BaseModel):
+    """A named inspection job: which bodies, and the closure needed to rebuild them.
+
+    ``bodies`` is the whole dependency closure (including boolean tool bodies);
+    ``bodyIds`` names the bodies being inspected, so a tool body is rebuilt but
+    is not itself checked. ``againstBodyIds`` is clearance-only: only pairs with
+    one body in ``bodyIds`` and the other here are measured.
+    """
+
+    bodyIds: list[str] = Field(default_factory=list)
+    bodies: dict[str, InspectionBody] = Field(default_factory=dict)
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    againstBodyIds: list[str] = Field(default_factory=list)
+    #: inspect.clearance options, in SolidCraft millimetres / cubic millimetres.
+    minimumClearance: float | None = None
+    minVolume: float | None = None
+    nearest: int | None = None
+    #: inspect.interference option, in seconds.
+    budgetSeconds: float | None = None
+
+
 class CommandRequest(BaseModel):
     type: Literal["command"]
     payload: CommandPayload
@@ -233,6 +271,21 @@ class ListCommandsRequest(BaseModel):
 class DescribeCommandRequest(BaseModel):
     type: Literal["describe_command"]
     payload: DescribeCommandPayload
+
+
+class InspectInterferenceRequest(BaseModel):
+    type: Literal["inspect_interference"]
+    payload: InspectionPayload
+
+
+class InspectClearanceRequest(BaseModel):
+    type: Literal["inspect_clearance"]
+    payload: InspectionPayload
+
+
+class InspectCenterOfMassRequest(BaseModel):
+    type: Literal["inspect_center_of_mass"]
+    payload: InspectionPayload
 
 
 JobRequest = Annotated[
@@ -254,6 +307,11 @@ JobRequest = Annotated[
         BatchRequest,
         ListCommandsRequest,
         DescribeCommandRequest,
+        # Named inspection jobs. Also SolidCraft-only, but each maps to one
+        # catalog command, so they are served while the passthrough is closed.
+        InspectInterferenceRequest,
+        InspectClearanceRequest,
+        InspectCenterOfMassRequest,
     ],
     Field(discriminator="type"),
 ]

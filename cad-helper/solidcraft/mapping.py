@@ -289,6 +289,126 @@ def _normalize_operations(operations: Iterable[dict[str, Any]]) -> list[dict[str
     return normalized
 
 
+#: The named inspection jobs and the one catalog command each is allowed to run.
+INSPECTION_COMMANDS = {
+    "inspect_interference": "inspect.interference",
+    "inspect_clearance": "inspect.clearance",
+    "inspect_center_of_mass": "inspect.center_of_mass",
+}
+
+
+def _body_translation_mm(position: Any) -> list[float]:
+    """Pistola scene placement (metres, Y-up) to SolidCraft millimetres (Z-up)."""
+    values = list(position or [])
+    values = [float(value) for value in values[:3]]
+    while len(values) < 3:
+        values.append(0.0)
+    x, y, z = values
+    return [x * M_TO_MM, -z * M_TO_MM, y * M_TO_MM]
+
+
+def _placement_warnings(name: str, body: dict[str, Any]) -> list[str]:
+    warnings: list[str] = []
+    rotation = [float(value) for value in (body.get("rotation") or [0.0, 0.0, 0.0])]
+    if any(abs(value) > 1e-9 for value in rotation):
+        warnings.append(
+            f"Body {name!r} is rotated in the scene; the inspection uses its "
+            "unrotated placement."
+        )
+    scale = [float(value) for value in (body.get("scale") or [1.0, 1.0, 1.0])]
+    if any(abs(value - 1.0) > 1e-9 for value in scale):
+        warnings.append(
+            f"Body {name!r} is scaled in the scene; the inspection uses its "
+            "unscaled geometry."
+        )
+    return warnings
+
+
+def inspection_commands(
+    *,
+    job_type: str,
+    body_ids: Sequence[str],
+    bodies: dict[str, dict[str, Any]],
+    sketches: dict[str, dict[str, Any]],
+    against_body_ids: Sequence[str] = (),
+    minimum_clearance_mm: float | None = None,
+    min_volume_mm3: float | None = None,
+    nearest: int | None = None,
+    budget_seconds: float | None = None,
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Rebuild the named Pistola bodies and append one inspection command.
+
+    Each body is replayed from its operation timeline under a deterministic
+    name (`PistolaBody1`, `PistolaBody2`, ...), translated into its scene
+    placement, and then measured. Replaying rather than reading a STEP artifact
+    keeps inspection valid after a restart, when artifacts are gone.
+
+    Returns the command script, the names of the inspected bodies, and any
+    placement warnings.
+    """
+    if job_type not in INSPECTION_COMMANDS:
+        raise SolidCraftMappingError(f"{job_type!r} is not a named inspection job.")
+
+    roots = [str(body_id) for body_id in body_ids]
+    if not roots:
+        raise SolidCraftMappingError("An inspection job needs at least one body id.")
+
+    build_order = list(dict.fromkeys([*roots, *(str(body_id) for body_id in against_body_ids)]))
+    for body_id in build_order:
+        if body_id not in bodies:
+            raise SolidCraftMappingError(
+                f"Body {body_id!r} is missing from the inspection closure."
+            )
+
+    commands: list[dict[str, Any]] = []
+    names: dict[str, str] = {}
+    warnings: list[str] = []
+
+    for index, body_id in enumerate(build_order):
+        body = bodies[body_id]
+        name = f"PistolaBody{index + 1}"
+        operations = body.get("operations") or body.get("operationHistory") or []
+        if not operations:
+            raise SolidCraftMappingError(
+                f"Body {body_id!r} has no operation history. Inspection rebuilds "
+                "a parametric timeline; imported STEP bodies are not supported yet."
+            )
+        names[body_id] = name
+        commands.extend(
+            operations_to_commands(
+                operations=operations,
+                sketches=sketches,
+                bodies=bodies,
+                body_name=name,
+            )
+        )
+        translation = _body_translation_mm(body.get("position"))
+        if any(abs(value) > 1e-9 for value in translation):
+            commands.append(
+                {
+                    "command": "solid.move",
+                    "params": {"bodies": [name], "translate": translation},
+                }
+            )
+        warnings.extend(_placement_warnings(name, body))
+
+    params: dict[str, Any] = {"bodies": [names[body_id] for body_id in roots]}
+    if job_type == "inspect_clearance":
+        if against_body_ids:
+            params["against"] = [names[str(body_id)] for body_id in against_body_ids]
+        if minimum_clearance_mm is not None:
+            params["clearance"] = float(minimum_clearance_mm)
+        if min_volume_mm3 is not None:
+            params["min_volume"] = float(min_volume_mm3)
+        if nearest is not None:
+            params["nearest"] = int(nearest)
+    elif job_type == "inspect_interference" and budget_seconds is not None:
+        params["budget_s"] = float(budget_seconds)
+
+    commands.append({"command": INSPECTION_COMMANDS[job_type], "params": params})
+    return commands, [names[body_id] for body_id in roots], warnings
+
+
 def operations_to_commands(
     *,
     operations: Sequence[dict[str, Any]],
@@ -389,7 +509,7 @@ def operations_to_commands(
                     raise SolidCraftMappingError(
                         f"Tool body {tool_body_id!r} is missing from the evaluation closure."
                     )
-                tool_name = f"PistolaTool{index + 1}"
+                tool_name = f"{body_name}Tool{index + 1}"
                 commands.extend(
                     operations_to_commands(
                         operations=tool_body.get("operations") or tool_body.get("operationHistory") or [],

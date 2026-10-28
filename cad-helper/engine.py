@@ -18,10 +18,24 @@ CadEngine = Literal["freecad", "solidcraft"]
 
 DEFAULT_ENGINE: CadEngine = "freecad"
 
+#: Job types that reach SolidCraft's command catalog directly. Arbitrary
+#: command execution must stay closed on a public helper, so these are the
+#: ones ``PISTOLA_CAD_ALLOW_PASSTHROUGH`` gates.
+SOLIDCRAFT_PASSTHROUGH_JOB_TYPES = frozenset(
+    {"command", "batch", "list_commands", "describe_command"}
+)
+
+#: Named inspection jobs. They are SolidCraft-only, but each maps to exactly
+#: one catalog command with a fixed shape, so they are not passthrough and stay
+#: available when it is closed. That is the point of naming them.
+SOLIDCRAFT_INSPECTION_JOB_TYPES = frozenset(
+    {"inspect_interference", "inspect_clearance", "inspect_center_of_mass"}
+)
+
 #: Job types only SolidCraft can serve. FreeCAD has no addressable command
 #: catalog, so these are refused rather than silently answered with nothing.
-SOLIDCRAFT_ONLY_JOB_TYPES = frozenset(
-    {"command", "batch", "list_commands", "describe_command"}
+SOLIDCRAFT_ONLY_JOB_TYPES = (
+    SOLIDCRAFT_PASSTHROUGH_JOB_TYPES | SOLIDCRAFT_INSPECTION_JOB_TYPES
 )
 
 
@@ -34,3 +48,14 @@ def get_cad_engine(env: dict[str, str] | None = None) -> CadEngine:
 
 def is_solidcraft_only(job_type: str) -> bool:
     return job_type in SOLIDCRAFT_ONLY_JOB_TYPES
+
+
+def is_passthrough_job_type(job_type: str) -> bool:
+    """Whether the job type is raw catalog access, and therefore gated."""
+    return job_type in SOLIDCRAFT_PASSTHROUGH_JOB_TYPES
+
+
+def is_inspection_job_type(job_type: str) -> bool:
+    """Whether the job type is one of the named inspection jobs."""
+    return job_type in SOLIDCRAFT_INSPECTION_JOB_TYPES
+

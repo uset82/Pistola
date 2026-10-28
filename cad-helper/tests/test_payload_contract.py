@@ -34,6 +34,7 @@ HANDLER_PAYLOADS = {
     "run_batch": schemas.BatchPayload,
     "run_list_commands": schemas.ListCommandsPayload,
     "run_describe_command": schemas.DescribeCommandPayload,
+    "run_inspection": schemas.InspectionPayload,
 }
 
 BOOLEAN_PAYLOADS = (

@@ -13,7 +13,13 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from auth import require_helper_token
-from engine import CadEngine, get_cad_engine, is_solidcraft_only
+from engine import (
+    CadEngine,
+    get_cad_engine,
+    is_inspection_job_type,
+    is_passthrough_job_type,
+    is_solidcraft_only,
+)
 from job_store import JobStore
 from operations.boolean import run_boolean_operation
 from operations.extrude import run_extrude
@@ -166,6 +172,13 @@ def _run_job(request: JobRequest, job_id: str) -> JobResult:
         return backend.run_list_commands(job_id=job_id, payload=request.payload, artifact_dir=ARTIFACT_DIR)
     if request.type == "describe_command":
         return backend.run_describe_command(job_id=job_id, payload=request.payload, artifact_dir=ARTIFACT_DIR)
+    if is_inspection_job_type(request.type):
+        return backend.run_inspection(
+            job_id=job_id,
+            job_type=request.type,
+            payload=request.payload,
+            artifact_dir=ARTIFACT_DIR,
+        )
     raise HTTPException(status_code=400, detail=f"Unsupported CAD job type: {request.type}")
 
 
@@ -201,7 +214,9 @@ async def create_job(request: Request) -> JobStatus:
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=error.errors()) from error
 
-    if is_solidcraft_only(parsed_request.type) and not allow_passthrough():
+    # Only raw catalog access is gated. Named inspection jobs map to one fixed
+    # command each, so they stay available on a public helper.
+    if is_passthrough_job_type(parsed_request.type) and not allow_passthrough():
         raise HTTPException(
             status_code=403,
             detail=(

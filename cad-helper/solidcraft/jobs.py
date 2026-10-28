@@ -18,6 +18,7 @@ from schemas import (
     ExtrudePayload,
     FilletPayload,
     ImportStepPayload,
+    InspectionPayload,
     JobResult,
     JobResultPayload,
     ListCommandsPayload,
@@ -27,7 +28,9 @@ from schemas import (
 )
 from solidcraft.client import SolidCraftClientTypes, SolidCraftError, get_client
 from solidcraft.mapping import (
+    INSPECTION_COMMANDS,
     SolidCraftMappingError,
+    inspection_commands,
     operations_to_commands,
     preview_from_measurement,
     resolve_edge_refs,
@@ -690,6 +693,43 @@ def run_describe_command(*, job_id: str, payload: DescribeCommandPayload, artifa
             artifact_dir=artifact_dir,
             step_path=None,
             data={"command": payload.command, "description": client.describe(payload.command)},
+        )
+    except (SolidCraftError, SolidCraftMappingError) as error:
+        return _failed(job_id, job_type, error)
+
+
+def run_inspection(*, job_id: str, job_type: str, payload: InspectionPayload, artifact_dir: Path) -> JobResult:
+    """Run one named inspection job.
+
+    The job type selects the command and is never taken from the payload, so
+    this cannot be used as a general command runner. It works with
+    ``PISTOLA_CAD_ALLOW_PASSTHROUGH=0`` for exactly that reason.
+    """
+    try:
+        client = get_client()
+        commands, names, warnings = inspection_commands(
+            job_type=job_type,
+            body_ids=payload.bodyIds,
+            bodies={body_id: body.model_dump() for body_id, body in payload.bodies.items()},
+            sketches=payload.sketches,
+            against_body_ids=payload.againstBodyIds,
+            minimum_clearance_mm=payload.minimumClearance,
+            min_volume_mm3=payload.minVolume,
+            nearest=payload.nearest,
+            budget_seconds=payload.budgetSeconds,
+        )
+        results = client.run_script(commands)
+        return _result(
+            job_id=job_id,
+            job_type=job_type,
+            artifact_dir=artifact_dir,
+            step_path=None,
+            data={
+                "command": INSPECTION_COMMANDS[job_type],
+                "bodies": names,
+                "result": results[-1] if results else None,
+            },
+            warnings=warnings,
         )
     except (SolidCraftError, SolidCraftMappingError) as error:
         return _failed(job_id, job_type, error)
