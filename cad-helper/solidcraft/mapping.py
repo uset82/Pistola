@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import os
+from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 M_TO_MM = 1000.0
@@ -476,5 +477,92 @@ def preview_from_measurement(measurement: dict[str, Any]) -> dict[str, Any]:
     return {
         "primitive": "box",
         "dimensions": [dimensions[0], dimensions[2], dimensions[1]],
+        "color": "#60a5fa",
+    }
+
+
+def _to_scene_point(x: float, y: float, z: float) -> tuple[float, float, float]:
+    # SolidCraft is Z-up and in millimetres; the editor is Y-up and in metres.
+    return (x / 1000.0, z / 1000.0, -y / 1000.0)
+
+
+def _to_scene_normal(x: float, y: float, z: float) -> tuple[float, float, float]:
+    return (x, z, -y)
+
+
+def _stl_triangles(data: bytes) -> list[tuple[tuple[float, float, float], tuple[float, ...], tuple[float, ...], tuple[float, ...]]]:
+    """Read binary STL triangles, falling back to a minimal ASCII reader."""
+    import struct
+
+    if len(data) >= 84:
+        count = struct.unpack_from("<I", data, 80)[0]
+        expected = 84 + count * 50
+        if expected <= len(data):
+            triangles = []
+            offset = 84
+            for _ in range(count):
+                values = struct.unpack_from("<12fH", data, offset)
+                normal = (values[0], values[1], values[2])
+                a = (values[3], values[4], values[5])
+                b = (values[6], values[7], values[8])
+                c = (values[9], values[10], values[11])
+                triangles.append((normal, a, b, c))
+                offset += 50
+            if triangles:
+                return triangles
+
+    try:
+        text = data.decode("utf-8", errors="replace")
+    except Exception:
+        return []
+
+    triangles = []
+    normal = (0.0, 0.0, 0.0)
+    vertices: list[tuple[float, float, float]] = []
+    for line in text.splitlines():
+        parts = line.strip().split()
+        if not parts:
+            continue
+        if parts[0] == "facet" and len(parts) >= 5 and parts[1] == "normal":
+            normal = (float(parts[2]), float(parts[3]), float(parts[4]))
+            vertices = []
+        elif parts[0] == "vertex" and len(parts) >= 4:
+            vertices.append((float(parts[1]), float(parts[2]), float(parts[3])))
+        elif parts[0] == "endfacet" and len(vertices) == 3:
+            triangles.append((normal, vertices[0], vertices[1], vertices[2]))
+            vertices = []
+    return triangles
+
+
+def mesh_preview_from_stl(stl_path: Path | str) -> dict[str, Any]:
+    """Build a viewer-ready mesh preview from a SolidCraft STL export."""
+    path = Path(stl_path)
+    if not path.exists():
+        return {}
+    triangles = _stl_triangles(path.read_bytes())
+    if not triangles:
+        return {}
+
+    positions: list[float] = []
+    normals: list[float] = []
+    indices: list[int] = []
+    for normal, a, b, c in triangles:
+        if len(positions) // 3 + 3 > 0xFFFFFFFF:
+            break
+        base = len(positions) // 3
+        for point in (a, b, c):
+            positions.extend(_to_scene_point(*point))
+        for _ in range(3):
+            normals.extend(_to_scene_normal(*normal))
+        indices.extend((base, base + 1, base + 2))
+
+    if len(positions) < 9 or len(indices) < 3:
+        return {}
+
+    return {
+        "primitive": "mesh",
+        "positions": positions,
+        "indices": indices,
+        "normals": normals,
         "color": "#60a5fa",
     }

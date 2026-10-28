@@ -27,6 +27,7 @@ from schemas import (
 from solidcraft.client import SolidCraftClientTypes, SolidCraftError, get_client
 from solidcraft.mapping import (
     SolidCraftMappingError,
+    mesh_preview_from_stl,
     operations_to_commands,
     preview_from_measurement,
     resolve_edge_refs,
@@ -160,8 +161,14 @@ def _run_commands_to_step(
         return _failed(job_id, job_type, SolidCraftMappingError("No geometry commands were produced."))
 
     step_path = artifact_dir / f"{job_id}.step"
-    results = client.run_script(commands, outputs=[step_path.as_posix()])
+    stl_path = artifact_dir / f"{job_id}.stl"
+    results = client.run_script(
+        commands, outputs=[step_path.as_posix(), stl_path.as_posix()]
+    )
     measurement = _measurement_for(client, commands)
+    preview = mesh_preview_from_stl(stl_path) or (
+        preview_from_measurement(measurement) if measurement else {}
+    )
     return _result(
         job_id=job_id,
         job_type=job_type,
@@ -170,6 +177,7 @@ def _run_commands_to_step(
         measurement=measurement,
         operations=operations,
         warnings=[*(warnings or []), *_warning_list(results)],
+        preview=preview,
     )
 
 
@@ -534,13 +542,19 @@ def run_import_step(*, job_id: str, payload: ImportStepPayload, artifact_dir: Pa
 
         cad_path = artifact_dir / f"{job_id}-import{source_path.suffix or '.step'}"
         shutil.copyfile(source_path, cad_path)
+        stl_path = artifact_dir / f"{job_id}-import.stl"
+        try:
+            client.run_script([], input_path=source_path.as_posix(), outputs=[stl_path.as_posix()])
+        except (SolidCraftError, SolidCraftMappingError):
+            pass
         return _result(
             job_id=job_id,
             job_type=job_type,
             artifact_dir=artifact_dir,
             step_path=cad_path,
             measurement=measurement,
-            preview=preview_from_measurement(measurement),
+            preview=mesh_preview_from_stl(stl_path)
+            or preview_from_measurement(measurement),
         )
     except (SolidCraftError, SolidCraftMappingError, OSError) as error:
         return _failed(job_id, job_type, error)

@@ -8,6 +8,7 @@ from solidcraft.mapping import (
     SolidCraftMappingError,
     from_solidcraft_length,
     operations_to_commands,
+    mesh_preview_from_stl,
     preview_from_measurement,
     resolve_edge_refs,
     sketch_commands,
@@ -148,3 +149,26 @@ def test_missing_sketch_fails_loudly():
             operations=[{"kind": "extrude", "sketchId": "missing", "params": {"distance": 1}}],
             sketches={},
         )
+
+
+def test_mesh_preview_from_stl_converts_units_and_axes(tmp_path):
+    stl = tmp_path / "part.stl"
+    stl.write_text("""solid test
+facet normal 0 0 1
+  outer loop
+    vertex 0 0 0
+    vertex 400 0 0
+    vertex 0 300 200
+  endloop
+endfacet
+endsolid test
+""", encoding="utf-8")
+
+    preview = mesh_preview_from_stl(stl)
+
+    assert preview["primitive"] == "mesh"
+    assert preview["positions"][:9] == pytest.approx(
+        [0.0, 0.0, -0.0, 0.4, 0.0, -0.0, 0.0, 0.2, -0.3]
+    )
+    assert preview["indices"] == [0, 1, 2]
+    assert preview["normals"][:3] == pytest.approx([0.0, 1.0, -0.0])
