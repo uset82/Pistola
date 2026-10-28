@@ -137,6 +137,11 @@ export const assistantActionTypeValues = [
   'list_solidcraft_commands',
   'describe_solidcraft_command',
   'run_solidcraft_command',
+  // Named SolidCraft inspection jobs. Each maps to one fixed catalog command,
+  // so they keep working where the raw passthrough is closed.
+  'inspect_interference',
+  'inspect_clearance',
+  'inspect_center_of_mass',
 ] as const
 export const assistantSafeImmediateActionTypes = [
   'reset_workspace_selection',
@@ -177,6 +182,10 @@ export const assistantSafeImmediateActionTypes = [
   'set_node_metadata',
   'list_solidcraft_commands',
   'describe_solidcraft_command',
+  // All three inspection jobs only read geometry.
+  'inspect_interference',
+  'inspect_clearance',
+  'inspect_center_of_mass',
 ] as const
 
 export const assistantDestructiveActionTypes = [
@@ -891,6 +900,31 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     params: z.record(z.string(), z.unknown()).default({}),
     /** Body the command is recorded against. Defaults to the selection. */
     bodyId: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal('inspect_interference'),
+    /** Bodies to check. Omit to check every CAD body in the scene. */
+    bodyIds: z.array(z.string()).optional(),
+    /** Seconds SolidCraft may spend before returning partial results. */
+    budgetSeconds: z.number().positive().max(86400).optional(),
+  }),
+  z.object({
+    type: z.literal('inspect_clearance'),
+    /** Bodies to measure. Omit for every CAD body not named in the baseline. */
+    bodyIds: z.array(z.string()).optional(),
+    /** Baseline bodies: only pairs crossing the two sets are measured. */
+    againstBodyIds: z.array(z.string()).optional(),
+    /** Report pairs closer than this many millimetres. */
+    minimumClearance: z.number().nonnegative().optional(),
+    /** Overlaps smaller than this many cubic millimetres count as contact. */
+    minVolume: z.number().nonnegative().optional(),
+    /** Nearest other bodies to report for each measured body. */
+    nearest: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal('inspect_center_of_mass'),
+    /** Bodies to measure. Omit to measure every CAD body in the scene. */
+    bodyIds: z.array(z.string()).optional(),
   }),
   z.object({
     type: z.literal('reparent_node'),

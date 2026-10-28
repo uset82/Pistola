@@ -3,13 +3,22 @@ import type { CadHelperJobResult } from './contracts'
 import { waitForCadJob } from './wait-for-job'
 
 /**
- * The SolidCraft passthrough job types.
+ * SolidCraft job types the editor can submit.
  *
- * These reach SolidCraft's command catalog directly instead of going through
- * the eleven canonical geometry jobs. The helper rejects them with a 400 while
- * it runs the FreeCAD engine, because FreeCAD has no addressable catalog.
+ * The passthrough types reach the command catalog directly and are gated by
+ * `PISTOLA_CAD_ALLOW_PASSTHROUGH` on the helper. The inspection types are
+ * named jobs: each maps to exactly one catalog command, so they stay available
+ * when the passthrough is closed. The helper rejects all of them with a 400
+ * while it runs the FreeCAD engine, which has no addressable catalog.
  */
-export type SolidcraftJobType = 'command' | 'batch' | 'list_commands' | 'describe_command'
+export type SolidcraftJobType =
+  | 'command'
+  | 'batch'
+  | 'list_commands'
+  | 'describe_command'
+  | 'inspect_interference'
+  | 'inspect_clearance'
+  | 'inspect_center_of_mass'
 
 export class SolidcraftUnavailableError extends Error {
   constructor(detail: string) {
