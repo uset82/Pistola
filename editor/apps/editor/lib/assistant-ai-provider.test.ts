@@ -219,6 +219,28 @@ test('AssistantPlanRequestSchema parses structured image attachments', () => {
   assert.equal(request.image?.analysis?.hasRedMarkup, true)
 })
 
+test('AssistantPlanRequestSchema accepts an explicit null image', () => {
+  // Latent twin of the agent step 400: this schema had the same non-nullable
+  // `image` field and only escaped because its call site uses a conditional spread.
+  const request = AssistantPlanRequestSchema.parse({
+    prompt: 'clean the area',
+    chatMode: 'create',
+    image: null,
+  })
+
+  assert.equal(request.image, null)
+})
+
+test('AssistantPlanRequestSchema still rejects a malformed image', () => {
+  assert.throws(() =>
+    AssistantPlanRequestSchema.parse({
+      prompt: 'clean the area',
+      chatMode: 'create',
+      image: { kind: 'workspace', source: 'upload' },
+    }),
+  )
+})
+
 test('buildAssistantRequest normalizes image turns into an OpenRouter-safe Responses payload', () => {
   const request = AssistantPlanRequestSchema.parse({
     prompt: 'clean this area',

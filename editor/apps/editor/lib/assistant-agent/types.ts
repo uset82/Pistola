@@ -47,7 +47,9 @@ export const AgentStepRequestSchema = z.object({
   messages: z.array(AgentMessageSchema).default([]),
   toolResults: z.array(AgentToolResultSchema).default([]),
   workspaceContext: z.record(z.string(), z.unknown()).optional(),
-  image: AssistantImageAttachmentSchema.optional(),
+  // nullish, not optional: callers legitimately send `image: null` when no image is attached
+  // (JSON.stringify keeps null and drops undefined), and the value is never read downstream.
+  image: AssistantImageAttachmentSchema.nullish(),
   round: z.number().int().min(1).default(1),
   budgets: AgentStepBudgetSchema.default(defaultAgentStepBudget),
 })

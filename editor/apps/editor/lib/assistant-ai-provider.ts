@@ -136,7 +136,9 @@ export const AssistantPlanRequestSchema = z.object({
   sessionId: z.string().min(1).optional(),
   codexThreadId: z.string().min(1).optional(),
   context: z.record(z.string(), z.unknown()).optional(),
-  image: AssistantImageAttachmentSchema.optional(),
+  // nullish, not optional: mirrors the agent step schema so a caller that sends
+  // `image: null` cannot be rejected at the route boundary.
+  image: AssistantImageAttachmentSchema.nullish(),
   imageDataUrl: z.string().optional(),
   continuation: AssistantPlanContinuationSchema.optional(),
   conversationHistory: z
