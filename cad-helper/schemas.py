@@ -215,13 +215,13 @@ class DescribeCommandPayload(BaseModel):
     command: str
 
 
-class InspectionBody(BaseModel):
-    """One Pistola body, rebuilt by the helper for a named inspection job.
+class BodySnapshot(BaseModel):
+    """One Pistola body, rebuilt by the helper for a named SolidCraft job.
 
     ``position`` is the scene placement in Pistola metres (Y-up). Translation
-    is applied before inspection; ``rotation`` and ``scale`` are reported as
-    warnings because SolidCraft's inspection commands take a single axis/angle
-    and cannot represent an arbitrary Euler rotation yet.
+    is applied before rebuilding; ``rotation`` and ``scale`` are reported as
+    warnings because SolidCraft's commands take a single axis/angle and cannot
+    represent an arbitrary Euler rotation yet.
     """
 
     id: str = ""
@@ -232,18 +232,23 @@ class InspectionBody(BaseModel):
     scale: list[float] = Field(default_factory=lambda: [1.0, 1.0, 1.0])
 
 
-class InspectionPayload(BaseModel):
-    """A named inspection job: which bodies, and the closure needed to rebuild them.
+class BodyClosurePayload(BaseModel):
+    """Which bodies a named job rebuilds, and the closure needed to do it.
 
     ``bodies`` is the whole dependency closure (including boolean tool bodies);
-    ``bodyIds`` names the bodies being inspected, so a tool body is rebuilt but
-    is not itself checked. ``againstBodyIds`` is clearance-only: only pairs with
-    one body in ``bodyIds`` and the other here are measured.
+    ``bodyIds`` names the bodies the job acts on, so a tool body is rebuilt but
+    is not itself measured or assigned.
     """
 
     bodyIds: list[str] = Field(default_factory=list)
-    bodies: dict[str, InspectionBody] = Field(default_factory=dict)
+    bodies: dict[str, BodySnapshot] = Field(default_factory=dict)
     sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
+class InspectionPayload(BodyClosurePayload):
+    """A named inspection job. ``againstBodyIds`` is clearance-only: only pairs
+    with one body in ``bodyIds`` and the other here are measured."""
+
     againstBodyIds: list[str] = Field(default_factory=list)
     #: inspect.clearance options, in SolidCraft millimetres / cubic millimetres.
     minimumClearance: float | None = None
@@ -251,6 +256,25 @@ class InspectionPayload(BaseModel):
     nearest: int | None = None
     #: inspect.interference option, in seconds.
     budgetSeconds: float | None = None
+
+
+class CadMaterialAssignment(BaseModel):
+    """A material assignment, plus the optional engineering card and query.
+
+    ``name`` is what SolidCraft's ``material.assign`` takes. ``card`` is a
+    schema-1 engineering material card; SolidCraft validates it and answers the
+    directional query, so Pistola carries it verbatim rather than duplicating
+    the validator. ``direction`` selects which modulus to report and is not
+    persisted on the body.
+    """
+
+    name: str = Field(min_length=1)
+    card: dict[str, Any] | None = None
+    direction: list[float] | None = None
+
+
+class AssignCadMaterialPayload(BodyClosurePayload):
+    material: CadMaterialAssignment
 
 
 class CommandRequest(BaseModel):
@@ -288,6 +312,11 @@ class InspectCenterOfMassRequest(BaseModel):
     payload: InspectionPayload
 
 
+class AssignCadMaterialRequest(BaseModel):
+    type: Literal["assign_cad_material"]
+    payload: AssignCadMaterialPayload
+
+
 JobRequest = Annotated[
     Union[
         SketchToSolidRequest,
@@ -312,6 +341,8 @@ JobRequest = Annotated[
         InspectInterferenceRequest,
         InspectClearanceRequest,
         InspectCenterOfMassRequest,
+        # Named material job. Same rule: the job type selects the commands.
+        AssignCadMaterialRequest,
     ],
     Field(discriminator="type"),
 ]

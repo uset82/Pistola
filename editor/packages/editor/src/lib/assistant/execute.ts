@@ -14,7 +14,7 @@ import { useViewer } from '@pascal-app/viewer'
 import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
 import { CadSpecError, evaluateCadSolidSpecCached, type KernelMesh } from '../cad/local-kernel'
-import { collectInspectionClosure } from '../cad/inspection'
+import { collectBodyClosure } from '../cad/body-closure'
 import { CadSolidSpecSchema } from '../cad/solid-spec'
 import { runSolidcraftJob, solidcraftJobData } from '../cad/solidcraft-command'
 import { boundsFromBoxes, poseForView, type RenderViewId } from '../render/capture-frame'
@@ -758,7 +758,7 @@ const getValidationError = (action: AssistantAction) => {
         }
       }
 
-      const closure = collectInspectionClosure(nodes, {
+      const closure = collectBodyClosure(nodes, {
         bodyIds: requested,
         againstBodyIds: against,
       })
@@ -778,6 +778,22 @@ const getValidationError = (action: AssistantAction) => {
       )
       if (withoutHistory.length > 0) {
         return `Inspection rebuilds a parametric timeline; "${withoutHistory[0]?.name}" has none. Imported STEP bodies cannot be inspected yet.`
+      }
+      return null
+    }
+    case 'assign_cad_material': {
+      if (isForwardRef(action.bodyId)) return null
+      const node = action.bodyId
+        ? useScene.getState().nodes[action.bodyId as AnyNodeId]
+        : getCurrentSelectionNode()
+      if (node?.type !== 'cad-body') {
+        return 'Select a CAD body before assigning a material.'
+      }
+      const closure = collectBodyClosure(useScene.getState().nodes, {
+        bodyIds: [node.id],
+      })
+      if (!closure.bodies[node.id]?.operations.length) {
+        return 'Assigning a material rebuilds a parametric timeline; imported STEP bodies are not supported yet.'
       }
       return null
     }
@@ -1588,7 +1604,7 @@ const executeAction = async (
     case 'inspect_interference':
     case 'inspect_clearance':
     case 'inspect_center_of_mass': {
-      const closure = collectInspectionClosure(useScene.getState().nodes, {
+      const closure = collectBodyClosure(useScene.getState().nodes, {
         bodyIds: action.bodyIds,
         againstBodyIds:
           action.type === 'inspect_clearance' ? action.againstBodyIds : undefined,
@@ -1610,6 +1626,28 @@ const executeAction = async (
         ...(action.type === 'inspect_interference' && action.budgetSeconds !== undefined
           ? { budgetSeconds: action.budgetSeconds }
           : {}),
+      })
+      return { data: solidcraftJobData(job) }
+    }
+    case 'assign_cad_material': {
+      const body = resolveCadBody(action.bodyId)
+      const closure = collectBodyClosure(useScene.getState().nodes, {
+        bodyIds: [body.id],
+      })
+      const job = await runSolidcraftJob('assign_cad_material', {
+        bodyIds: closure.bodyIds,
+        bodies: closure.bodies,
+        sketches: closure.sketches,
+        material: {
+          name: action.material,
+          ...(action.card ? { card: action.card } : {}),
+          ...(action.direction ? { direction: action.direction } : {}),
+        },
+      })
+      // Persist only after the helper accepted the name and card. The field is
+      // what run_regenerate re-applies; the job's rebuilt geometry is discarded.
+      useScene.getState().updateNode(body.id, {
+        material: { name: action.material, card: action.card ?? null },
       })
       return { data: solidcraftJobData(job) }
     }

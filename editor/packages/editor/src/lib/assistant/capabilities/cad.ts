@@ -543,6 +543,30 @@ export const inspectCenterOfMassCapability = defineCapability({
   },
 })
 
+export const assignCadMaterialCapability = defineCapability({
+  type: 'assign_cad_material',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('assign_cad_material'),
+    bodyId: z.string().optional(),
+    material: z.string().min(1),
+    card: z.record(z.string(), z.unknown()).optional(),
+    direction: z.tuple([z.number(), z.number(), z.number()]).optional(),
+  }),
+  safeImmediate: false,
+  describe:
+    "Assign a SolidCraft material to a CAD body, optionally with a schema-1 engineering card and a directional Young's-modulus query. It survives regenerate. Requires the SolidCraft CAD engine",
+  examples: [
+    'make this part steel',
+    'assign aluminium with this material card',
+    'what is the modulus along the grain',
+  ],
+  aliases: {
+    en: ['assign material', 'set body material'],
+    es: ['asignar material', 'cambiar material del cuerpo'],
+  },
+})
+
 export const cadCapabilities = [
   setCadWorkplaneCapability,
   closeCadSketchCapability,
@@ -574,4 +598,5 @@ export const cadCapabilities = [
   inspectInterferenceCapability,
   inspectClearanceCapability,
   inspectCenterOfMassCapability,
+  assignCadMaterialCapability,
 ]

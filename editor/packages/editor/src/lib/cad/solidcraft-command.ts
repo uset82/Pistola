@@ -19,6 +19,7 @@ export type SolidcraftJobType =
   | 'inspect_interference'
   | 'inspect_clearance'
   | 'inspect_center_of_mass'
+  | 'assign_cad_material'
 
 export class SolidcraftUnavailableError extends Error {
   constructor(detail: string) {

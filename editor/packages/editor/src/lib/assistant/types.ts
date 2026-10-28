@@ -142,6 +142,8 @@ export const assistantActionTypeValues = [
   'inspect_interference',
   'inspect_clearance',
   'inspect_center_of_mass',
+  // A material assignment changes body state, so it is not safe-immediate.
+  'assign_cad_material',
 ] as const
 export const assistantSafeImmediateActionTypes = [
   'reset_workspace_selection',
@@ -220,6 +222,55 @@ export const AssistantSceneExportFormatSchema = z.enum(assistantSceneExportForma
 export const AssistantCameraOrbitDirectionSchema = z.enum(assistantCameraOrbitDirectionValues)
 export const AssistantCatalogCategorySchema = z.enum(assistantCatalogCategoryValues)
 export const AssistantToolSchema = z.enum(assistantToolValues)
+
+/**
+ * A schema-1 engineering material card, as SolidCraft defines it.
+ *
+ * This validates the shape a caller can type; SolidCraft is the authority on
+ * the numbers and refuses an inconsistent card. `passthrough` keeps fields a
+ * future schema version adds, so the card is not silently truncated here.
+ */
+export const AssistantMaterialSourceSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  kind: z.enum(['user_supplied', 'measurement', 'public_reference', 'illustrative']),
+  license: z.string().optional(),
+  reference: z.string().optional(),
+})
+export const AssistantMaterialPropertySchema = z.object({
+  data: z
+    .object({
+      kind: z.enum([
+        'density',
+        'elasticity',
+        'tensile_strength',
+        'compressive_strength',
+        'yield_strength',
+        'shear_strength',
+        'thermal_conductivity',
+        'thermal_expansion',
+        'specific_heat',
+      ]),
+    })
+    .passthrough(),
+  source_id: z.string().min(1),
+  conditions: z.record(z.string(), z.unknown()).optional(),
+})
+export const AssistantMaterialCardSchema = z
+  .object({
+    schema_version: z.literal(1),
+    designation: z.string().min(1),
+    family: z.enum(['wood', 'polymer', 'glass', 'metal', 'other']),
+    sources: z.array(AssistantMaterialSourceSchema).default([]),
+    properties: z.array(AssistantMaterialPropertySchema).min(1),
+  })
+  .passthrough()
+export const AssistantMaterialDirectionSchema = z
+  .tuple([z.number(), z.number(), z.number()])
+  .refine((value) => value.some((component) => component !== 0), {
+    message: 'A material direction must be a non-zero vector.',
+  })
+
 export const AssistantPoint2Schema = z.tuple([z.number(), z.number()])
 export const AssistantPoint3Schema = z.tuple([z.number(), z.number(), z.number()])
 export const AssistantSideSchema = z.enum(assistantSideValues)
@@ -925,6 +976,17 @@ const AssistantActionUnionSchema = z.discriminatedUnion('type', [
     type: z.literal('inspect_center_of_mass'),
     /** Bodies to measure. Omit to measure every CAD body in the scene. */
     bodyIds: z.array(z.string()).optional(),
+  }),
+  z.object({
+    type: z.literal('assign_cad_material'),
+    /** Body the material is assigned to. Defaults to the selection. */
+    bodyId: z.string().optional(),
+    /** A SolidCraft material name: built-in, or one this design owns. */
+    material: z.string().min(1),
+    /** Schema-1 engineering card, carried with the body across regenerates. */
+    card: AssistantMaterialCardSchema.optional(),
+    /** Material-local direction for the Young's-modulus query. */
+    direction: AssistantMaterialDirectionSchema.optional(),
   }),
   z.object({
     type: z.literal('reparent_node'),
