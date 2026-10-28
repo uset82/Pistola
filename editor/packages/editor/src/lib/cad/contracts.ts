@@ -36,6 +36,14 @@ export type CadHelperHealth = {
   version: string
   helperUrl: string
   error?: string
+  /**
+   * Whether the helper requires a bearer token on /v1/cad/*.
+   *
+   * /health is unauthenticated so platform probes keep working, which means a
+   * helper that will reject every job still reads as reachable. This lets the
+   * caller tell those apart.
+   */
+  authRequired?: boolean
 }
 
 export type CadHelperJobRequest = {
@@ -146,6 +154,11 @@ export const normalizeCadHelperHealth = (
     version: asString(record.version) || 'unknown',
     helperUrl: asString(record.helperUrl) || helperUrlFallback,
     ...(asString(record.error) ? { error: asString(record.error)! } : {}),
+    // The normalizer builds a fixed shape, so a field the helper reports has
+    // to be named here or it is silently dropped before any caller sees it.
+    ...(typeof record.authRequired === 'boolean'
+      ? { authRequired: record.authRequired }
+      : {}),
   }
 }
 
