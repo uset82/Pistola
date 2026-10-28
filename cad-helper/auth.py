@@ -14,7 +14,7 @@ from typing import Annotated
 
 from fastapi import Header, HTTPException
 
-from settings import TOKEN_ENV, helper_token
+from settings import TOKEN_ENV, ConfigurationError, helper_token
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,13 @@ def require_helper_token(
     authorization: Annotated[str | None, Header()] = None,
 ) -> None:
     """FastAPI dependency: reject unauthenticated requests when a token is set."""
-    expected = helper_token()
+    try:
+        expected = helper_token()
+    except ConfigurationError as error:
+        # The variable exists but is unusable. Serving open would be worse than
+        # serving nothing, so refuse every request until it is fixed.
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
     if expected is None:
         return
 
@@ -48,12 +54,22 @@ def require_helper_token(
 
 
 def log_auth_configuration() -> None:
-    """Say once, at startup, that the API is open — hosting makes that fatal."""
+    """Validate the auth configuration at startup.
+
+    A blank token raises, which fails the application's startup rather than
+    letting a deployment that lost its secret come up unauthenticated. An unset
+    token only warns, because that is the local-development default.
+    """
     global _warned_about_missing_token
+
+    # Raise before the once-only guard: a misconfiguration must fail every
+    # start, not just the first one.
+    token = helper_token()
+
     if _warned_about_missing_token:
         return
     _warned_about_missing_token = True
-    if helper_token() is None:
+    if token is None:
         logger.warning(
             "%s is unset: /v1/cad/* accepts unauthenticated requests. "
             "Set it before exposing this helper outside localhost.",
