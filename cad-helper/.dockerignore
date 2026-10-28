@@ -1,0 +1,8 @@
+.artifacts/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tests/
+.tools/
+.env
+.env*.local

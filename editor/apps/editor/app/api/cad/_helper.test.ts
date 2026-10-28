@@ -122,3 +122,99 @@ test('in-process mock CAD helper handles health check and jobs without child pro
   }
 })
 
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[name]
+  } else {
+    process.env[name] = value
+  }
+}
+
+async function withRecordingHelper(
+  run: (helperUrl: string, received: Array<string | undefined>) => Promise<void>,
+) {
+  const { createServer } = await import('node:http')
+  const received: Array<string | undefined> = []
+  const server = createServer((request, response) => {
+    received.push(request.headers.authorization)
+    response.writeHead(200, { 'Content-Type': 'application/json' })
+    response.end(
+      JSON.stringify({
+        status: 'ready',
+        runtime: 'python',
+        engine: 'solidcraft',
+        version: 'test',
+        helperUrl: '',
+      }),
+    )
+  })
+
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const address = server.address()
+  const port = typeof address === 'object' && address ? address.port : 0
+
+  try {
+    await run(`http://127.0.0.1:${port}`, received)
+  } finally {
+    server.closeAllConnections?.()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+}
+
+test('helper requests carry the shared bearer token when one is configured', async () => {
+  const { fetchCadHelper } = await import('./_helper')
+  const previous = {
+    url: process.env.PISTOLA_CAD_HELPER_URL,
+    runtime: process.env.PISTOLA_CAD_HELPER_RUNTIME,
+    token: process.env.PISTOLA_CAD_HELPER_TOKEN,
+  }
+
+  await withRecordingHelper(async (helperUrl, received) => {
+    process.env.PISTOLA_CAD_HELPER_URL = helperUrl
+    process.env.PISTOLA_CAD_HELPER_RUNTIME = 'external'
+    process.env.PISTOLA_CAD_HELPER_TOKEN = 'test-token'
+
+    try {
+      const response = await fetchCadHelper('/v1/cad/jobs', {
+        method: 'POST',
+        body: JSON.stringify({ type: 'list_commands', payload: {} }),
+      })
+
+      assert.equal(response.status, 200)
+      // The reachability probe hits /health unauthenticated; the proxied
+      // request must carry the token.
+      assert.deepEqual(received, [undefined, 'Bearer test-token'])
+    } finally {
+      restoreEnv('PISTOLA_CAD_HELPER_URL', previous.url)
+      restoreEnv('PISTOLA_CAD_HELPER_RUNTIME', previous.runtime)
+      restoreEnv('PISTOLA_CAD_HELPER_TOKEN', previous.token)
+    }
+  })
+})
+
+test('helper requests stay unauthenticated when no token is configured', async () => {
+  const { fetchCadHelper } = await import('./_helper')
+  const previous = {
+    url: process.env.PISTOLA_CAD_HELPER_URL,
+    runtime: process.env.PISTOLA_CAD_HELPER_RUNTIME,
+    token: process.env.PISTOLA_CAD_HELPER_TOKEN,
+  }
+
+  await withRecordingHelper(async (helperUrl, received) => {
+    process.env.PISTOLA_CAD_HELPER_URL = helperUrl
+    process.env.PISTOLA_CAD_HELPER_RUNTIME = 'external'
+    delete process.env.PISTOLA_CAD_HELPER_TOKEN
+
+    try {
+      const response = await fetchCadHelper('/v1/cad/jobs/cadjob_1')
+
+      assert.equal(response.status, 200)
+      assert.deepEqual(received, [undefined, undefined])
+    } finally {
+      restoreEnv('PISTOLA_CAD_HELPER_URL', previous.url)
+      restoreEnv('PISTOLA_CAD_HELPER_RUNTIME', previous.runtime)
+      restoreEnv('PISTOLA_CAD_HELPER_TOKEN', previous.token)
+    }
+  })
+})
+

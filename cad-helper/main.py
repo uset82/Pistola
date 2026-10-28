@@ -1,16 +1,30 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth import log_auth_configuration
+from settings import helper_token
 from engine import get_cad_engine
 from freecad_runtime import FreeCADRuntimeError, build_helper_health_payload
-from routers.jobs import router as jobs_router
+from job_store import sweep_artifacts
+from routers.jobs import ARTIFACT_DIR, router as jobs_router
+from settings import job_ttl_seconds
 
 
-app = FastAPI(title="Pistola CAD Helper", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    log_auth_configuration()
+    # Job entries do not survive a restart, so anything past the retention
+    # window is already unreachable and only consuming disk.
+    sweep_artifacts(ARTIFACT_DIR, job_ttl_seconds())
+    yield
+
+
+app = FastAPI(title="Pistola CAD Helper", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -32,7 +46,20 @@ HELPER_URL = f"http://{DEFAULT_HOST}:{DEFAULT_PORT}"
 _HEALTH_CACHE: dict[str, dict[str, str]] = {}
 
 
-def _error_payload(engine: str, error: Exception) -> dict[str, str]:
+def _auth_required() -> bool:
+    """Whether /v1/cad/* needs a bearer token.
+
+    Reported on the open health route so a caller can tell a configured
+    helper apart from one it is about to 401 against.
+    """
+    try:
+        return helper_token() is not None
+    except Exception:
+        # A blank token is a misconfiguration, and auth is still required.
+        return True
+
+
+def _error_payload(engine: str, error: Exception) -> dict[str, object]:
     """A health payload for an engine that could not be reached.
 
     The payload is a formal interface, so an unavailable engine reports
@@ -46,10 +73,11 @@ def _error_payload(engine: str, error: Exception) -> dict[str, str]:
         "version": "unknown",
         "helperUrl": HELPER_URL,
         "error": str(error),
+        "authRequired": _auth_required(),
     }
 
 
-def _freecad_health() -> dict[str, str]:
+def _freecad_health() -> dict[str, object]:
     # Probed on first request rather than at import. Probing at import meant a
     # machine without FREECAD_PATH could not start the helper at all, which
     # also blocked the SolidCraft engine from running on its own.
@@ -61,7 +89,7 @@ def _freecad_health() -> dict[str, str]:
     return _HEALTH_CACHE["freecad"]
 
 
-def _solidcraft_health() -> dict[str, str]:
+def _solidcraft_health() -> dict[str, object]:
     from solidcraft.client import SolidCraftError, get_client
 
     if "solidcraft" not in _HEALTH_CACHE:
@@ -75,13 +103,14 @@ def _solidcraft_health() -> dict[str, str]:
             "engine": "solidcraft",
             "version": version,
             "helperUrl": HELPER_URL,
+            "authRequired": _auth_required(),
         }
     return _HEALTH_CACHE["solidcraft"]
 
 
 @app.get("/health")
 @app.get("/v1/health")
-def health() -> dict[str, str]:
+def health() -> dict[str, object]:
     if get_cad_engine() == "solidcraft":
         return _solidcraft_health()
     return _freecad_health()

@@ -129,6 +129,37 @@ const isCadHelperHealthy = async (helperUrl: string) => {
   }
 }
 
+/**
+ * Turn a bare 401 into something the editor can act on.
+ *
+ * /health is unauthenticated, so a helper with a token configured still probes
+ * as reachable. Without this, forgetting PISTOLA_CAD_HELPER_TOKEN on the app
+ * side shows a healthy engine and fails every job with an opaque error.
+ */
+const explainCadHelperAuthFailure = (response: Response) => {
+  if (response.status !== 401) return response
+
+  const hasToken = Boolean(process.env.PISTOLA_CAD_HELPER_TOKEN?.trim())
+  return new Response(
+    JSON.stringify({
+      error: hasToken
+        ? 'The CAD helper rejected this token. PISTOLA_CAD_HELPER_TOKEN differs between this app and the helper.'
+        : 'The CAD helper requires a bearer token and PISTOLA_CAD_HELPER_TOKEN is not set for this app.',
+    }),
+    { status: 401, headers: { 'Content-Type': 'application/json' } },
+  )
+}
+
+// Only the helper's /v1/cad/* routes are token-protected; /health stays open
+// so the reachability probe above keeps working without it.
+const applyCadHelperAuth = (headers: Headers) => {
+  const token = process.env.PISTOLA_CAD_HELPER_TOKEN?.trim()
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+  return headers
+}
+
 const waitForCadHelper = async (helperUrl: string) => {
   const deadline = Date.now() + CAD_HELPER_START_TIMEOUT_MS
   let lastError: string | null = null
@@ -469,15 +500,17 @@ export async function fetchCadHelper(pathname: string, init?: RequestInit): Prom
   }
 
   if (await isCadHelperHealthy(helperUrl)) {
-    const headers = new Headers(init?.headers)
+    const headers = applyCadHelperAuth(new Headers(init?.headers))
     if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json')
     }
-    return fetch(`${helperUrl}${pathname}`, {
-      ...init,
-      cache: 'no-store',
-      headers,
-    })
+    return explainCadHelperAuthFailure(
+      await fetch(`${helperUrl}${pathname}`, {
+        ...init,
+        cache: 'no-store',
+        headers,
+      }),
+    )
   }
 
   try {
@@ -489,17 +522,19 @@ export async function fetchCadHelper(pathname: string, init?: RequestInit): Prom
     throw error
   }
 
-  const headers = new Headers(init?.headers)
+  const headers = applyCadHelperAuth(new Headers(init?.headers))
   if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
   try {
-    return await fetch(`${helperUrl}${pathname}`, {
-      ...init,
-      cache: 'no-store',
-      headers,
-    })
+    return explainCadHelperAuthFailure(
+      await fetch(`${helperUrl}${pathname}`, {
+        ...init,
+        cache: 'no-store',
+        headers,
+      }),
+    )
   } catch (error) {
     if (isLoopbackCadHelperUrl(helperUrl) && process.env.PISTOLA_CAD_HELPER_RUNTIME !== 'python') {
       return handleMockCadRequest(pathname, init)
