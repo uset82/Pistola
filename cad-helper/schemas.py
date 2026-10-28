@@ -62,6 +62,11 @@ class RegeneratePayload(BaseModel):
     body: dict[str, Any] = Field(default_factory=dict)
     sketch: dict[str, Any] | None = None
     overrides: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class BooleanUnionPayload(BaseModel):
@@ -69,6 +74,11 @@ class BooleanUnionPayload(BaseModel):
     bodyIdB: str
     targetBody: dict[str, Any] = Field(default_factory=dict)
     toolBody: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class BooleanCutPayload(BaseModel):
@@ -76,6 +86,11 @@ class BooleanCutPayload(BaseModel):
     bodyIdB: str
     targetBody: dict[str, Any] = Field(default_factory=dict)
     toolBody: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class BooleanIntersectPayload(BaseModel):
@@ -83,6 +98,11 @@ class BooleanIntersectPayload(BaseModel):
     bodyIdB: str
     targetBody: dict[str, Any] = Field(default_factory=dict)
     toolBody: dict[str, Any] = Field(default_factory=dict)
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class FilletPayload(BaseModel):
@@ -109,6 +129,12 @@ class ExportStepPayload(BaseModel):
     bodyName: str | None = None
     body: dict[str, Any] = Field(default_factory=dict)
     targetPath: str | None = None
+    sketch: dict[str, Any] | None = None
+    #: Dependency closure the SolidCraft bridge needs to replay a timeline:
+    #: every sketch and body the operation graph references, by id. Empty for
+    #: FreeCAD, which resolves its own document, so this stays additive.
+    sketches: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    bodies: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class SketchToSolidRequest(BaseModel):
