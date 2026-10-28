@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
@@ -128,6 +129,12 @@ def _topology_probe(
     return probe
 
 
+@dataclass(frozen=True)
+class BuiltCommands:
+    commands: list[dict[str, Any]]
+    warnings: list[str]
+
+
 def _build_commands(
     client: SolidCraftClientTypes,
     *,
@@ -135,15 +142,18 @@ def _build_commands(
     sketches: dict[str, dict[str, Any]],
     bodies: dict[str, dict[str, Any]] | None = None,
     body_name: str = BODY_NAME,
-) -> list[dict[str, Any]]:
-    return operations_to_commands(
+) -> BuiltCommands:
+    warnings: list[str] = []
+    commands = operations_to_commands(
         operations=operations,
         sketches=sketches,
         bodies=bodies,
         body_name=body_name,
         resolve_edges=resolve_edge_refs,
         topology_for_body=_topology_probe(client, body_name),
+        warnings=warnings,
     )
+    return BuiltCommands(commands=commands, warnings=warnings)
 
 
 def _run_commands_to_step(
@@ -210,7 +220,7 @@ def run_sketch_to_solid(*, job_id: str, payload: SketchToSolidPayload, artifact_
             direction=[0.0, 1.0, 0.0],
             symmetric=False,
         )
-        commands = _build_commands(
+        built = _build_commands(
             client,
             operations=[operation],
             sketches={sketch_id: sketch},
@@ -219,9 +229,10 @@ def run_sketch_to_solid(*, job_id: str, payload: SketchToSolidPayload, artifact_
             client,
             job_id=job_id,
             job_type=job_type,
-            commands=commands,
+            commands=built.commands,
             artifact_dir=artifact_dir,
             operations=[operation],
+            warnings=built.warnings,
         )
     except (SolidCraftError, SolidCraftMappingError) as error:
         return _failed(job_id, job_type, error)
@@ -239,7 +250,7 @@ def run_extrude(*, job_id: str, payload: ExtrudePayload, artifact_dir: Path) -> 
             direction=list(payload.direction),
             symmetric=bool(payload.symmetric),
         )
-        commands = _build_commands(
+        built = _build_commands(
             client,
             operations=[operation],
             sketches={sketch_id: sketch},
@@ -248,9 +259,10 @@ def run_extrude(*, job_id: str, payload: ExtrudePayload, artifact_dir: Path) -> 
             client,
             job_id=job_id,
             job_type=job_type,
-            commands=commands,
+            commands=built.commands,
             artifact_dir=artifact_dir,
             operations=[operation],
+            warnings=built.warnings,
         )
     except (SolidCraftError, SolidCraftMappingError) as error:
         return _failed(job_id, job_type, error)
@@ -275,7 +287,7 @@ def run_revolve(*, job_id: str, payload: RevolvePayload, artifact_dir: Path) -> 
             "axis": payload.axis,
             "angle": float(payload.angle),
         }
-        commands = _build_commands(
+        built = _build_commands(
             client,
             operations=[operation],
             sketches={sketch_id: sketch},
@@ -284,9 +296,10 @@ def run_revolve(*, job_id: str, payload: RevolvePayload, artifact_dir: Path) -> 
             client,
             job_id=job_id,
             job_type=job_type,
-            commands=commands,
+            commands=built.commands,
             artifact_dir=artifact_dir,
             operations=[operation],
+            warnings=built.warnings,
         )
     except (SolidCraftError, SolidCraftMappingError) as error:
         return _failed(job_id, job_type, error)
@@ -326,7 +339,7 @@ def run_boolean_operation(
             payload.bodyIdB: tool_body,
             **(payload.bodies or {}),
         }
-        commands = _build_commands(
+        built = _build_commands(
             client,
             operations=operations,
             sketches=payload.sketches or {},
@@ -336,9 +349,10 @@ def run_boolean_operation(
             client,
             job_id=job_id,
             job_type=job_type,
-            commands=commands,
+            commands=built.commands,
             artifact_dir=artifact_dir,
             operations=operations,
+            warnings=built.warnings,
         )
     except (SolidCraftError, SolidCraftMappingError) as error:
         return _failed(job_id, job_type, error)
@@ -417,7 +431,7 @@ def _run_edge_job(
         )
 
     operations = [*body_operations(body), edge_operation]
-    commands = _build_commands(
+    built = _build_commands(
         client,
         operations=operations,
         sketches={},
@@ -426,9 +440,10 @@ def _run_edge_job(
         client,
         job_id=job_id,
         job_type=job_type,
-        commands=commands,
+        commands=built.commands,
         artifact_dir=artifact_dir,
         operations=operations,
+        warnings=built.warnings,
     )
 
 
@@ -496,7 +511,7 @@ def run_regenerate(*, job_id: str, payload: RegeneratePayload, artifact_dir: Pat
         if str(body.get("id")) not in bodies:
             bodies[str(body.get("id"))] = body
 
-        commands = _build_commands(
+        built = _build_commands(
             client,
             operations=operations,
             sketches=sketches,
@@ -506,9 +521,10 @@ def run_regenerate(*, job_id: str, payload: RegeneratePayload, artifact_dir: Pat
             client,
             job_id=job_id,
             job_type=job_type,
-            commands=commands,
+            commands=built.commands,
             artifact_dir=artifact_dir,
             operations=operations,
+            warnings=built.warnings,
         )
         return result
     except (SolidCraftError, SolidCraftMappingError) as error:
@@ -552,6 +568,7 @@ def _sanitize(name: str) -> str:
 
 def run_export_step(*, job_id: str, payload: ExportStepPayload, artifact_dir: Path) -> JobResult:
     job_type = "export_step"
+    mapping_warnings: list[str] = []
     try:
         body = dict(payload.body or {})
         filename = f"{_sanitize(payload.bodyName or body.get('name') or body.get('id') or 'cad-body')}.step"
@@ -576,13 +593,14 @@ def run_export_step(*, job_id: str, payload: ExportStepPayload, artifact_dir: Pa
             sketches = {str(sketch.get("id")): sketch} if sketch else {}
             sketches.update(payload.sketches or {})
             bodies = payload.bodies or {str(body.get("id")): body}
-            commands = _build_commands(
+            built = _build_commands(
                 client,
                 operations=operations,
                 sketches=sketches,
                 bodies=bodies,
             )
-            client.run_script(commands, outputs=[target_path.as_posix()])
+            mapping_warnings = built.warnings
+            client.run_script(built.commands, outputs=[target_path.as_posix()])
 
         content = target_path.read_text(encoding="utf-8")
         measurement = _measurement_for(get_client(), [], input_path=target_path.as_posix())
@@ -595,6 +613,7 @@ def run_export_step(*, job_id: str, payload: ExportStepPayload, artifact_dir: Pa
             preview=body.get("preview") or preview_from_measurement(measurement),
             operations=body_operations(body),
             export_file={"filename": target_path.name, "content": content},
+            warnings=mapping_warnings,
         )
     except (SolidCraftError, SolidCraftMappingError, OSError) as error:
         return _failed(job_id, job_type, error)

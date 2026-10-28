@@ -3,9 +3,32 @@ from __future__ import annotations
 import json
 import math
 import os
+from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 M_TO_MM = 1000.0
+CATALOG_PATH = Path(__file__).with_name("catalog.json")
+
+
+def _load_command_catalog() -> dict[str, dict[str, Any]]:
+    try:
+        catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return {
+        command["id"]: command
+        for command in catalog
+        if isinstance(command, dict) and isinstance(command.get("id"), str)
+    }
+
+
+CATALOG = _load_command_catalog()
+
+
+def _command_supports_targets(command: str) -> bool:
+    params = str(CATALOG.get(command, {}).get("params") or "")
+    return "targets" in params and "operation" in params
+
 
 BODY_NAME_COMMANDS = {
     "solid.extrude",
@@ -20,6 +43,10 @@ BODY_NAME_COMMANDS = {
     "solid.pipe",
     "solid.bounding_solid",
     "solid.coil",
+}
+
+TARGETING_BODY_COMMANDS = {
+    command for command in BODY_NAME_COMMANDS if _command_supports_targets(command)
 }
 
 BOOLEAN_KINDS = {
@@ -270,6 +297,7 @@ def operations_to_commands(
     body_name: str = "PistolaBody",
     resolve_edges: Callable[[list[str], dict[str, Any]], list[list[float]]] | None = None,
     topology_for_body: Callable[[str, list[dict[str, Any]]], dict[str, Any]] | None = None,
+    warnings: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Replay a Pistola operation timeline as a SolidCraft command script.
 
@@ -297,10 +325,25 @@ def operations_to_commands(
             if not command:
                 raise SolidCraftMappingError("A solidcraft_command operation has no command id.")
             command_params = dict(params.get("commandParams") or raw_operation.get("commandParams") or {})
-            if command in BODY_NAME_COMMANDS and "body_name" not in command_params:
-                # Keep primitive bodies addressable by later fillet/chamfer
-                # operations, whose topology probe asks for this stable name.
-                command_params["body_name"] = body_name
+            caller_overrides = any(
+                key in command_params for key in ("operation", "targets", "name", "body_name")
+            )
+            if not caller_overrides and command in BODY_NAME_COMMANDS:
+                if command in TARGETING_BODY_COMMANDS:
+                    # A body-creating command without an explicit target would
+                    # otherwise create a second body that the Pistola body does
+                    # not represent. Join it into the body under regeneration.
+                    command_params["operation"] = "join"
+                    command_params["targets"] = [body_name]
+                else:
+                    # No target support (currently solid.bounding_solid): keep
+                    # the separate body addressable, but say so.
+                    command_params["body_name"] = body_name
+                    if warnings is not None:
+                        warnings.append(
+                            f"SolidCraft command {command!r} created a separate body; "
+                            f"this Pistola body does not represent it."
+                        )
             commands.append({"command": command, "params": command_params})
             continue
 

@@ -6,6 +6,7 @@ import pytest
 
 from solidcraft.mapping import (
     SolidCraftMappingError,
+    TARGETING_BODY_COMMANDS,
     from_solidcraft_length,
     operations_to_commands,
     preview_from_measurement,
@@ -148,3 +149,92 @@ def test_missing_sketch_fails_loudly():
             operations=[{"kind": "extrude", "sketchId": "missing", "params": {"distance": 1}}],
             sketches={},
         )
+
+
+def _solidcraft_command(command: str, params: dict) -> dict:
+    return {
+        "id": "op-solidcraft",
+        "kind": "solidcraft_command",
+        "params": {
+            "command": command,
+            "commandParams": params,
+        },
+    }
+
+
+def test_body_creating_command_joins_the_pistola_body():
+    warnings: list[str] = []
+    commands = operations_to_commands(
+        operations=[
+            _solidcraft_command(
+                "solid.box", {"length": 10, "width": 10, "height": 40}
+            )
+        ],
+        sketches={},
+        body_name="PistolaBody",
+        warnings=warnings,
+    )
+
+    command = commands[-1]
+    assert command["command"] == "solid.box"
+    assert command["params"]["operation"] == "join"
+    assert command["params"]["targets"] == ["PistolaBody"]
+    assert "body_name" not in command["params"]
+    assert warnings == []
+
+
+def test_caller_supplied_command_placement_wins():
+    supplied = {
+        "operation": "cut",
+        "targets": ["OtherBody"],
+        "name": "Custom",
+        "body_name": "CustomBody",
+    }
+    commands = operations_to_commands(
+        operations=[_solidcraft_command("solid.box", dict(supplied))],
+        sketches={},
+        body_name="PistolaBody",
+    )
+
+    params = commands[-1]["params"]
+    assert params["operation"] == "cut"
+    assert params["targets"] == ["OtherBody"]
+    assert params["name"] == "Custom"
+    assert params["body_name"] == "CustomBody"
+
+
+def test_bounding_solid_warns_instead_of_joining():
+    warnings: list[str] = []
+    commands = operations_to_commands(
+        operations=[
+            _solidcraft_command("solid.bounding_solid", {"margin": 1})
+        ],
+        sketches={},
+        body_name="PistolaBody",
+        warnings=warnings,
+    )
+
+    params = commands[-1]["params"]
+    assert params["body_name"] == "PistolaBody"
+    assert "targets" not in params
+    assert "operation" not in params
+    assert len(warnings) == 1
+    assert "does not represent it" in warnings[0]
+
+
+def test_non_body_command_is_unchanged():
+    params_in = {"bodies": ["PistolaBody"], "factor": 2}
+    commands = operations_to_commands(
+        operations=[_solidcraft_command("solid.scale", params_in)],
+        sketches={},
+        body_name="PistolaBody",
+    )
+
+    assert commands[-1]["params"] == params_in
+
+
+def test_targeting_commands_are_derived_from_the_catalog():
+    assert "solid.bounding_solid" not in TARGETING_BODY_COMMANDS
+    assert len(TARGETING_BODY_COMMANDS) == 11
+    assert "solid.box" in TARGETING_BODY_COMMANDS
+    assert "solid.extrude" in TARGETING_BODY_COMMANDS
