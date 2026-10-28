@@ -171,6 +171,10 @@ def _run_job(request: JobRequest, job_id: str) -> JobResult:
 
 @router.post("/jobs", response_model=JobStatus)
 async def create_job(request: Request) -> JobStatus:
+    # Named before parsing so an uploaded file carries the job id and is
+    # evicted with it; a uuid4 name would outlive every job that used it.
+    job_id = _job_id()
+
     try:
         content_type = request.headers.get("content-type", "")
         if content_type.startswith("multipart/form-data"):
@@ -184,7 +188,7 @@ async def create_job(request: Request) -> JobStatus:
                 raise HTTPException(status_code=400, detail="Missing STEP file upload.")
 
             suffix = Path(upload.filename or "import.step").suffix or ".step"
-            upload_path = UPLOAD_DIR / f"{uuid4().hex}{suffix}"
+            upload_path = UPLOAD_DIR / f"{job_id}-source{suffix}"
             upload_path.write_bytes(await upload.read())
             parsed_request = JOB_REQUEST_ADAPTER.validate_python(
                 {
@@ -196,8 +200,6 @@ async def create_job(request: Request) -> JobStatus:
             parsed_request = JOB_REQUEST_ADAPTER.validate_python(await request.json())
     except ValidationError as error:
         raise HTTPException(status_code=422, detail=error.errors()) from error
-
-    job_id = _job_id()
 
     if is_solidcraft_only(parsed_request.type) and not allow_passthrough():
         raise HTTPException(

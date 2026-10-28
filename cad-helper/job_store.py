@@ -9,6 +9,7 @@ it, and a startup sweep removes files orphaned by a previous process.
 
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,30 +46,38 @@ class JobStore:
         self._artifact_dir = artifact_dir.resolve() if artifact_dir is not None else None
         self._clock = clock
         self._jobs: dict[str, StoredJob] = {}
+        # FastAPI runs `async def create_job` on the event loop but dispatches
+        # the synchronous `get_job` route to its threadpool, so both threads
+        # mutate this dict. Reentrant because put() nests into _remove().
+        self._lock = threading.RLock()
 
     def __len__(self) -> int:
-        return len(self._jobs)
+        with self._lock:
+            return len(self._jobs)
 
     def __contains__(self, job_id: str) -> bool:
         return self.get(job_id) is not None
 
     def put(self, job_id: str, result: JobResult) -> None:
-        self._jobs[job_id] = StoredJob(result=result, created_at=self._clock())
-        self._evict_expired()
-        self._evict_overflow()
+        with self._lock:
+            self._jobs[job_id] = StoredJob(result=result, created_at=self._clock())
+            self._evict_expired()
+            self._evict_overflow()
 
     def get(self, job_id: str) -> JobResult | None:
-        entry = self._jobs.get(job_id)
-        if entry is None:
-            return None
-        if self._is_expired(entry):
-            self._remove(job_id)
-            return None
-        return entry.result
+        with self._lock:
+            entry = self._jobs.get(job_id)
+            if entry is None:
+                return None
+            if self._is_expired(entry):
+                self._remove(job_id)
+                return None
+            return entry.result
 
     def clear(self) -> None:
-        for job_id in list(self._jobs):
-            self._remove(job_id)
+        with self._lock:
+            for job_id in list(self._jobs):
+                self._remove(job_id)
 
     def _is_expired(self, entry: StoredJob) -> bool:
         return self._clock() - entry.created_at >= self._ttl_seconds
@@ -123,8 +132,9 @@ class JobStore:
                         candidates.append(self._artifact_dir / relative)
 
         # A failed job never records refs, and a killed one can leave partial
-        # files behind; both are named after the job id.
-        candidates.extend(self._artifact_dir.glob(f"{job_id}*"))
+        # files behind; both are named after the job id. Recursive because an
+        # uploaded source file lives in the uploads/ subdirectory.
+        candidates.extend(self._artifact_dir.rglob(f"{job_id}*"))
 
         seen: set[Path] = set()
         unique: list[Path] = []
