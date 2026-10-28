@@ -487,6 +487,62 @@ export const runSolidcraftCommandCapability = defineCapability({
   },
 })
 
+export const inspectInterferenceCapability = defineCapability({
+  type: 'inspect_interference',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('inspect_interference'),
+    bodyIds: z.array(z.string()).optional(),
+    budgetSeconds: z.number().positive().max(86400).optional(),
+  }),
+  safeImmediate: true,
+  describe:
+    'Check which solid bodies overlap, with the overlap volume, area, bounding box and centre. Requires the SolidCraft CAD engine',
+  examples: ['do these parts collide', 'check interference between the bracket and the housing'],
+  aliases: {
+    en: ['check interference', 'find collisions between bodies'],
+    es: ['comprobar interferencias', 'buscar colisiones entre cuerpos'],
+  },
+})
+
+export const inspectClearanceCapability = defineCapability({
+  type: 'inspect_clearance',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('inspect_clearance'),
+    bodyIds: z.array(z.string()).optional(),
+    againstBodyIds: z.array(z.string()).optional(),
+    minimumClearance: z.number().nonnegative().optional(),
+    minVolume: z.number().nonnegative().optional(),
+    nearest: z.number().int().positive().optional(),
+  }),
+  safeImmediate: true,
+  describe:
+    'Measure overlaps and the smallest gaps between solid bodies, in millimetres. Requires the SolidCraft CAD engine',
+  examples: ['is there clearance between these parts', 'how close is the lid to the base'],
+  aliases: {
+    en: ['check clearance', 'measure gaps between bodies'],
+    es: ['comprobar holgura', 'medir separacion entre cuerpos'],
+  },
+})
+
+export const inspectCenterOfMassCapability = defineCapability({
+  type: 'inspect_center_of_mass',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('inspect_center_of_mass'),
+    bodyIds: z.array(z.string()).optional(),
+  }),
+  safeImmediate: true,
+  describe:
+    'Report the centre of mass of each solid body and of all of them together, with volume. Requires the SolidCraft CAD engine',
+  examples: ['where is the centre of mass', 'weigh this assembly'],
+  aliases: {
+    en: ['centre of mass', 'center of mass'],
+    es: ['centro de masa', 'centro de gravedad'],
+  },
+})
+
 export const cadCapabilities = [
   setCadWorkplaneCapability,
   closeCadSketchCapability,
@@ -515,4 +571,7 @@ export const cadCapabilities = [
   listSolidcraftCommandsCapability,
   describeSolidcraftCommandCapability,
   runSolidcraftCommandCapability,
+  inspectInterferenceCapability,
+  inspectClearanceCapability,
+  inspectCenterOfMassCapability,
 ]

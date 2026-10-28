@@ -24,6 +24,11 @@ export const cadJobTypes = [
   'batch',
   'list_commands',
   'describe_command',
+  // Named inspection jobs. SolidCraft-only too, but each maps to one fixed
+  // catalog command, so they are served while the passthrough is closed.
+  'inspect_interference',
+  'inspect_clearance',
+  'inspect_center_of_mass',
 ] as const
 
 export type CadJobType = (typeof cadJobTypes)[number]

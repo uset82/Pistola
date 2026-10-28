@@ -14,6 +14,7 @@ import { useViewer } from '@pascal-app/viewer'
 import { placeCadBodyInArchitecture } from '../place-cad-instance'
 import { resolveCadSpaceParentId } from '../cad-parent'
 import { CadSpecError, evaluateCadSolidSpecCached, type KernelMesh } from '../cad/local-kernel'
+import { collectInspectionClosure } from '../cad/inspection'
 import { CadSolidSpecSchema } from '../cad/solid-spec'
 import { runSolidcraftJob, solidcraftJobData } from '../cad/solidcraft-command'
 import { boundsFromBoxes, poseForView, type RenderViewId } from '../render/capture-frame'
@@ -741,6 +742,44 @@ const getValidationError = (action: AssistantAction) => {
       return node?.type === 'cad-body'
         ? null
         : 'Select a CAD body before running a SolidCraft command.'
+    }
+    case 'inspect_interference':
+    case 'inspect_clearance':
+    case 'inspect_center_of_mass': {
+      const nodes = useScene.getState().nodes
+      const requested = action.bodyIds ?? []
+      const against =
+        action.type === 'inspect_clearance' ? (action.againstBodyIds ?? []) : []
+
+      for (const bodyId of [...requested, ...against]) {
+        if (isForwardRef(bodyId)) continue
+        if (nodes[bodyId as AnyNodeId]?.type !== 'cad-body') {
+          return `CAD body "${bodyId}" was not found.`
+        }
+      }
+
+      const closure = collectInspectionClosure(nodes, {
+        bodyIds: requested,
+        againstBodyIds: against,
+      })
+      const inspected = closure.bodyIds.length
+      if (inspected === 0) {
+        return 'Create or select a CAD body before running an inspection.'
+      }
+      if (
+        action.type !== 'inspect_center_of_mass' &&
+        inspected + closure.againstBodyIds.length < 2
+      ) {
+        return 'Interference and clearance need at least two CAD bodies.'
+      }
+
+      const withoutHistory = Object.values(closure.bodies).filter(
+        (body) => body.operations.length === 0,
+      )
+      if (withoutHistory.length > 0) {
+        return `Inspection rebuilds a parametric timeline; "${withoutHistory[0]?.name}" has none. Imported STEP bodies cannot be inspected yet.`
+      }
+      return null
     }
     case 'retry_cad_body': {
       if (isForwardRef(action.bodyId)) return null
@@ -1545,6 +1584,34 @@ const executeAction = async (
       })
       useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })
       return { bodyIds: [body.id], nodeId: body.id }
+    }
+    case 'inspect_interference':
+    case 'inspect_clearance':
+    case 'inspect_center_of_mass': {
+      const closure = collectInspectionClosure(useScene.getState().nodes, {
+        bodyIds: action.bodyIds,
+        againstBodyIds:
+          action.type === 'inspect_clearance' ? action.againstBodyIds : undefined,
+      })
+      const job = await runSolidcraftJob(action.type, {
+        bodyIds: closure.bodyIds,
+        bodies: closure.bodies,
+        sketches: closure.sketches,
+        ...(action.type === 'inspect_clearance'
+          ? {
+              againstBodyIds: closure.againstBodyIds,
+              ...(action.minimumClearance !== undefined
+                ? { minimumClearance: action.minimumClearance }
+                : {}),
+              ...(action.minVolume !== undefined ? { minVolume: action.minVolume } : {}),
+              ...(action.nearest !== undefined ? { nearest: action.nearest } : {}),
+            }
+          : {}),
+        ...(action.type === 'inspect_interference' && action.budgetSeconds !== undefined
+          ? { budgetSeconds: action.budgetSeconds }
+          : {}),
+      })
+      return { data: solidcraftJobData(job) }
     }
     case 'create_site': {
       const siteId = createSite(action)
