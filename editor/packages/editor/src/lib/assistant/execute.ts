@@ -86,6 +86,7 @@ import {
   isDestructiveAssistantActionType,
   isSafeImmediateAssistantActionType,
 } from './types'
+import { bodyOperationsPatch, readBodyOperations } from '../cad/body-operations'
 import { prepareAssistantActionForExecution } from './execution-preparation'
 import {
   type AssistantActionSequenceIssue,
@@ -283,7 +284,7 @@ const getSelectedCadBodies = () =>
 const getCadBodyOperations = (bodyId: string | undefined) => {
   const body = getCadBodyById(bodyId)
   if (!body) return null
-  return body.operationHistory.length > 0 ? body.operationHistory : body.operations
+  return readBodyOperations(body)
 }
 
 const cadSolidPreview = (
@@ -332,8 +333,7 @@ const createAttachmentBodies = (
         dimensions: spec.dimensions,
         color: spec.color,
       },
-      operations: [],
-      operationHistory: [],
+      ...bodyOperationsPatch([]),
       artifacts: {},
       warnings: [warning],
     })
@@ -1297,8 +1297,7 @@ const executeAction = async (
         metalness: action.metalness,
         opacity: action.opacity,
         preview: cadSolidPreview(action.spec, mesh, action),
-        operations: [],
-        operationHistory: [],
+        ...bodyOperationsPatch([]),
         sourceSketchIds: [],
         artifacts: {},
         warnings: [],
@@ -1539,12 +1538,9 @@ const executeAction = async (
       // so both lists must move together. Updating only `operations` meant the
       // regenerate was sent the old timeline and echoed it straight back over
       // the new command.
-      const current =
-        body.operationHistory.length > 0 ? body.operationHistory : (body.operations ?? [])
-      const nextOperations = [...current, operation]
+      const nextOperations = [...readBodyOperations(body), operation]
       useScene.getState().updateNode(body.id, {
-        operations: nextOperations,
-        operationHistory: nextOperations,
+        ...bodyOperationsPatch(nextOperations),
         regenStatus: 'pending',
       })
       useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })

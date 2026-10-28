@@ -1,6 +1,7 @@
 import { CadBodyNode as CadBodyNodeSchema, useScene } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
 import useEditor from '../../store/use-editor'
+import { bodyOperationsPatch } from '../cad/body-operations'
 import { resolveCadSpaceParentId } from '../cad-parent'
 import { createMacJob, waitForMacJob } from './client'
 import type { MacHelperJobResult } from './contracts'
@@ -42,8 +43,7 @@ const buildMacBodyFromJob = (job: MacHelperJobResult, parentId: string) => {
       dimensions: [2, 1.2, 1.5],
       color: '#34d399',
     },
-    operations: [],
-    operationHistory: [],
+    ...bodyOperationsPatch([]),
     sourceSketchIds: [],
     artifacts: {
       previewUrl,

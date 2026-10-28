@@ -12,6 +12,7 @@ import {
   normalizeCadBodyOperations,
   useScene,
 } from '@pascal-app/core'
+import { bodyOperationsPatch, readBodyOperations } from '../lib/cad/body-operations'
 import { resolveCadSpaceParentId } from '../lib/cad-parent'
 import { useViewer } from '@pascal-app/viewer'
 import { create } from 'zustand'
@@ -191,7 +192,7 @@ const getSelectedCadBodies = (): CadBodyNode[] =>
     .filter((node): node is CadBodyNode => node?.type === 'cad-body')
 
 const getBodyOperations = (body: CadBodyNode): CadBodyOperation[] =>
-  normalizeCadBodyOperations(body.operationHistory.length > 0 ? body.operationHistory : body.operations)
+  readBodyOperations(body)
 
 const findCadBodyForSketch = (sketchId: string) =>
   Object.values(useScene.getState().nodes).find(
@@ -419,8 +420,7 @@ const updateBodyOperations = (
   extra: Partial<CadBodyNode> = {},
 ) => {
   useScene.getState().updateNode(bodyId as AnyNodeId, {
-    operations: operations as any,
-    operationHistory: operations as any,
+    ...bodyOperationsPatch(operations),
     regenStatus: 'pending',
     regenError: null,
     ...extra,
@@ -476,8 +476,7 @@ const queueSketchBodyOperation = (
     sourceSketchIds: [sketch.id],
     regenStatus: 'pending',
     preview: getQueuedPreview(operation),
-    operations: [operation],
-    operationHistory: [operation],
+    ...bodyOperationsPatch([operation]),
     artifacts: {},
     warnings: [],
   })
@@ -779,8 +778,7 @@ const useCad = create<CadState>()((set, get) => ({
         regenStatus: 'idle',
         regenError: null,
         preview: completed.result.preview,
-        operations: [],
-        operationHistory: [],
+        ...bodyOperationsPatch([]),
         sourceSketchIds: [],
         artifacts: completed.result.artifacts,
         previewArtifactRef:

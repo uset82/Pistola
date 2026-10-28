@@ -12,6 +12,7 @@ import {
 import { useViewer } from '@pascal-app/viewer'
 import useCad from '../../store/use-cad'
 import useEditor from '../../store/use-editor'
+import { readBodyOperations } from '../cad/body-operations'
 import { listAssistantCatalogItems } from './catalog'
 
 export type AssistantNodeSummary = Record<string, unknown>
@@ -232,7 +233,7 @@ export const summarizeAssistantNode = (node: AnyNode): AssistantNodeSummary => {
         closedProfileEntityIds: node.closedProfileEntityIds,
       }
     case 'cad-body': {
-      const operations = node.operationHistory.length > 0 ? node.operationHistory : node.operations
+      const operations = readBodyOperations(node)
       return {
         id: node.id,
         type: node.type,

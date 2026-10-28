@@ -10,6 +10,7 @@ import {
   normalizeCadBodyOperations,
   useScene,
 } from '@pascal-app/core'
+import { bodyOperationsPatch, readBodyOperations } from './body-operations'
 
 const DEFAULT_SKETCH_ELEVATION = 0.01
 
@@ -619,8 +620,7 @@ export async function executeCadBrief(
         regenStatus: preview.primitive === 'extruded-profile' ? 'idle' : 'pending',
         regenError: null,
         preview,
-        operations: [cadOperation],
-        operationHistory: [cadOperation],
+        ...bodyOperationsPatch([cadOperation]),
         artifacts: {},
         warnings: [],
       })
@@ -655,10 +655,9 @@ export async function executeCadBrief(
           ? buildFilletOperation(params)
           : buildChamferOperation(params)
 
-    const nextOperations = normalizeCadBodyOperations([...targetBody.operationHistory, cadOperation])
+    const nextOperations = normalizeCadBodyOperations([...readBodyOperations(targetBody), cadOperation])
     useScene.getState().updateNode(targetBody.id as AnyNodeId, {
-      operations: nextOperations as any,
-      operationHistory: nextOperations as any,
+      ...bodyOperationsPatch(nextOperations),
       regenStatus: 'pending',
       regenError: null,
       preview: targetBody.preview,

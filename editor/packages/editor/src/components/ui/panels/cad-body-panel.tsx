@@ -11,6 +11,7 @@ import { useViewer } from '@pascal-app/viewer'
 import { FileDown, GripVertical, RefreshCcw, Trash2 } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { runAssistantCommand } from '../../../lib/assistant-command-actions'
+import { readBodyOperations } from '../../../lib/cad/body-operations'
 import useCad, { cadHelperUnavailableMessage } from '../../../store/use-cad'
 import { ActionButton, ActionGroup } from '../controls/action-button'
 import { PanelSection } from '../controls/panel-section'
@@ -33,9 +34,6 @@ const getPreviewSummary = (node: CadBodyNode) =>
       : node.preview.primitive === 'mesh'
         ? `Local solid • ${Math.round(node.preview.positions.length / 3)} verts`
         : `Profile extrusion • ${node.preview.points.length} points • h ${node.preview.height.toFixed(2)} m`
-
-const getBodyOperations = (node: CadBodyNode) =>
-  normalizeCadBodyOperations(node.operationHistory.length > 0 ? node.operationHistory : node.operations)
 
 const formatOperationKindLabel = (operation: CadBodyOperation) =>
   operation.kind === 'boolean_union' || operation.kind === 'boolean_cut' || operation.kind === 'boolean_intersect'
@@ -86,7 +84,7 @@ export function CadBodyPanel() {
       ? (nodes[selectedId as AnyNodeId] as CadBodyNode)
       : null
 
-  const operations = useMemo(() => (node ? getBodyOperations(node) : []), [node])
+  const operations = useMemo(() => (node ? readBodyOperations(node) : []), [node])
 
   const handleClose = useCallback(() => {
     void runAssistantCommand([{ type: 'select_nodes', nodeIds: [] }])
