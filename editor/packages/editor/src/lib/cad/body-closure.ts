@@ -5,14 +5,15 @@ import {
 } from '@pascal-app/core'
 
 /**
- * The payload a named inspection job needs.
+ * The payload a named helper job needs.
  *
- * The helper rebuilds every body from its operation timeline, so it needs the
- * whole dependency graph: each inspected body, every boolean tool body it
- * references, and every sketch those operations use. Sending only the roots
- * would fail with "missing from the inspection closure".
+ * Inspection and material assignment both rebuild bodies from their operation
+ * timelines, so the helper needs the whole dependency graph: each target body,
+ * every boolean tool body it references, and every sketch those operations
+ * use. Sending only the roots would fail with "missing from the job's body
+ * closure".
  */
-export type InspectionBodyPayload = {
+export type BodySnapshotPayload = {
   id: string
   name: string
   operations: CadBodyOperation[]
@@ -21,13 +22,13 @@ export type InspectionBodyPayload = {
   scale: [number, number, number]
 }
 
-export type InspectionClosure = {
-  /** Bodies being measured, in the order the caller asked for them. */
+export type BodyClosure = {
+  /** Bodies the job acts on, in the order the caller asked for them. */
   bodyIds: string[]
   /** Clearance only: bodies measured against, but not reported themselves. */
   againstBodyIds: string[]
   /** Roots plus boolean tool bodies, keyed by node id. */
-  bodies: Record<string, InspectionBodyPayload>
+  bodies: Record<string, BodySnapshotPayload>
   sketches: Record<string, Record<string, unknown>>
 }
 
@@ -59,15 +60,15 @@ const toolBodyIdsOf = (operation: CadBodyOperation): string[] => {
 }
 
 /**
- * Collect the bodies, tool bodies and sketches an inspection needs.
+ * Collect the bodies, tool bodies and sketches a named job needs.
  *
- * With no `bodyIds`, every CAD body is inspected, excluding any named in
+ * With no `bodyIds`, every CAD body is included, excluding any named in
  * `againstBodyIds` (a clearance baseline is not itself the subject).
  */
-export const collectInspectionClosure = (
+export const collectBodyClosure = (
   nodes: Record<string, SceneNode>,
   options: { bodyIds?: string[]; againstBodyIds?: string[] } = {},
-): InspectionClosure => {
+): BodyClosure => {
   const againstBodyIds = (options.againstBodyIds ?? []).filter(
     (id) => nodes[id]?.type === 'cad-body',
   )
@@ -80,7 +81,7 @@ export const collectInspectionClosure = (
         )
 
   const bodyIds = requested.filter((id) => nodes[id]?.type === 'cad-body')
-  const bodies: Record<string, InspectionBodyPayload> = {}
+  const bodies: Record<string, BodySnapshotPayload> = {}
   const sketches: Record<string, Record<string, unknown>> = {}
 
   const visit = (id: string) => {

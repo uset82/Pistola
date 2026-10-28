@@ -29,6 +29,8 @@ export const cadJobTypes = [
   'inspect_interference',
   'inspect_clearance',
   'inspect_center_of_mass',
+  // Named material job. Same rule: the job type selects the commands.
+  'assign_cad_material',
 ] as const
 
 export type CadJobType = (typeof cadJobTypes)[number]

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { collectInspectionClosure } from './inspection'
+import { collectBodyClosure } from './body-closure'
 
-type NodeMap = Parameters<typeof collectInspectionClosure>[0]
+type NodeMap = Parameters<typeof collectBodyClosure>[0]
 
 const extrude = (sketchId: string): Record<string, unknown> => ({
   id: `extrude-${sketchId}`,
@@ -53,7 +53,7 @@ const scene = (): NodeMap =>
   }) as unknown as NodeMap
 
 test('with no bodyIds every CAD body is inspected and its sketches are carried', () => {
-  const closure = collectInspectionClosure(scene())
+  const closure = collectBodyClosure(scene())
 
   assert.deepEqual(closure.bodyIds, ['body-a', 'body-b'])
   assert.deepEqual(closure.againstBodyIds, [])
@@ -62,7 +62,7 @@ test('with no bodyIds every CAD body is inspected and its sketches are carried',
 })
 
 test('explicit bodyIds are kept in order and filtered to CAD bodies', () => {
-  const closure = collectInspectionClosure(scene(), {
+  const closure = collectBodyClosure(scene(), {
     bodyIds: ['body-b', 'level-1', 'missing'],
   })
 
@@ -72,7 +72,7 @@ test('explicit bodyIds are kept in order and filtered to CAD bodies', () => {
 })
 
 test('a clearance baseline is rebuilt but not inspected', () => {
-  const closure = collectInspectionClosure(scene(), {
+  const closure = collectBodyClosure(scene(), {
     bodyIds: ['body-a'],
     againstBodyIds: ['body-b'],
   })
@@ -84,7 +84,7 @@ test('a clearance baseline is rebuilt but not inspected', () => {
 })
 
 test('a clearance baseline is excluded from the default body set', () => {
-  const closure = collectInspectionClosure(scene(), { againstBodyIds: ['body-b'] })
+  const closure = collectBodyClosure(scene(), { againstBodyIds: ['body-b'] })
 
   assert.deepEqual(closure.bodyIds, ['body-a'])
   assert.deepEqual(closure.againstBodyIds, ['body-b'])
@@ -94,7 +94,7 @@ test('boolean tool bodies join the closure without becoming inspected bodies', (
   const nodes = scene() as unknown as Record<string, Record<string, unknown>>
   nodes['body-a'] = body('body-a', { operations: [booleanCut(['body-b'])] })
 
-  const closure = collectInspectionClosure(nodes as unknown as NodeMap, {
+  const closure = collectBodyClosure(nodes as unknown as NodeMap, {
     bodyIds: ['body-a'],
   })
 
@@ -109,7 +109,7 @@ test('operationHistory wins over the mirrored operations list', () => {
     operationHistory: [extrude('sketch-1'), extrude('sketch-2')],
   })
 
-  const closure = collectInspectionClosure(nodes as unknown as NodeMap, {
+  const closure = collectBodyClosure(nodes as unknown as NodeMap, {
     bodyIds: ['body-a'],
   })
 
@@ -118,7 +118,7 @@ test('operationHistory wins over the mirrored operations list', () => {
 })
 
 test('scene placement is carried for every body', () => {
-  const closure = collectInspectionClosure(scene(), { bodyIds: ['body-b'] })
+  const closure = collectBodyClosure(scene(), { bodyIds: ['body-b'] })
 
   assert.deepEqual(closure.bodies['body-b']?.position, [0.01, 0.002, 0.003])
   assert.deepEqual(closure.bodies['body-b']?.rotation, [0, 0, 0])
