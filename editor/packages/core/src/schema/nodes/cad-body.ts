@@ -252,6 +252,20 @@ export const CadBodyArtifacts = z.object({
   helperJobId: z.string().nullable().optional(),
 })
 
+/**
+ * The material a body carries.
+ *
+ * `name` is the SolidCraft material `material.assign` takes. `card` is a
+ * schema-1 engineering material card: engineering data, not rendering, and
+ * SolidCraft—not this schema—validates its contents. The bridge re-applies
+ * the assignment after a regenerate, because a regenerate rebuilds the body
+ * from its operation timeline in a fresh process.
+ */
+export const CadBodyMaterialSchema = z.object({
+  name: z.string().min(1),
+  card: z.record(z.string(), z.unknown()).nullable().default(null),
+})
+
 export const CadBodyNodeSchema = BaseNode.extend({
   id: objectId('cbody'),
   type: nodeType('cad-body'),
@@ -287,6 +301,7 @@ export const CadBodyNodeSchema = BaseNode.extend({
   previewArtifactRef: z.string().nullable().default(null),
   cadArtifactRef: z.string().nullable().default(null),
   warnings: z.array(z.string()).default([]),
+  material: CadBodyMaterialSchema.nullable().default(null),
 }).describe(
   dedent`
   CAD body node - parametric solid preview backed by an external CAD helper
@@ -299,3 +314,4 @@ export const CadBodyNodeSchema = BaseNode.extend({
 export const CadBodyNode = CadBodyNodeSchema
 export type CadBodyOperation = z.infer<typeof CadBodyOperation>
 export type CadBodyNode = z.infer<typeof CadBodyNodeSchema>
+export type CadBodyMaterial = z.infer<typeof CadBodyMaterialSchema>

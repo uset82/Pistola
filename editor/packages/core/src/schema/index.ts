@@ -27,6 +27,7 @@ export {
   CadBodyOperation,
   CadBodyNode,
   CadBodyNodeSchema,
+  CadBodyMaterialSchema,
   CadBodyPreview,
   getCadBooleanOperationKind,
   normalizeCadBodyOperation,
@@ -68,5 +69,6 @@ export { WallNode } from './nodes/wall'
 export { WindowNode } from './nodes/window'
 export { ZoneNode } from './nodes/zone'
 export type { AnyNodeId, AnyNodeType } from './types'
+export type { CadBodyMaterial } from './nodes/cad-body'
 // Union types
 export { AnyNode } from './types'
