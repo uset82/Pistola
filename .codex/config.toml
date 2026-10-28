@@ -9,3 +9,10 @@ env_vars = ["PISTOLA_TARGET", "PISTOLA_TRANSPORT", "PISTOLA_BROWSER_CDP_URL", "P
 
 [mcp_servers.pistola.env]
 PISTOLA_TARGET = "local"
+
+[mcp_servers.solidcraft]
+command = "node"
+args = ["scripts/solidcraft-mcp.mjs"]
+startup_timeout_sec = 30
+tool_timeout_sec = 300
+env_vars = ["SOLIDCRAFT_CLI_PATH", "SOLIDCRAFT_MODE", "SOLIDCRAFT_CONTROL_PORT", "SOLIDCRAFT_CONTROL_TOKEN"]

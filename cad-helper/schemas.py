@@ -23,6 +23,10 @@ class JobResultPayload(BaseModel):
     operations: list[dict[str, Any]] = Field(default_factory=list)
     artifacts: ArtifactRefs = Field(default_factory=ArtifactRefs)
     exportFile: dict[str, str] | None = None
+    #: Free-form engine output for the SolidCraft passthrough job types, which
+    #: return a command catalog or raw command results rather than a body.
+    #: Empty for every geometry job, so FreeCAD results are unchanged.
+    data: dict[str, Any] = Field(default_factory=dict)
 
 
 class JobResult(BaseModel):
@@ -162,6 +166,49 @@ class ExportStepRequest(BaseModel):
     payload: ExportStepPayload
 
 
+class CommandPayload(BaseModel):
+    command: str
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class BatchStep(BaseModel):
+    command: str
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class BatchPayload(BaseModel):
+    commands: list[BatchStep] = Field(default_factory=list)
+    rollback: bool = True
+
+
+class ListCommandsPayload(BaseModel):
+    filter: str | None = None
+
+
+class DescribeCommandPayload(BaseModel):
+    command: str
+
+
+class CommandRequest(BaseModel):
+    type: Literal["command"]
+    payload: CommandPayload
+
+
+class BatchRequest(BaseModel):
+    type: Literal["batch"]
+    payload: BatchPayload
+
+
+class ListCommandsRequest(BaseModel):
+    type: Literal["list_commands"]
+    payload: ListCommandsPayload = Field(default_factory=ListCommandsPayload)
+
+
+class DescribeCommandRequest(BaseModel):
+    type: Literal["describe_command"]
+    payload: DescribeCommandPayload
+
+
 JobRequest = Annotated[
     Union[
         SketchToSolidRequest,
@@ -175,6 +222,12 @@ JobRequest = Annotated[
         ChamferRequest,
         ImportStepRequest,
         ExportStepRequest,
+        # SolidCraft only. These are rejected with a 400 while the FreeCAD
+        # engine is active, because FreeCAD has no command catalog to address.
+        CommandRequest,
+        BatchRequest,
+        ListCommandsRequest,
+        DescribeCommandRequest,
     ],
     Field(discriminator="type"),
 ]

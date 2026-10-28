@@ -73,3 +73,8 @@ Thumbs.db
 .idea/
 .codex-runtime/
 *.bak
+
+# SolidCraft portable builds and CAD job output (binaries and artifacts)
+.tools/
+cad-out/
+cad-helper/.artifacts/

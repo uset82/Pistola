@@ -3,12 +3,18 @@
     "pistola": {
       "command": "node",
       "args": [
-        "D:/Proyectos/pistolacodex/editor/tooling/pistola-mcp/src/index.ts"
+        "C:/Users/carlos/PROYECTOS/Pistola-canonical/editor/tooling/pistola-mcp/src/index.ts"
       ],
       "env": {
         "PISTOLA_TARGET": "local",
         "PISTOLA_TRANSPORT": "bridge"
       }
+    },
+    "solidcraft": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\carlos\\PROYECTOS\\Pistola-canonical\\scripts\\solidcraft-mcp.mjs"
+      ]
     }
   }
 }

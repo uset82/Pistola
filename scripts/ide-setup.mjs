@@ -26,6 +26,24 @@ const relativeMcpEntry = {
   env: localEnv,
 }
 
+// SolidCraft's own stdio MCP server, reached through a launcher that resolves
+// the installed binary. Registered beside `pistola` so every IDE surface gets
+// the parametric CAD command catalog as well as the scene tools.
+const solidcraftEntry = {
+  command: 'node',
+  args: [path.join(repoRoot, 'scripts/solidcraft-mcp.mjs')],
+}
+
+const repoRelativeSolidcraftEntry = {
+  command: 'node',
+  args: ['scripts/solidcraft-mcp.mjs'],
+}
+
+const workspaceSolidcraftEntry = {
+  command: 'node',
+  args: ['${workspaceFolder}/scripts/solidcraft-mcp.mjs'],
+}
+
 const requiredSnippets = [
   'window.pistola.invoke',
   'taskPlan',
@@ -103,12 +121,15 @@ await mergeJson(path.join(repoRoot, '.mcp.json'), (current) => ({
       args: ['editor/tooling/pistola-mcp/src/index.ts'],
       env: localEnv,
     },
+    solidcraft: repoRelativeSolidcraftEntry,
   },
 }))
 
 await mergeJson(path.join(repoRoot, '.claude/settings.json'), (current) => ({
   ...current,
-  enabledMcpjsonServers: Array.from(new Set([...(current.enabledMcpjsonServers ?? []), 'pistola'])),
+  enabledMcpjsonServers: Array.from(
+    new Set([...(current.enabledMcpjsonServers ?? []), 'pistola', 'solidcraft']),
+  ),
 }))
 
 await mergeJson(path.join(repoRoot, '.cursor/mcp.json'), (current) => ({
@@ -116,6 +137,7 @@ await mergeJson(path.join(repoRoot, '.cursor/mcp.json'), (current) => ({
   mcpServers: {
     ...(current.mcpServers ?? {}),
     pistola: relativeMcpEntry,
+    solidcraft: workspaceSolidcraftEntry,
   },
 }))
 
@@ -128,6 +150,7 @@ await mergeJson(path.join(repoRoot, '.agents/mcp_config.json'), (current) => ({
       args: [path.join(repoRoot, 'editor/tooling/pistola-mcp/src/index.ts').replaceAll('\\', '/')],
       env: localEnv,
     },
+    solidcraft: solidcraftEntry,
   },
 }))
 
@@ -141,6 +164,7 @@ await mergeJson(path.join(repoRoot, '.workbuddy/mcp.json'), (current) => ({
       args: ['editor/tooling/pistola-mcp/src/index.ts'],
       env: localEnv,
     },
+    solidcraft: repoRelativeSolidcraftEntry,
   },
 }))
 
@@ -148,7 +172,14 @@ await mergeJson(path.join(repoRoot, '.workbuddy/settings.json'), (current) => ({
   ...current,
   permissions: {
     ...(current.permissions ?? {}),
-    allow: Array.from(new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*', 'DeferExecuteTool'])),
+    allow: Array.from(
+      new Set([
+        ...(current.permissions?.allow ?? []),
+        'mcp__pistola__*',
+        'mcp__solidcraft__*',
+        'DeferExecuteTool',
+      ]),
+    ),
   },
 }))
 
@@ -161,16 +192,19 @@ await mergeJson(path.join(repoRoot, '.qoder/settings.json'), (current) => ({
       args: ['editor/tooling/pistola-mcp/src/index.ts'],
       env: localEnv,
     },
+    solidcraft: repoRelativeSolidcraftEntry,
   },
   mcp: {
     ...(current.mcp ?? {}),
     enabledProjectMcpServers: Array.from(
-      new Set([...(current.mcp?.enabledProjectMcpServers ?? []), 'pistola']),
+      new Set([...(current.mcp?.enabledProjectMcpServers ?? []), 'pistola', 'solidcraft']),
     ),
   },
   permissions: {
     ...(current.permissions ?? {}),
-    allow: Array.from(new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*'])),
+    allow: Array.from(
+      new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*', 'mcp__solidcraft__*']),
+    ),
   },
 }))
 await ensureFile(path.join(repoRoot, '.qoder/skills/pistola-direct-control/SKILL.md'), skill)
@@ -203,32 +237,36 @@ if (installUser && !checkOnly) {
   // servers. The user settings file is the approval that `claude mcp get` reads.
   await mergeJson(path.join(os.homedir(), '.claude/settings.json'), (current) => ({
     ...current,
-    enabledMcpjsonServers: Array.from(new Set([...(current.enabledMcpjsonServers ?? []), 'pistola'])),
+    enabledMcpjsonServers: Array.from(
+      new Set([...(current.enabledMcpjsonServers ?? []), 'pistola', 'solidcraft']),
+    ),
   }))
   // Antigravity stores MCP config in the user profile (~/.gemini/config/mcp_config.json).
   // It has no portable project path, so this block runs only for --install-user.
   await mergeJson(path.join(os.homedir(), '.gemini/config/mcp_config.json'), (current) => ({
     ...current,
-    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry },
+    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry, solidcraft: solidcraftEntry },
   }))
   await mergeJson(path.join(os.homedir(), '.workbuddy-ai/mcp.json'), (current) => ({
     ...current,
-    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry },
+    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry, solidcraft: solidcraftEntry },
   }))
   await mkdir(path.join(os.homedir(), '.workbuddy-ai/skills/pistola-direct-control'), { recursive: true })
   await writeFile(path.join(os.homedir(), '.workbuddy-ai/skills/pistola-direct-control/SKILL.md'), skill)
   await mergeJson(path.join(os.homedir(), '.qoder/settings.json'), (current) => ({
     ...current,
-    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry },
+    mcpServers: { ...(current.mcpServers ?? {}), pistola: mcpEntry, solidcraft: solidcraftEntry },
     mcp: {
       ...(current.mcp ?? {}),
       enabledProjectMcpServers: Array.from(
-        new Set([...(current.mcp?.enabledProjectMcpServers ?? []), 'pistola']),
+        new Set([...(current.mcp?.enabledProjectMcpServers ?? []), 'pistola', 'solidcraft']),
       ),
     },
     permissions: {
       ...(current.permissions ?? {}),
-      allow: Array.from(new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*'])),
+      allow: Array.from(
+        new Set([...(current.permissions?.allow ?? []), 'mcp__pistola__*', 'mcp__solidcraft__*']),
+      ),
     },
   }))
   await mkdir(path.join(os.homedir(), '.qoder/skills/pistola-direct-control'), { recursive: true })
