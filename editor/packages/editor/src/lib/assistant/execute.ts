@@ -1535,8 +1535,16 @@ const executeAction = async (
         command: action.command,
         commandParams: action.params ?? {},
       }
+      // The runtime system reads `operationHistory` first when it has entries,
+      // so both lists must move together. Updating only `operations` meant the
+      // regenerate was sent the old timeline and echoed it straight back over
+      // the new command.
+      const current =
+        body.operationHistory.length > 0 ? body.operationHistory : (body.operations ?? [])
+      const nextOperations = [...current, operation]
       useScene.getState().updateNode(body.id, {
-        operations: [...(body.operations ?? []), operation],
+        operations: nextOperations,
+        operationHistory: nextOperations,
         regenStatus: 'pending',
       })
       useViewer.getState().setSelection({ selectedIds: [body.id], zoneId: null })
