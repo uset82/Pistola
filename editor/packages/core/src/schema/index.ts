@@ -22,7 +22,9 @@ export {
 } from './collections'
 export { BuildingNode } from './nodes/building'
 export {
-  type CadBodyOperation,
+  // Exported as both the Zod schema and its inferred type: consumers that
+  // build or validate an operation need the value, not just the type.
+  CadBodyOperation,
   CadBodyNode,
   CadBodyNodeSchema,
   CadBodyPreview,

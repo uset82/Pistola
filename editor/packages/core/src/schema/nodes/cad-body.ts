@@ -155,6 +155,18 @@ export const CadChamferOperation = CadOperationBase.extend({
   distance: z.number().positive().default(0.05),
 })
 
+export const CadSolidcraftOperation = CadOperationBase.extend({
+  type: z.literal('solidcraft_command').default('solidcraft_command'),
+  kind: z.literal('solidcraft_command'),
+  params: z.object({
+    /** A command id from the SolidCraft catalog, e.g. `solid.shell`. */
+    command: z.string().min(1),
+    commandParams: z.record(z.string(), z.unknown()).default({}),
+  }),
+  command: z.string().min(1),
+  commandParams: z.record(z.string(), z.unknown()).default({}),
+})
+
 export const CadBodyOperation = z.union([
   CadExtrudeOperation,
   CadRevolveOperation,
@@ -164,6 +176,7 @@ export const CadBodyOperation = z.union([
   CadLegacyBooleanOperation,
   CadFilletOperation,
   CadChamferOperation,
+  CadSolidcraftOperation,
 ])
 
 export const getCadBooleanOperationKind = (operation: z.infer<typeof CadBooleanOperationMode>) =>

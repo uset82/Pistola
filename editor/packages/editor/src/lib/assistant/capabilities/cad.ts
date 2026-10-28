@@ -434,6 +434,59 @@ export const setCadSketchPlaneCapability = defineCapability({
   },
 })
 
+export const listSolidcraftCommandsCapability = defineCapability({
+  type: 'list_solidcraft_commands',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('list_solidcraft_commands'),
+    filter: z.string().optional(),
+  }),
+  safeImmediate: true,
+  describe:
+    'List SolidCraft commands from the live catalog, optionally filtered. Requires the SolidCraft CAD engine',
+  examples: ['what fillet commands exist', 'list sketch commands'],
+  aliases: {
+    en: ['list solidcraft commands', 'search CAD commands'],
+    es: ['listar comandos solidcraft', 'buscar comandos CAD'],
+  },
+})
+
+export const describeSolidcraftCommandCapability = defineCapability({
+  type: 'describe_solidcraft_command',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('describe_solidcraft_command'),
+    command: z.string().min(1),
+  }),
+  safeImmediate: true,
+  describe:
+    'Read one SolidCraft command parameter contract before running it. Requires the SolidCraft CAD engine',
+  examples: ['what params does solid.shell take', 'describe sketch.circle.center'],
+  aliases: {
+    en: ['describe solidcraft command', 'show command parameters'],
+    es: ['describir comando solidcraft', 'ver parametros del comando'],
+  },
+})
+
+export const runSolidcraftCommandCapability = defineCapability({
+  type: 'run_solidcraft_command',
+  domain: 'cad',
+  schema: z.object({
+    type: z.literal('run_solidcraft_command'),
+    command: z.string().min(1),
+    params: z.record(z.string(), z.unknown()).default({}),
+    bodyId: z.string().optional(),
+  }),
+  safeImmediate: false,
+  describe:
+    'Run any SolidCraft catalog command against a body and record it on the body timeline. Requires the SolidCraft CAD engine',
+  examples: ['shell this body 2mm', 'run solid.draft on the selected part'],
+  aliases: {
+    en: ['run solidcraft command', 'execute CAD command'],
+    es: ['ejecutar comando solidcraft', 'correr comando CAD'],
+  },
+})
+
 export const cadCapabilities = [
   setCadWorkplaneCapability,
   closeCadSketchCapability,
@@ -459,4 +512,7 @@ export const cadCapabilities = [
   exportCadBodyStepCapability,
   addCadSketchEntitiesCapability,
   setCadSketchPlaneCapability,
+  listSolidcraftCommandsCapability,
+  describeSolidcraftCommandCapability,
+  runSolidcraftCommandCapability,
 ]

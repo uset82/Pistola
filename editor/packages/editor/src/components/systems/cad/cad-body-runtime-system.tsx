@@ -9,13 +9,12 @@ import {
   normalizeCadBodyOperations,
   useScene,
 } from '@pascal-app/core'
-import { createCadJob, fetchCadJob } from '../../../lib/cad/client'
+import { createCadJob } from '../../../lib/cad/client'
+import type { CadHelperJobResult, CadHelperJobStatus } from '../../../lib/cad/contracts'
+import { waitForCadJob } from '../../../lib/cad/wait-for-job'
 import useCad from '../../../store/use-cad'
 
-const CAD_JOB_TIMEOUT_MS = 60_000
-const CAD_JOB_POLL_MS = 500
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const getBodyOperations = (body: CadBodyNode) =>
   normalizeCadBodyOperations(body.operationHistory.length > 0 ? body.operationHistory : body.operations)
@@ -31,7 +30,7 @@ const getSourceSketch = (
 
 const mergeBodyArtifacts = (
   body: CadBodyNode,
-  jobResult: Awaited<ReturnType<typeof fetchCadJob>>,
+  jobResult: CadHelperJobResult,
 ) => {
   const nextArtifacts = {
     ...(body.artifacts || {}),
@@ -47,7 +46,7 @@ const mergeBodyArtifacts = (
 }
 
 const mapJobStatusToBodyStatus = (
-  status: Awaited<ReturnType<typeof fetchCadJob>>['status'],
+  status: CadHelperJobStatus,
 ): CadBodyNode['regenStatus'] => {
   switch (status) {
     case 'running':
@@ -60,26 +59,6 @@ const mapJobStatusToBodyStatus = (
     default:
       return 'idle'
   }
-}
-
-async function waitForCadJob(
-  jobId: string,
-  onStatus: (status: Awaited<ReturnType<typeof fetchCadJob>>['status']) => void,
-) {
-  const deadline = Date.now() + CAD_JOB_TIMEOUT_MS
-
-  while (Date.now() < deadline) {
-    const job = await fetchCadJob(jobId)
-    onStatus(job.status)
-
-    if (job.status === 'succeeded' || job.status === 'failed') {
-      return job
-    }
-
-    await sleep(CAD_JOB_POLL_MS)
-  }
-
-  throw new Error('CAD helper timed out while waiting for a job result.')
 }
 
 export const CadBodyRuntimeSystem = () => {
